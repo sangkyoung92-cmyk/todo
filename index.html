@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>노트 MVP</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>노트 MVP (탭 + 노트)</h1>
+      <p>OneNote 핵심 기능 초간단 버전</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>탭</h2>
+          <button id="add-tab-btn">+ 탭</button>
+        </div>
+        <ul id="tab-list" class="list"></ul>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>노트</h2>
+          <button id="add-note-btn">+ 노트</button>
+        </div>
+        <ul id="note-list" class="list"></ul>
+      </section>
+
+      <section class="panel editor-panel">
+        <div class="panel-head">
+          <h2>편집기</h2>
+          <small id="save-status">저장 대기</small>
+        </div>
+        <div class="editor-fields">
+          <label>
+            제목
+            <input id="note-title" type="text" placeholder="노트 제목" />
+          </label>
+          <label>
+            내용
+            <textarea id="note-content" placeholder="회의록/업무 내용을 작성하세요."></textarea>
+          </label>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
