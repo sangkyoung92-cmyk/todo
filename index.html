@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>노트 MVP</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>노트 MVP (탭 + 노트)</h1>
+      <p>OneNote 핵심 + 기본 문서 서식 기능</p>
+    </header>
+
+    <main class="workspace">
+      <section class="tabs-row panel">
+        <div class="panel-head">
+          <h2>탭</h2>
+          <button id="add-tab-btn">+ 탭</button>
+        </div>
+        <ul id="tab-list" class="tab-list"></ul>
+      </section>
+
+      <section class="content-row">
+        <aside class="panel notes-panel">
+          <div class="panel-head">
+            <h2>노트 목록</h2>
+            <button id="add-note-btn">+ 노트</button>
+          </div>
+          <ul id="note-list" class="list"></ul>
+        </aside>
+
+        <section class="panel editor-panel">
+          <div class="panel-head">
+            <h2>편집기</h2>
+            <small id="save-status">저장 대기</small>
+          </div>
+
+          <div class="editor-fields">
+            <label>
+              제목
+              <input id="note-title" type="text" placeholder="노트 제목" />
+            </label>
+
+            <div class="toolbar" id="editor-toolbar">
+              <select id="font-family">
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Malgun Gothic">Malgun Gothic</option>
+              </select>
+
+              <select id="font-size">
+                <option value="2">작게</option>
+                <option value="3" selected>기본</option>
+                <option value="4">크게</option>
+                <option value="5">매우 크게</option>
+              </select>
+
+              <input id="font-color" type="color" value="#202124" title="글자색" />
+
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="underline"><u>U</u></button>
+              <button type="button" data-cmd="insertOrderedList">1.</button>
+              <button type="button" data-cmd="insertUnorderedList">•</button>
+            </div>
+
+            <div
+              id="note-content"
+              class="rich-editor"
+              contenteditable="true"
+              role="textbox"
+              aria-label="노트 본문"
+              data-placeholder="회의록/업무 내용을 작성하세요."
+            ></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
