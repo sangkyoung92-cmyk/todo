@@ -1,7 +1,7 @@
 import { load, nowISO, save, state, uid, getNextSectionColor } from './state/store.js';
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
-  searchInput, toolbarEl, syncStatusEl, authAreaEl,
+  searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signOutUser, onAuthChange } from './auth.js';
@@ -9,6 +9,8 @@ import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
   loadFromCloud, setSyncStatusCallback,
 } from './sync/cloud.js';
+import { addTodo } from './ui/todo.js';
+import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
 
 function rerender() {
   renderAll(rerender);
@@ -65,6 +67,35 @@ function addNote() {
   setTimeout(() => {
     titleEl.focus();
   }, 50);
+}
+
+function addTodoFromSelection() {
+  const text = getSelectedEditorText(contentEl);
+  if (!text) {
+    alert('에디터에서 할 일로 만들 텍스트를 먼저 선택하세요.');
+    return;
+  }
+  addTodo(text, state.selectedNoteId || null);
+  rerender();
+}
+
+function extractTodosFromCurrentNote() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note) {
+    alert('먼저 페이지를 선택하세요.');
+    return;
+  }
+
+  const candidates = extractTodoCandidatesFromHtml(note.content);
+  const unique = [...new Set(candidates)].filter((line) => !state.todos.some((t) => t.text === line));
+
+  if (!unique.length) {
+    alert('추출할 새로운 할 일이 없습니다.');
+    return;
+  }
+
+  unique.forEach((line) => addTodo(line, note.id));
+  rerender();
 }
 
 function scheduleAutoSave() {
@@ -342,8 +373,21 @@ searchInput.addEventListener('keydown', (e) => {
 // ── Event listeners ──────────────────────────────────
 addTabBtn.addEventListener('click', addTab);
 addNoteBtn.addEventListener('click', addNote);
+addTodoBtn.addEventListener('click', () => {
+  const text = prompt('할 일을 입력하세요.');
+  if (!text?.trim()) return;
+  addTodo(text.trim(), state.selectedNoteId || null);
+  rerender();
+});
+extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
 titleEl.addEventListener('input', scheduleAutoSave);
 contentEl.addEventListener('input', scheduleAutoSave);
+contentEl.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    addTodoFromSelection();
+  }
+});
 
 // Prevent newline in title, move focus to content
 titleEl.addEventListener('keydown', (e) => {

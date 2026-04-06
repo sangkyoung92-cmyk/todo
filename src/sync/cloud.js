@@ -108,6 +108,7 @@ export async function loadFromCloud(rerender) {
       // This account has no cloud state yet: start from empty account workspace.
       state.tabs = [];
       state.notes = [];
+      state.todos = [];
       state.selectedTabId = null;
       state.selectedNoteId = null;
       save();
@@ -124,6 +125,7 @@ export async function loadFromCloud(rerender) {
     const cloudNotes = notesSnap.docs.map((d) => d.data());
 
     state.tabs = cloudData.tabs || [];
+    state.todos = cloudData.todos || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
     state.selectedNoteId = cloudData.selectedNoteId || null;
     state.notes = cloudNotes;
@@ -155,6 +157,7 @@ export async function syncToCloud() {
     const stateRef = doc(db, 'users', currentUid, 'data', 'state');
     batch.set(stateRef, {
       tabs: state.tabs,
+      todos: state.todos,
       selectedTabId: state.selectedTabId,
       selectedNoteId: state.selectedNoteId,
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),

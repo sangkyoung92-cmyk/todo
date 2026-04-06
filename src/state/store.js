@@ -8,6 +8,7 @@ export const SECTION_COLORS = [
 export const state = {
   tabs: [],
   notes: [],
+  todos: [],
   selectedTabId: null,
   selectedNoteId: null,
   saveTimer: null,
@@ -38,6 +39,7 @@ export function save() {
   const payload = {
     tabs: state.tabs,
     notes: state.notes,
+    todos: state.todos,
     selectedTabId: state.selectedTabId,
     selectedNoteId: state.selectedNoteId,
   };
@@ -51,6 +53,7 @@ export function load() {
   if (!raw) {
     state.tabs = [];
     state.notes = [];
+    state.todos = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;
     return;
@@ -60,6 +63,7 @@ export function load() {
     const parsed = JSON.parse(raw);
     state.tabs = parsed.tabs || [];
     state.notes = parsed.notes || [];
+    state.todos = parsed.todos || [];
 
     // Ensure all tabs have a color
     state.tabs.forEach((tab, i) => {
@@ -75,6 +79,7 @@ export function load() {
     console.error('Failed to parse storage:', error);
     state.tabs = [];
     state.notes = [];
+    state.todos = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;
   }
