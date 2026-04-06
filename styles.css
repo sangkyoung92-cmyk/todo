@@ -715,8 +715,8 @@ body {
   transform: translateY(-50%);
 }
 
-/* ── Tab color palette ───────────────────────────────── */
-.tab-color-palette {
+/* ── Tab color popup (body-level) ────────────────────── */
+.tab-color-popup {
   display: none;
   position: fixed;
   background: white;
@@ -726,28 +726,11 @@ body {
   padding: 7px;
   grid-template-columns: repeat(4, 22px);
   gap: 4px;
-  z-index: 600;
+  z-index: 9999;
 }
 
-.tab-color-palette.open {
+.tab-color-popup.open {
   display: grid;
-}
-
-.tab-color-palette .color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid rgba(0,0,0,0.15);
-  padding: 0;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-
-.tab-color-palette .color-swatch:hover {
-  transform: scale(1.25);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
-  position: relative;
-  z-index: 1;
 }
 
 /* ── Responsive ──────────────────────────────────────── */
