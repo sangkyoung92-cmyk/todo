@@ -56,15 +56,15 @@ export function renderTabs(onRender) {
 
     li.querySelector('[data-action="color"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      const palette = document.getElementById(`tab-color-${tab.id}`);
+      const palette = li.querySelector('.tab-color-palette');
       // Close other open palettes
       document.querySelectorAll('.tab-color-palette.open').forEach((p) => {
-        if (p.id !== `tab-color-${tab.id}`) p.classList.remove('open');
+        if (p !== palette) p.classList.remove('open');
       });
       palette.classList.toggle('open');
     });
 
-    document.getElementById(`tab-color-${tab.id}`).addEventListener('click', (e) => {
+    li.querySelector('.tab-color-palette').addEventListener('click', (e) => {
       e.stopPropagation();
       const swatch = e.target.closest('.color-swatch');
       if (!swatch) return;
