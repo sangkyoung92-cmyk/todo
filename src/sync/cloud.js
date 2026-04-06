@@ -60,6 +60,37 @@ function getLocalMaxUpdatedAt() {
   return all.reduce((max, d) => (d > max ? d : max), '');
 }
 
+function mergeByUpdatedAt(localItems, cloudItems) {
+  const byId = new Map();
+
+  localItems.forEach((item) => {
+    byId.set(item.id, item);
+  });
+
+  cloudItems.forEach((item) => {
+    const local = byId.get(item.id);
+    if (!local) {
+      byId.set(item.id, item);
+      return;
+    }
+    const localUpdatedAt = local.updatedAt || '';
+    const cloudUpdatedAt = item.updatedAt || '';
+    byId.set(item.id, cloudUpdatedAt > localUpdatedAt ? item : local);
+  });
+
+  return [...byId.values()];
+}
+
+function haveDifferentIdsOrUpdatedAt(a, b) {
+  if (a.length !== b.length) return true;
+  const aMap = new Map(a.map((x) => [x.id, x.updatedAt || '']));
+  for (const item of b) {
+    if (!aMap.has(item.id)) return true;
+    if (aMap.get(item.id) !== (item.updatedAt || '')) return true;
+  }
+  return false;
+}
+
 /**
  * On sign-in: cloud is the source of truth.
  * @param {Function} rerender - call to re-render the whole UI
