@@ -662,6 +662,97 @@ body {
   background: #a19f9d;
 }
 
+/* ── Image in editor ────────────────────────────────── */
+.note-content img {
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+/* ── Image resize overlay ───────────────────────────── */
+.img-resize-overlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 500;
+  border: 2px solid #7B2FA0;
+  border-radius: 2px;
+  display: none;
+}
+
+.img-resize-overlay.visible {
+  display: block;
+}
+
+.img-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #7B2FA0;
+  border-radius: 2px;
+  pointer-events: all;
+}
+
+.img-resize-handle-se {
+  cursor: nwse-resize;
+  bottom: -5px;
+  right: -5px;
+}
+
+.img-resize-handle-s {
+  cursor: ns-resize;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.img-resize-handle-e {
+  cursor: ew-resize;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ── Tab color palette ───────────────────────────────── */
+.tab-color-palette {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #e1dfdd;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  padding: 7px;
+  grid-template-columns: repeat(4, 22px);
+  gap: 4px;
+  z-index: 600;
+}
+
+.tab-color-palette.open {
+  display: grid;
+}
+
+.tab-color-palette .color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid rgba(0,0,0,0.15);
+  padding: 0;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.tab-color-palette .color-swatch:hover {
+  transform: scale(1.25);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 1024px) {
   body {

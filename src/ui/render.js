@@ -1,4 +1,4 @@
-import { state, getCurrentTabNotes, nowISO, save } from '../state/store.js';
+import { state, getCurrentTabNotes, nowISO, save, SECTION_COLORS } from '../state/store.js';
 import { escapeHtml, formatDate, formatDateShort } from '../utils/format.js';
 import {
   contentEl, noteListEl, saveStatusEl, tabListEl, titleEl,
@@ -16,9 +16,26 @@ export function renderTabs(onRender) {
       li.style.background = tab.color;
     }
 
+    const tabColors = [
+      ...SECTION_COLORS,
+      '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71',
+      '#3498db', '#9b59b6', '#1abc9c', '#e91e63',
+    ];
+    const swatchesHtml = tabColors
+      .map((c) => `<button class="color-swatch" data-color="${c}" style="background:${c}" title="${c}"></button>`)
+      .join('');
+
     li.innerHTML = `
       <span class="section-tab-label">${escapeHtml(tab.name)}</span>
       <div class="section-tab-actions">
+        <div class="tab-color-picker-wrap" style="position:relative">
+          <button class="icon-btn" data-action="color" title="색상 변경">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 2a6 6 0 110 12A6 6 0 018 2zm0 2a4 4 0 100 8A4 4 0 008 4z" opacity=".2"/><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="tab-color-palette" id="tab-color-${tab.id}">
+            ${swatchesHtml}
+          </div>
+        </div>
         <button class="icon-btn" data-action="rename" title="이름 변경">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 010 .708l-1 1-1.414-1.414 1-.999a.5.5 0 01.707 0l.707.705zM11.086 2.207L9.672.793 2 8.464V10h1.537l7.549-7.793zM1 11.5A.5.5 0 011.5 11H3v-1h-.5A1.5 1.5 0 001 11.5V14a1 1 0 001 1h11a1 1 0 001-1v-2.5a1.5 1.5 0 00-1.5-1.5H12v1h.5a.5.5 0 01.5.5V14H2v-2.5z"/></svg>
         </button>
@@ -33,6 +50,26 @@ export function renderTabs(onRender) {
       state.selectedTabId = tab.id;
       const notes = getCurrentTabNotes();
       state.selectedNoteId = notes[0]?.id || null;
+      save();
+      onRender();
+    });
+
+    li.querySelector('[data-action="color"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const palette = document.getElementById(`tab-color-${tab.id}`);
+      // Close other open palettes
+      document.querySelectorAll('.tab-color-palette.open').forEach((p) => {
+        if (p.id !== `tab-color-${tab.id}`) p.classList.remove('open');
+      });
+      palette.classList.toggle('open');
+    });
+
+    document.getElementById(`tab-color-${tab.id}`).addEventListener('click', (e) => {
+      e.stopPropagation();
+      const swatch = e.target.closest('.color-swatch');
+      if (!swatch) return;
+      tab.color = swatch.dataset.color;
+      tab.updatedAt = nowISO();
       save();
       onRender();
     });
