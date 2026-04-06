@@ -4,6 +4,7 @@ import {
   contentEl, noteListEl, saveStatusEl, tabListEl, titleEl,
   currentSectionNameEl, noteDateEl,
 } from './dom.js';
+import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
@@ -37,6 +38,7 @@ export function renderTabs(onRender) {
       const notes = getCurrentTabNotes();
       state.selectedNoteId = notes[0]?.id || null;
       save();
+      markStateDirty(); scheduleSync();
       onRender();
     });
 
@@ -60,6 +62,7 @@ export function renderTabs(onRender) {
       tab.name = next.trim();
       tab.updatedAt = nowISO();
       save();
+      markStateDirty(); scheduleSync();
       onRender();
     });
 
@@ -69,6 +72,9 @@ export function renderTabs(onRender) {
         return;
       }
       if (!confirm(`'${tab.name}' 섹션을 삭제할까요? (포함된 페이지도 삭제됩니다)`)) return;
+
+      const deletedNoteIds = state.notes.filter((n) => n.tabId === tab.id).map((n) => n.id);
+      state.pendingDeleteNoteIds.push(...deletedNoteIds);
 
       state.tabs = state.tabs.filter((x) => x.id !== tab.id);
       state.notes = state.notes.filter((n) => n.tabId !== tab.id);
@@ -80,6 +86,7 @@ export function renderTabs(onRender) {
       const notes = getCurrentTabNotes();
       state.selectedNoteId = notes[0]?.id || null;
       save();
+      markStateDirty(); scheduleSync();
       onRender();
     });
 
@@ -155,6 +162,7 @@ export function renderNotes(onRender) {
       }
       state.selectedNoteId = note.id;
       save();
+      markStateDirty(); scheduleSync();
       renderEditor();
       renderNotes(onRender);
       renderTabs(onRender);
@@ -162,10 +170,12 @@ export function renderNotes(onRender) {
 
     li.querySelector('[data-action="delete-note"]').addEventListener('click', () => {
       if (!confirm('이 페이지를 삭제할까요?')) return;
+      state.pendingDeleteNoteIds.push(note.id);
       state.notes = state.notes.filter((x) => x.id !== note.id);
       const next = getCurrentTabNotes()[0];
       state.selectedNoteId = next?.id || null;
       save();
+      markStateDirty(); scheduleSync();
       onRender();
     });
 
