@@ -92,7 +92,7 @@ function haveDifferentIdsOrUpdatedAt(a, b) {
 }
 
 /**
- * On sign-in: compare local vs cloud and pick the newer one.
+ * On sign-in: cloud is the source of truth.
  * @param {Function} rerender - call to re-render the whole UI
  */
 export async function loadFromCloud(rerender) {
@@ -105,9 +105,17 @@ export async function loadFromCloud(rerender) {
     const stateSnap = await getDoc(stateRef);
 
     if (!stateSnap.exists()) {
-      // First sign-in: no cloud data yet — push local state up
-      markAllDirty();
-      await syncToCloud();
+      // This account has no cloud state yet: start from empty account workspace.
+      state.tabs = [];
+      state.notes = [];
+      state.selectedTabId = null;
+      state.selectedNoteId = null;
+      save();
+      dirtyNoteIds.clear();
+      hasDirtyState = false;
+      state.pendingDeleteNoteIds.length = 0;
+      rerender?.();
+      updateSyncStatus('synced');
       return;
     }
 
@@ -115,42 +123,18 @@ export async function loadFromCloud(rerender) {
     const notesSnap = await getDocs(collection(db, 'users', currentUid, 'notes'));
     const cloudNotes = notesSnap.docs.map((d) => d.data());
 
-    const localTabs = state.tabs;
-    const localNotes = state.notes;
-    const mergedTabs = mergeByUpdatedAt(localTabs, cloudData.tabs || []);
-    const mergedNotes = mergeByUpdatedAt(localNotes, cloudNotes);
+    state.tabs = cloudData.tabs || [];
+    state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
+    state.selectedNoteId = cloudData.selectedNoteId || null;
+    state.notes = cloudNotes;
 
-    const mergedTabIds = new Set(mergedTabs.map((t) => t.id));
-    const mergedSelectedTabId = mergedTabIds.has(state.selectedTabId)
-      ? state.selectedTabId
-      : (mergedTabIds.has(cloudData.selectedTabId) ? cloudData.selectedTabId : mergedTabs[0]?.id || null);
-
-    const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
-    const mergedSelectedNoteId = mergedNoteIds.has(state.selectedNoteId)
-      ? state.selectedNoteId
-      : (mergedNoteIds.has(cloudData.selectedNoteId) ? cloudData.selectedNoteId : null);
-
-    const tabsChanged = haveDifferentIdsOrUpdatedAt(localTabs, mergedTabs);
-    const notesChanged = haveDifferentIdsOrUpdatedAt(localNotes, mergedNotes);
-    const selectionChanged = state.selectedTabId !== mergedSelectedTabId || state.selectedNoteId !== mergedSelectedNoteId;
-
-    state.tabs = mergedTabs;
-    state.notes = mergedNotes;
-    state.selectedTabId = mergedSelectedTabId;
-    state.selectedNoteId = mergedSelectedNoteId;
-
-    // Persist merged state to localStorage
+    // Persist to localStorage and clear pending local sync queue
     save();
     dirtyNoteIds.clear();
     hasDirtyState = false;
+    state.pendingDeleteNoteIds.length = 0;
 
     rerender?.();
-
-    // If merge introduced local-only changes, write merged result back to cloud
-    if (tabsChanged || notesChanged || selectionChanged) {
-      markAllDirty();
-      await syncToCloud();
-    }
 
     updateSyncStatus('synced');
   } catch (err) {
