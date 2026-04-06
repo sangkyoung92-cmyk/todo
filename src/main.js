@@ -128,13 +128,37 @@ colorBtn.addEventListener('mousedown', (e) => {
   colorPalette.classList.toggle('open');
 });
 
+// ── Tab Color Popup (body-level) ─────────────────────
+const tabColorPopup = document.getElementById('tab-color-popup');
+const TAB_COLORS = [
+  '#7B2FA0', '#1f4db6', '#107c10', '#d83b01',
+  '#0078d4', '#b4009e', '#038387', '#c19c00',
+  '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71',
+  '#3498db', '#9b59b6', '#1abc9c', '#e91e63',
+];
+tabColorPopup.innerHTML = TAB_COLORS
+  .map((c) => `<button class="color-swatch" data-color="${c}" style="background:${c}" title="${c}"></button>`)
+  .join('');
+
+tabColorPopup.addEventListener('click', (e) => {
+  const swatch = e.target.closest('.color-swatch');
+  if (!swatch) return;
+  const tab = state.tabs.find((t) => t.id === tabColorPopup.dataset.tabId);
+  if (!tab) return;
+  tab.color = swatch.dataset.color;
+  tab.updatedAt = nowISO();
+  save();
+  tabColorPopup.classList.remove('open');
+  rerender();
+});
+
 // Close palettes when clicking outside
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.color-picker-wrap')) {
     colorPalette.classList.remove('open');
   }
-  if (!e.target.closest('.tab-color-picker-wrap')) {
-    document.querySelectorAll('.tab-color-palette.open').forEach((p) => p.classList.remove('open'));
+  if (!e.target.closest('#tab-color-popup') && !e.target.closest('[data-action="color"]')) {
+    tabColorPopup.classList.remove('open');
   }
 });
 
