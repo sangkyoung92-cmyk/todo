@@ -11,3 +11,6 @@ export const noteDateEl = document.getElementById('note-date');
 export const toolbarEl = document.getElementById('toolbar');
 export const syncStatusEl = document.getElementById('sync-status');
 export const authAreaEl = document.getElementById('auth-area');
+export const todoListEl = document.getElementById('todo-list');
+export const addTodoBtn = document.getElementById('add-todo-btn');
+export const extractTodoBtn = document.getElementById('extract-todo-btn');

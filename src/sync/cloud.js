@@ -61,7 +61,7 @@ function getLocalMaxUpdatedAt() {
 }
 
 /**
- * On sign-in: compare local vs cloud and pick the newer one.
+ * On sign-in: cloud is the source of truth.
  * @param {Function} rerender - call to re-render the whole UI
  */
 export async function loadFromCloud(rerender) {
@@ -74,38 +74,38 @@ export async function loadFromCloud(rerender) {
     const stateSnap = await getDoc(stateRef);
 
     if (!stateSnap.exists()) {
-      // First sign-in: no cloud data yet — push local state up
-      markAllDirty();
-      await syncToCloud();
+      // This account has no cloud state yet: start from empty account workspace.
+      state.tabs = [];
+      state.notes = [];
+      state.todos = [];
+      state.selectedTabId = null;
+      state.selectedNoteId = null;
+      save();
+      dirtyNoteIds.clear();
+      hasDirtyState = false;
+      state.pendingDeleteNoteIds.length = 0;
+      rerender?.();
+      updateSyncStatus('synced');
       return;
     }
 
     const cloudData = stateSnap.data();
-    const cloudUpdatedAt = cloudData.updatedAt || '';
-    const localUpdatedAt = getLocalMaxUpdatedAt();
+    const notesSnap = await getDocs(collection(db, 'users', currentUid, 'notes'));
+    const cloudNotes = notesSnap.docs.map((d) => d.data());
 
-    if (cloudUpdatedAt > localUpdatedAt) {
-      // Cloud is more recent — load from cloud
-      const notesSnap = await getDocs(collection(db, 'users', currentUid, 'notes'));
-      const cloudNotes = notesSnap.docs.map((d) => d.data());
+    state.tabs = cloudData.tabs || [];
+    state.todos = cloudData.todos || [];
+    state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
+    state.selectedNoteId = cloudData.selectedNoteId || null;
+    state.notes = cloudNotes;
 
-      state.tabs = cloudData.tabs || state.tabs;
-      state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
-      state.selectedNoteId = cloudData.selectedNoteId || null;
-      state.notes = cloudNotes;
+    // Persist to localStorage and clear pending local sync queue
+    save();
+    dirtyNoteIds.clear();
+    hasDirtyState = false;
+    state.pendingDeleteNoteIds.length = 0;
 
-      // Persist to localStorage (skip cloud sync hooks)
-      save();
-      dirtyNoteIds.clear();
-      hasDirtyState = false;
-
-      rerender?.();
-    } else if (localUpdatedAt > cloudUpdatedAt) {
-      // Local is more recent — push to cloud
-      markAllDirty();
-      await syncToCloud();
-    }
-    // else: equal — already in sync
+    rerender?.();
 
     updateSyncStatus('synced');
   } catch (err) {
@@ -126,6 +126,7 @@ export async function syncToCloud() {
     const stateRef = doc(db, 'users', currentUid, 'data', 'state');
     batch.set(stateRef, {
       tabs: state.tabs,
+      todos: state.todos,
       selectedTabId: state.selectedTabId,
       selectedNoteId: state.selectedNoteId,
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),

@@ -261,7 +261,7 @@ body {
 .section-tab-actions {
   display: flex;
   gap: 1px;
-  padding-right: 4px;
+  padding-right: 2px;
   opacity: 0;
   transition: opacity 0.1s;
 }
@@ -445,7 +445,7 @@ body {
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 260px 1fr 320px;
   overflow: hidden;
 }
 
@@ -464,6 +464,11 @@ body {
 
 .editor-panel {
   background: #ffffff;
+}
+
+.todo-panel {
+  background: #fff;
+  border-left: 1px solid #edebe9;
 }
 
 .panel-head {
@@ -660,6 +665,32 @@ body {
   color: #a19f9d;
 }
 
+.note-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ghost-btn {
+  border: 1px solid #d2d0ce;
+  background: #fff;
+  border-radius: 6px;
+  color: #605e5c;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  background: #f3f2f1;
+}
+
+.note-actions-tip {
+  font-size: 11px;
+  color: #a19f9d;
+}
+
 .note-title-underline {
   margin-top: 12px;
   height: 2px;
@@ -719,6 +750,45 @@ body {
   padding-left: 12px;
   margin: 8px 0;
   color: #605e5c;
+}
+
+/* ── Todo ───────────────────────────────────────────── */
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-left: 3px solid transparent;
+}
+
+.todo-item:hover {
+  background: #f8f7fb;
+  border-left-color: #d8b7e7;
+}
+
+.todo-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.todo-main input {
+  margin-top: 2px;
+}
+
+.todo-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #323130;
+  word-break: break-word;
+}
+
+.todo-item.done .todo-text {
+  text-decoration: line-through;
+  color: #a19f9d;
 }
 
 /* disabled state */

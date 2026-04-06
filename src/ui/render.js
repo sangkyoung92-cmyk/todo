@@ -5,6 +5,7 @@ import {
   currentSectionNameEl, noteDateEl,
 } from './dom.js';
 import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
+import { renderTodos } from './todo.js';
 
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
@@ -23,9 +24,6 @@ export function renderTabs(onRender) {
         <button class="icon-btn" data-action="color" title="색상 변경">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 2a6 6 0 110 12A6 6 0 018 2zm0 2a4 4 0 100 8A4 4 0 008 4z" opacity=".2"/><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         </button>
-        <button class="icon-btn" data-action="rename" title="이름 변경">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 010 .708l-1 1-1.414-1.414 1-.999a.5.5 0 01.707 0l.707.705zM11.086 2.207L9.672.793 2 8.464V10h1.537l7.549-7.793zM1 11.5A.5.5 0 011.5 11H3v-1h-.5A1.5 1.5 0 001 11.5V14a1 1 0 001 1h11a1 1 0 001-1v-2.5a1.5 1.5 0 00-1.5-1.5H12v1h.5a.5.5 0 01.5.5V14H2v-2.5z"/></svg>
-        </button>
         <button class="icon-btn" data-action="delete" title="섹션 삭제">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
         </button>
@@ -37,6 +35,17 @@ export function renderTabs(onRender) {
       state.selectedTabId = tab.id;
       const notes = getCurrentTabNotes();
       state.selectedNoteId = notes[0]?.id || null;
+      save();
+      markStateDirty(); scheduleSync();
+      onRender();
+    });
+
+    li.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.icon-btn')) return;
+      const next = prompt('섹션 이름을 입력하세요.', tab.name);
+      if (!next?.trim()) return;
+      tab.name = next.trim();
+      tab.updatedAt = nowISO();
       save();
       markStateDirty(); scheduleSync();
       onRender();
@@ -54,16 +63,6 @@ export function renderTabs(onRender) {
         popup.style.left = `${rect.left}px`;
         popup.classList.add('open');
       }
-    });
-
-    li.querySelector('[data-action="rename"]').addEventListener('click', () => {
-      const next = prompt('섹션 이름을 입력하세요.', tab.name);
-      if (!next?.trim()) return;
-      tab.name = next.trim();
-      tab.updatedAt = nowISO();
-      save();
-      markStateDirty(); scheduleSync();
-      onRender();
     });
 
     li.querySelector('[data-action="delete"]').addEventListener('click', () => {
@@ -208,6 +207,7 @@ export function renderAll(onRender) {
   renderTabs(onRender);
   renderNotes(onRender);
   renderEditor();
+  renderTodos(onRender);
 }
 
 function stripHtml(html) {
