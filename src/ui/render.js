@@ -61,7 +61,15 @@ export function renderTabs(onRender) {
       document.querySelectorAll('.tab-color-palette.open').forEach((p) => {
         if (p !== palette) p.classList.remove('open');
       });
-      palette.classList.toggle('open');
+      if (palette.classList.contains('open')) {
+        palette.classList.remove('open');
+        return;
+      }
+      // Position fixed relative to button
+      const rect = e.currentTarget.getBoundingClientRect();
+      palette.style.top = `${rect.bottom + 6}px`;
+      palette.style.left = `${rect.left}px`;
+      palette.classList.add('open');
     });
 
     li.querySelector('.tab-color-palette').addEventListener('click', (e) => {

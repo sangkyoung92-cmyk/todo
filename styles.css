@@ -718,10 +718,7 @@ body {
 /* ── Tab color palette ───────────────────────────────── */
 .tab-color-palette {
   display: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   background: white;
   border: 1px solid #e1dfdd;
   border-radius: 6px;
