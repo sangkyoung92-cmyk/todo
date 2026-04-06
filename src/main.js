@@ -39,7 +39,7 @@ function addNote() {
   const note = {
     id: uid(),
     tabId: state.selectedTabId,
-    title: '제목 없음',
+    title: '',
     content: '',
     createdAt: now,
     updatedAt: now,
@@ -57,7 +57,6 @@ function addNote() {
   // Focus the title input for immediate editing
   setTimeout(() => {
     titleEl.focus();
-    titleEl.select();
   }, 50);
 }
 
@@ -85,10 +84,13 @@ function scheduleAutoSave() {
   }, 800);
 }
 
-// ── Toolbar ──────────────────────────────────────────────
+// ── Toolbar ──────────────────────────────────────────
 toolbarEl.addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tbtn');
   if (!btn) return;
+
+  // Ignore color-btn — handled separately
+  if (btn.id === 'color-btn') return;
 
   e.preventDefault(); // keep focus in editor
 
@@ -116,7 +118,36 @@ contentEl.addEventListener('keyup', updateToolbarState);
 contentEl.addEventListener('mouseup', updateToolbarState);
 contentEl.addEventListener('selectionchange', updateToolbarState);
 
-// ── Search ───────────────────────────────────────────────
+// ── Text Color Picker ────────────────────────────────
+const colorBtn = document.getElementById('color-btn');
+const colorPalette = document.getElementById('color-palette');
+const colorBtnBar = document.getElementById('color-btn-bar');
+
+colorBtn.addEventListener('mousedown', (e) => {
+  e.preventDefault(); // keep focus in editor
+  colorPalette.classList.toggle('open');
+});
+
+// Close palette when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.color-picker-wrap')) {
+    colorPalette.classList.remove('open');
+  }
+});
+
+colorPalette.addEventListener('mousedown', (e) => {
+  e.preventDefault(); // keep focus in editor
+  const swatch = e.target.closest('.color-swatch');
+  if (!swatch) return;
+
+  const color = swatch.dataset.color;
+  document.execCommand('foreColor', false, color);
+  colorBtnBar.style.background = color;
+  contentEl.focus();
+  colorPalette.classList.remove('open');
+});
+
+// ── Search ───────────────────────────────────────────
 searchInput.addEventListener('input', () => {
   state.searchQuery = searchInput.value;
   renderNotes(rerender);
@@ -131,7 +162,7 @@ searchInput.addEventListener('keydown', (e) => {
   }
 });
 
-// ── Event listeners ──────────────────────────────────────
+// ── Event listeners ──────────────────────────────────
 addTabBtn.addEventListener('click', addTab);
 addNoteBtn.addEventListener('click', addNote);
 titleEl.addEventListener('input', scheduleAutoSave);

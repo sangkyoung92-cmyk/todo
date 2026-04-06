@@ -10,15 +10,15 @@ export function renderTabs(onRender) {
 
   state.tabs.forEach((tab) => {
     const li = document.createElement('li');
-    li.className = `section-item ${tab.id === state.selectedTabId ? 'active' : ''}`;
+    li.className = `section-tab ${tab.id === state.selectedTabId ? 'active' : ''}`;
+    // Set colored background for inactive tabs; active tab is white via CSS
+    if (tab.id !== state.selectedTabId) {
+      li.style.background = tab.color;
+    }
 
     li.innerHTML = `
-      <div class="section-color-bar" style="background:${tab.color}"></div>
-      <div class="section-item-body">
-        <div class="section-name">${escapeHtml(tab.name)}</div>
-        <div class="section-meta">${noteCountForTab(tab.id)}개 페이지</div>
-      </div>
-      <div class="section-actions">
+      <span class="section-tab-label">${escapeHtml(tab.name)}</span>
+      <div class="section-tab-actions">
         <button class="icon-btn" data-action="rename" title="이름 변경">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 010 .708l-1 1-1.414-1.414 1-.999a.5.5 0 01.707 0l.707.705zM11.086 2.207L9.672.793 2 8.464V10h1.537l7.549-7.793zM1 11.5A.5.5 0 011.5 11H3v-1h-.5A1.5 1.5 0 001 11.5V14a1 1 0 001 1h11a1 1 0 001-1v-2.5a1.5 1.5 0 00-1.5-1.5H12v1h.5a.5.5 0 01.5.5V14H2v-2.5z"/></svg>
         </button>
@@ -68,10 +68,6 @@ export function renderTabs(onRender) {
 
     tabListEl.appendChild(li);
   });
-}
-
-function noteCountForTab(tabId) {
-  return state.notes.filter((n) => n.tabId === tabId).length;
 }
 
 export function renderNotes(onRender) {

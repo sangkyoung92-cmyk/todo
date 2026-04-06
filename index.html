@@ -32,6 +32,15 @@
       </div>
     </header>
 
+    <!-- Section tabs bar (OneNote style) -->
+    <nav class="section-tabs-bar">
+      <ul id="tab-list" class="section-tabs-list"></ul>
+      <button id="add-tab-btn" class="add-section-tab-btn" title="섹션 추가">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+        섹션
+      </button>
+    </nav>
+
     <!-- Formatting toolbar -->
     <div class="toolbar" id="toolbar">
       <div class="toolbar-group">
@@ -65,6 +74,30 @@
         </button>
       </div>
       <div class="toolbar-sep"></div>
+      <!-- Text color picker -->
+      <div class="toolbar-group color-picker-wrap">
+        <button class="tbtn color-btn" id="color-btn" title="글자 색상">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <text x="3" y="15" font-size="14" font-weight="bold" font-family="serif">A</text>
+          </svg>
+          <span class="color-btn-bar" id="color-btn-bar" style="background:#201f1e"></span>
+        </button>
+        <div class="color-palette" id="color-palette">
+          <button class="color-swatch" data-color="#000000" style="background:#000000" title="검정"></button>
+          <button class="color-swatch" data-color="#404040" style="background:#404040" title="진회색"></button>
+          <button class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="빨강"></button>
+          <button class="color-swatch" data-color="#d35400" style="background:#d35400" title="주황"></button>
+          <button class="color-swatch" data-color="#c19c00" style="background:#c19c00" title="노랑"></button>
+          <button class="color-swatch" data-color="#107c10" style="background:#107c10" title="초록"></button>
+          <button class="color-swatch" data-color="#0078d4" style="background:#0078d4" title="파랑"></button>
+          <button class="color-swatch" data-color="#1f4db6" style="background:#1f4db6" title="남색"></button>
+          <button class="color-swatch" data-color="#7B2FA0" style="background:#7B2FA0" title="보라"></button>
+          <button class="color-swatch" data-color="#b4009e" style="background:#b4009e" title="자주"></button>
+          <button class="color-swatch" data-color="#038387" style="background:#038387" title="청록"></button>
+          <button class="color-swatch" data-color="#a19f9d" style="background:#a19f9d" title="회색"></button>
+        </div>
+      </div>
+      <div class="toolbar-sep"></div>
       <div class="toolbar-group">
         <button class="tbtn" data-cmd="removeFormat" title="서식 지우기">
           <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
@@ -73,18 +106,6 @@
     </div>
 
     <main class="layout">
-      <!-- Sections panel -->
-      <aside class="panel sections-panel">
-        <div class="panel-head">
-          <h2>섹션</h2>
-          <button id="add-tab-btn" class="add-btn">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-            섹션
-          </button>
-        </div>
-        <ul id="tab-list" class="list"></ul>
-      </aside>
-
       <!-- Pages panel -->
       <section class="panel pages-panel">
         <div class="panel-head">
