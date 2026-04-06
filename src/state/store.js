@@ -12,6 +12,7 @@ export const state = {
   selectedNoteId: null,
   saveTimer: null,
   searchQuery: '',
+  pendingDeleteNoteIds: [], // tracks note IDs to delete from Firestore (not persisted)
 };
 
 export function uid() {

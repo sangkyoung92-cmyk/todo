@@ -9,3 +9,5 @@ export const searchInput = document.getElementById('search-input');
 export const currentSectionNameEl = document.getElementById('current-section-name');
 export const noteDateEl = document.getElementById('note-date');
 export const toolbarEl = document.getElementById('toolbar');
+export const syncStatusEl = document.getElementById('sync-status');
+export const authAreaEl = document.getElementById('auth-area');

@@ -1,9 +1,14 @@
 import { load, nowISO, save, state, uid, getNextSectionColor } from './state/store.js';
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
-  searchInput, toolbarEl,
+  searchInput, toolbarEl, syncStatusEl, authAreaEl,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
+import { signIn, signOutUser, onAuthChange } from './auth.js';
+import {
+  setCurrentUser, markDirty, markStateDirty, scheduleSync,
+  loadFromCloud, setSyncStatusCallback,
+} from './sync/cloud.js';
 
 function rerender() {
   renderAll(rerender);
@@ -26,6 +31,7 @@ function addTab() {
   state.selectedTabId = tab.id;
   state.selectedNoteId = null;
   save();
+  markStateDirty(); scheduleSync();
   rerender();
 }
 
@@ -52,6 +58,7 @@ function addNote() {
   if (tab) tab.updatedAt = now;
 
   save();
+  markDirty(note.id); markStateDirty(); scheduleSync();
   rerender();
 
   // Focus the title input for immediate editing
@@ -78,6 +85,7 @@ function scheduleAutoSave() {
     if (tab) tab.updatedAt = now;
 
     save();
+    markDirty(note.id); scheduleSync();
     renderNotes(rerender);
     renderTabs(rerender);
     saveStatusEl.textContent = '저장됨';
@@ -148,6 +156,7 @@ tabColorPopup.addEventListener('click', (e) => {
   tab.color = swatch.dataset.color;
   tab.updatedAt = nowISO();
   save();
+  markStateDirty(); scheduleSync();
   tabColorPopup.classList.remove('open');
   rerender();
 });
@@ -341,6 +350,50 @@ titleEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
     contentEl.focus();
+  }
+});
+
+// ── Cloud Sync Status ────────────────────────────────
+const SYNC_LABELS = {
+  syncing: '☁ 동기화 중...',
+  synced: '☁ 동기화됨',
+  error: '☁ 오류',
+};
+
+setSyncStatusCallback((status) => {
+  syncStatusEl.textContent = SYNC_LABELS[status] || '';
+  syncStatusEl.dataset.status = status;
+});
+
+// ── Auth ─────────────────────────────────────────────
+function renderAuthArea(user) {
+  if (user) {
+    authAreaEl.innerHTML = `
+      <span class="user-info">
+        ${user.photoURL
+          ? `<img class="user-avatar" src="${user.photoURL}" alt="" referrerpolicy="no-referrer" />`
+          : `<span class="user-avatar-initials">${(user.displayName || user.email || '?')[0].toUpperCase()}</span>`
+        }
+        <span class="user-name">${user.displayName || user.email || ''}</span>
+      </span>
+      <button id="logout-btn" class="logout-btn">로그아웃</button>
+    `;
+    document.getElementById('logout-btn').addEventListener('click', () => signOutUser());
+  } else {
+    authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">Google 로그인</button>`;
+    document.getElementById('login-btn').addEventListener('click', () => signIn());
+    syncStatusEl.textContent = '';
+  }
+}
+
+onAuthChange((user) => {
+  renderAuthArea(user);
+  if (user) {
+    setCurrentUser(user.uid);
+    loadFromCloud(rerender);
+  } else {
+    setCurrentUser(null);
+    syncStatusEl.textContent = '';
   }
 });
 
