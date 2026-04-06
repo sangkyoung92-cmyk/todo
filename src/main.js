@@ -381,9 +381,24 @@ function renderAuthArea(user) {
     document.getElementById('logout-btn').addEventListener('click', () => signOutUser());
   } else {
     authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">Google 로그인</button>`;
-    document.getElementById('login-btn').addEventListener('click', () => signIn());
+    document.getElementById('login-btn').addEventListener('click', () => {
+      if (hasPotentialLocalDraft()) {
+        const ok = window.confirm(
+          '로그인 시 클라우드 데이터가 로컬 데이터를 덮어쓸 수 있어요.\n'
+          + '현재 이 브라우저에서 작성한 내용이 사라질 수 있습니다.\n'
+          + '계속 로그인할까요?',
+        );
+        if (!ok) return;
+      }
+      signIn();
+    });
     syncStatusEl.textContent = '';
   }
+}
+
+function hasPotentialLocalDraft() {
+  if (state.tabs.length > 0) return true;
+  return state.notes.some((note) => (note.title || '').trim() || (note.content || '').trim());
 }
 
 onAuthChange((user) => {
