@@ -5,3 +5,7 @@ export const addNoteBtn = document.getElementById('add-note-btn');
 export const titleEl = document.getElementById('note-title');
 export const contentEl = document.getElementById('note-content');
 export const saveStatusEl = document.getElementById('save-status');
+export const searchInput = document.getElementById('search-input');
+export const currentSectionNameEl = document.getElementById('current-section-name');
+export const noteDateEl = document.getElementById('note-date');
+export const toolbarEl = document.getElementById('toolbar');

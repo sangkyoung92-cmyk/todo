@@ -3,46 +3,136 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>노트 MVP</title>
+    <title>내 노트북</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Top header -->
     <header class="topbar">
-      <h1>노트 MVP (탭 + 노트)</h1>
-      <p>OneNote 핵심 기능 초간단 버전</p>
+      <div class="topbar-left">
+        <svg class="notebook-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="2" width="16" height="20" rx="2" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
+          <rect x="7" y="2" width="2" height="20" fill="white" fill-opacity="0.35"/>
+          <line x1="10" y1="7" x2="18" y2="7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="11" x2="18" y2="11" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="15" x2="15" y2="15" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="topbar-title">
+          <span class="notebook-name">내 노트북</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+          </svg>
+          <input id="search-input" type="text" placeholder="노트 검색..." autocomplete="off" />
+        </div>
+        <span id="save-status" class="save-status">저장됨</span>
+      </div>
     </header>
 
-    <main class="layout">
-      <aside class="panel">
-        <div class="panel-head">
-          <h2>탭</h2>
-          <button id="add-tab-btn">+ 탭</button>
-        </div>
-        <ul id="tab-list" class="list"></ul>
-      </aside>
+    <!-- Section tabs bar (OneNote style) -->
+    <nav class="section-tabs-bar">
+      <ul id="tab-list" class="section-tabs-list"></ul>
+      <button id="add-tab-btn" class="add-section-tab-btn" title="섹션 추가">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+        섹션
+      </button>
+    </nav>
 
-      <section class="panel">
+    <!-- Formatting toolbar -->
+    <div class="toolbar" id="toolbar">
+      <div class="toolbar-group">
+        <button class="tbtn" data-cmd="bold" title="굵게 (Ctrl+B)"><b>B</b></button>
+        <button class="tbtn" data-cmd="italic" title="기울임 (Ctrl+I)"><i>I</i></button>
+        <button class="tbtn" data-cmd="underline" title="밑줄 (Ctrl+U)"><u>U</u></button>
+        <button class="tbtn" data-cmd="strikeThrough" title="취소선"><s>S</s></button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="tbtn tbtn-text" data-cmd="formatBlock" data-val="h1" title="제목 1">H1</button>
+        <button class="tbtn tbtn-text" data-cmd="formatBlock" data-val="h2" title="제목 2">H2</button>
+        <button class="tbtn tbtn-text" data-cmd="formatBlock" data-val="p" title="본문">본문</button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="tbtn" data-cmd="insertUnorderedList" title="글머리 기호 목록">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a1 1 0 100 2 1 1 0 000-2zM9 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zm0 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zM5 9a1 1 0 100 2 1 1 0 000-2zm4 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zm-4 0a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
+        </button>
+        <button class="tbtn" data-cmd="insertOrderedList" title="번호 매기기 목록">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a1 1 0 000 2V4zm0 0V3a1 1 0 011-1h.01A1 1 0 016 3v3a1 1 0 01-1 1H4a1 1 0 010-2zm5 0a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1zm0 5a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1zm0 5a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1zM4 9a1 1 0 000 2V9zm0 0V8a1 1 0 011-1h.01A1 1 0 016 8v3a1 1 0 01-1 1H4a1 1 0 010-2zm0 5a1 1 0 000 2v-2zm0 0v-1a1 1 0 011-1h.01a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 010-2z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="tbtn" data-cmd="indent" title="들여쓰기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm4 5a1 1 0 011-1h8a1 1 0 110 2H8a1 1 0 01-1-1zm-4-3a1 1 0 011.707-.707l2 2a1 1 0 010 1.414l-2 2A1 1 0 013 16v-4z" clip-rule="evenodd"/></svg>
+        </button>
+        <button class="tbtn" data-cmd="outdent" title="내어쓰기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm4 5a1 1 0 011-1h8a1 1 0 110 2H8a1 1 0 01-1-1zm-4.707-2.293a1 1 0 010-1.414l2-2A1 1 0 016 5v4a1 1 0 01-1.707.707l-2-2z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <!-- Text color picker -->
+      <div class="toolbar-group color-picker-wrap">
+        <button class="tbtn color-btn" id="color-btn" title="글자 색상">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <text x="3" y="15" font-size="14" font-weight="bold" font-family="serif">A</text>
+          </svg>
+          <span class="color-btn-bar" id="color-btn-bar" style="background:#201f1e"></span>
+        </button>
+        <div class="color-palette" id="color-palette">
+          <button class="color-swatch" data-color="#000000" style="background:#000000" title="검정"></button>
+          <button class="color-swatch" data-color="#404040" style="background:#404040" title="진회색"></button>
+          <button class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="빨강"></button>
+          <button class="color-swatch" data-color="#d35400" style="background:#d35400" title="주황"></button>
+          <button class="color-swatch" data-color="#c19c00" style="background:#c19c00" title="노랑"></button>
+          <button class="color-swatch" data-color="#107c10" style="background:#107c10" title="초록"></button>
+          <button class="color-swatch" data-color="#0078d4" style="background:#0078d4" title="파랑"></button>
+          <button class="color-swatch" data-color="#1f4db6" style="background:#1f4db6" title="남색"></button>
+          <button class="color-swatch" data-color="#7B2FA0" style="background:#7B2FA0" title="보라"></button>
+          <button class="color-swatch" data-color="#b4009e" style="background:#b4009e" title="자주"></button>
+          <button class="color-swatch" data-color="#038387" style="background:#038387" title="청록"></button>
+          <button class="color-swatch" data-color="#a19f9d" style="background:#a19f9d" title="회색"></button>
+        </div>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="tbtn" data-cmd="removeFormat" title="서식 지우기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <main class="layout">
+      <!-- Pages panel -->
+      <section class="panel pages-panel">
         <div class="panel-head">
-          <h2>노트</h2>
-          <button id="add-note-btn">+ 노트</button>
+          <h2 id="current-section-name">페이지</h2>
+          <button id="add-note-btn" class="add-btn">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+            페이지
+          </button>
         </div>
         <ul id="note-list" class="list"></ul>
       </section>
 
+      <!-- Editor panel -->
       <section class="panel editor-panel">
-        <div class="panel-head">
-          <h2>편집기</h2>
-          <small id="save-status">저장 대기</small>
-        </div>
-        <div class="editor-fields">
-          <label>
-            제목
-            <input id="note-title" type="text" placeholder="노트 제목" />
-          </label>
-          <label>
-            내용
-            <textarea id="note-content" placeholder="회의록/업무 내용을 작성하세요."></textarea>
-          </label>
+        <div class="editor-inner">
+          <div class="note-header-area">
+            <input id="note-title" type="text" class="note-title-input" placeholder="제목 없음" />
+            <div id="note-date" class="note-date"></div>
+            <div class="note-title-underline"></div>
+          </div>
+          <div
+            id="note-content"
+            class="note-content"
+            contenteditable="true"
+            spellcheck="true"
+            data-placeholder="여기에 내용을 입력하세요..."
+          ></div>
         </div>
       </section>
     </main>
