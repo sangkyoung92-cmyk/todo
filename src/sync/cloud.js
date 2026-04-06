@@ -60,6 +60,37 @@ function getLocalMaxUpdatedAt() {
   return all.reduce((max, d) => (d > max ? d : max), '');
 }
 
+function mergeByUpdatedAt(localItems, cloudItems) {
+  const byId = new Map();
+
+  localItems.forEach((item) => {
+    byId.set(item.id, item);
+  });
+
+  cloudItems.forEach((item) => {
+    const local = byId.get(item.id);
+    if (!local) {
+      byId.set(item.id, item);
+      return;
+    }
+    const localUpdatedAt = local.updatedAt || '';
+    const cloudUpdatedAt = item.updatedAt || '';
+    byId.set(item.id, cloudUpdatedAt > localUpdatedAt ? item : local);
+  });
+
+  return [...byId.values()];
+}
+
+function haveDifferentIdsOrUpdatedAt(a, b) {
+  if (a.length !== b.length) return true;
+  const aMap = new Map(a.map((x) => [x.id, x.updatedAt || '']));
+  for (const item of b) {
+    if (!aMap.has(item.id)) return true;
+    if (aMap.get(item.id) !== (item.updatedAt || '')) return true;
+  }
+  return false;
+}
+
 /**
  * On sign-in: compare local vs cloud and pick the newer one.
  * @param {Function} rerender - call to re-render the whole UI
@@ -81,31 +112,45 @@ export async function loadFromCloud(rerender) {
     }
 
     const cloudData = stateSnap.data();
-    const cloudUpdatedAt = cloudData.updatedAt || '';
-    const localUpdatedAt = getLocalMaxUpdatedAt();
+    const notesSnap = await getDocs(collection(db, 'users', currentUid, 'notes'));
+    const cloudNotes = notesSnap.docs.map((d) => d.data());
 
-    if (cloudUpdatedAt > localUpdatedAt) {
-      // Cloud is more recent — load from cloud
-      const notesSnap = await getDocs(collection(db, 'users', currentUid, 'notes'));
-      const cloudNotes = notesSnap.docs.map((d) => d.data());
+    const localTabs = state.tabs;
+    const localNotes = state.notes;
+    const mergedTabs = mergeByUpdatedAt(localTabs, cloudData.tabs || []);
+    const mergedNotes = mergeByUpdatedAt(localNotes, cloudNotes);
 
-      state.tabs = cloudData.tabs || state.tabs;
-      state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
-      state.selectedNoteId = cloudData.selectedNoteId || null;
-      state.notes = cloudNotes;
+    const mergedTabIds = new Set(mergedTabs.map((t) => t.id));
+    const mergedSelectedTabId = mergedTabIds.has(state.selectedTabId)
+      ? state.selectedTabId
+      : (mergedTabIds.has(cloudData.selectedTabId) ? cloudData.selectedTabId : mergedTabs[0]?.id || null);
 
-      // Persist to localStorage (skip cloud sync hooks)
-      save();
-      dirtyNoteIds.clear();
-      hasDirtyState = false;
+    const mergedNoteIds = new Set(mergedNotes.map((n) => n.id));
+    const mergedSelectedNoteId = mergedNoteIds.has(state.selectedNoteId)
+      ? state.selectedNoteId
+      : (mergedNoteIds.has(cloudData.selectedNoteId) ? cloudData.selectedNoteId : null);
 
-      rerender?.();
-    } else if (localUpdatedAt > cloudUpdatedAt) {
-      // Local is more recent — push to cloud
+    const tabsChanged = haveDifferentIdsOrUpdatedAt(localTabs, mergedTabs);
+    const notesChanged = haveDifferentIdsOrUpdatedAt(localNotes, mergedNotes);
+    const selectionChanged = state.selectedTabId !== mergedSelectedTabId || state.selectedNoteId !== mergedSelectedNoteId;
+
+    state.tabs = mergedTabs;
+    state.notes = mergedNotes;
+    state.selectedTabId = mergedSelectedTabId;
+    state.selectedNoteId = mergedSelectedNoteId;
+
+    // Persist merged state to localStorage
+    save();
+    dirtyNoteIds.clear();
+    hasDirtyState = false;
+
+    rerender?.();
+
+    // If merge introduced local-only changes, write merged result back to cloud
+    if (tabsChanged || notesChanged || selectionChanged) {
       markAllDirty();
       await syncToCloud();
     }
-    // else: equal — already in sync
 
     updateSyncStatus('synced');
   } catch (err) {
