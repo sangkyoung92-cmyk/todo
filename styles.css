@@ -254,6 +254,22 @@ body {
   font-weight: 500;
 }
 
+.section-tab-rename-input {
+  width: 140px;
+  max-width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+  font: inherit;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #201f1e;
+}
+
+.section-tab-rename-input:focus {
+  outline: 2px solid #2564cf;
+  outline-offset: 0;
+}
+
 .section-tab.active .section-tab-label {
   font-weight: 600;
 }
