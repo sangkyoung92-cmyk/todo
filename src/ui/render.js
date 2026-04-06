@@ -7,10 +7,13 @@ import {
 import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { renderTodos } from './todo.js';
 
+let editingTabId = null;
+
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
 
   state.tabs.forEach((tab) => {
+    const isEditing = editingTabId === tab.id;
     const li = document.createElement('li');
     li.className = `section-tab ${tab.id === state.selectedTabId ? 'active' : ''}`;
     // Set colored background for inactive tabs; active tab is white via CSS
@@ -19,7 +22,11 @@ export function renderTabs(onRender) {
     }
 
     li.innerHTML = `
-      <span class="section-tab-label">${escapeHtml(tab.name)}</span>
+      <span class="section-tab-label">
+        ${isEditing
+    ? `<input class="section-tab-rename-input" type="text" value="${escapeHtml(tab.name)}" aria-label="섹션 이름 수정" />`
+    : escapeHtml(tab.name)}
+      </span>
       <div class="section-tab-actions">
         <button class="icon-btn" data-action="color" title="색상 변경">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 2a6 6 0 110 12A6 6 0 018 2zm0 2a4 4 0 100 8A4 4 0 008 4z" opacity=".2"/><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -31,6 +38,7 @@ export function renderTabs(onRender) {
     `;
 
     li.addEventListener('click', (e) => {
+      if (isEditing) return;
       if (e.target.closest('.icon-btn')) return;
       state.selectedTabId = tab.id;
       const notes = getCurrentTabNotes();
@@ -42,16 +50,58 @@ export function renderTabs(onRender) {
 
     li.addEventListener('dblclick', (e) => {
       if (e.target.closest('.icon-btn')) return;
-      const next = prompt('섹션 이름을 입력하세요.', tab.name);
-      if (!next?.trim()) return;
-      tab.name = next.trim();
-      tab.updatedAt = nowISO();
-      save();
-      markStateDirty(); scheduleSync();
+      editingTabId = tab.id;
       onRender();
     });
 
+    if (isEditing) {
+      const input = li.querySelector('.section-tab-rename-input');
+      const finishRename = ({ commit }) => {
+        if (!commit) {
+          editingTabId = null;
+          onRender();
+          return;
+        }
+
+        const nextName = input.value.trim();
+        if (!nextName) {
+          input.focus();
+          input.select();
+          return;
+        }
+
+        if (nextName !== tab.name) {
+          tab.name = nextName;
+          tab.updatedAt = nowISO();
+          save();
+          markStateDirty(); scheduleSync();
+        }
+        editingTabId = null;
+        onRender();
+      };
+
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('dblclick', (e) => e.stopPropagation());
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishRename({ commit: true });
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          finishRename({ commit: false });
+        }
+      });
+      input.addEventListener('blur', () => finishRename({ commit: true }));
+
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    }
+
     li.querySelector('[data-action="color"]').addEventListener('click', (e) => {
+      if (isEditing) return;
       e.stopPropagation();
       const popup = document.getElementById('tab-color-popup');
       const rect = e.currentTarget.getBoundingClientRect();
@@ -66,6 +116,7 @@ export function renderTabs(onRender) {
     });
 
     li.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      if (isEditing) return;
       if (state.tabs.length === 1) {
         alert('섹션은 최소 1개 필요합니다.');
         return;
