@@ -135,7 +135,6 @@ export function renderTodos(onRender) {
           const oldDiff = todo.difficulty;
           const idx = DIFFICULTY_CYCLE.indexOf(oldDiff);
           todo.difficulty = DIFFICULTY_CYCLE[(idx + 1) % DIFFICULTY_CYCLE.length];
-          todo.updatedAt = nowISO();
           logBehavior('difficulty_change', todo.id, oldDiff, todo.difficulty);
           save();
           markStateDirty(); scheduleSync();

@@ -3,6 +3,7 @@ const DIFFICULTY_COLORS = { '상': '#e74c3c', '중': '#e67e22', '하': '#27ae60'
 const overlayEl = document.getElementById('todo-modal-overlay');
 const modalEl = document.getElementById('todo-modal');
 const textInput = document.getElementById('todo-modal-text');
+const projectInput = document.getElementById('todo-modal-project');
 const deadlineInput = document.getElementById('todo-modal-deadline');
 const diffBtns = document.querySelectorAll('.todo-modal-diff-btn');
 const submitBtn = document.getElementById('todo-modal-submit');
@@ -24,6 +25,7 @@ function setDifficulty(diff) {
 
 function open() {
   textInput.value = '';
+  projectInput.value = '';
   deadlineInput.value = '';
   setDifficulty('중');
   overlayEl.classList.add('open');
@@ -48,6 +50,7 @@ function submit() {
   }
   close({
     text,
+    project: projectInput.value.trim() || null,
     difficulty: selectedDifficulty,
     deadline: deadlineInput.value || null,
   });
@@ -72,7 +75,7 @@ modalEl.addEventListener('keydown', (e) => {
 
 /**
  * 할 일 추가 모달을 열고 결과를 반환한다.
- * @returns {Promise<{ text: string, difficulty: string, deadline: string|null } | null>}
+ * @returns {Promise<{ text: string, project: string|null, difficulty: string, deadline: string|null } | null>}
  */
 export function showAddTodoModal() {
   return new Promise((resolve) => {
