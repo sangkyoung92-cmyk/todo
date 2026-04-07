@@ -7,7 +7,7 @@ import {
   addAiScheduleTaskBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
-import { signIn, signOutUser, onAuthChange } from './auth.js';
+import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
   loadFromCloud, setSyncStatusCallback,
@@ -671,7 +671,7 @@ function renderAuthArea(user) {
     document.getElementById('logout-btn').addEventListener('click', () => signOutUser());
   } else {
     authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">Google 로그인</button>`;
-    document.getElementById('login-btn').addEventListener('click', () => {
+    document.getElementById('login-btn').addEventListener('click', async () => {
       if (hasPotentialLocalDraft()) {
         const ok = window.confirm(
           '로그인 시 클라우드 데이터가 로컬 데이터를 덮어쓸 수 있어요.\n'
@@ -680,7 +680,29 @@ function renderAuthArea(user) {
         );
         if (!ok) return;
       }
-      signIn();
+      try {
+        await signIn();
+      } catch (err) {
+        const code = err?.code || '';
+
+        if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+          await signInRedirect();
+          return;
+        }
+
+        if (code === 'auth/unauthorized-domain') {
+          alert(
+            'Firebase 인증 도메인 설정이 필요합니다.\n'
+            + 'Firebase Console > Authentication > Settings > Authorized domains에\n'
+            + 'sangkyoung92-cmyk.github.io 를 추가해주세요.',
+          );
+          return;
+        }
+
+        if (code !== 'auth/popup-closed-by-user') {
+          alert(`로그인 실패: ${err.message || code || '알 수 없는 오류'}`);
+        }
+      }
     });
     syncStatusEl.textContent = '';
   }

@@ -1,9 +1,9 @@
 # 프로젝트 컨텍스트
 
 ## 배포
-- 플랫폼: Netlify
-- URL: https://gregarious-eclair-bcce20.netlify.app/
-- 배포 브랜치: `main` (main에 push하면 자동 배포)
+- 플랫폼: GitHub Pages
+- URL: https://sangkyoung92-cmyk.github.io/todo/
+- 배포 브랜치: `main` (`/` 루트 정적 파일 배포)
 
 ## 기술 스택
 - Vanilla JS (ES Modules), HTML, CSS — 빌드 도구 없음
