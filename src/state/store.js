@@ -9,6 +9,7 @@ export const state = {
   tabs: [],
   notes: [],
   todos: [],
+  behaviorLog: [],
   selectedTabId: null,
   selectedNoteId: null,
   saveTimer: null,
@@ -40,6 +41,7 @@ export function save() {
     tabs: state.tabs,
     notes: state.notes,
     todos: state.todos,
+    behaviorLog: state.behaviorLog,
     selectedTabId: state.selectedTabId,
     selectedNoteId: state.selectedNoteId,
   };
@@ -54,6 +56,7 @@ export function load() {
     state.tabs = [];
     state.notes = [];
     state.todos = [];
+    state.behaviorLog = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;
     return;
@@ -64,6 +67,7 @@ export function load() {
     state.tabs = parsed.tabs || [];
     state.notes = parsed.notes || [];
     state.todos = parsed.todos || [];
+    state.behaviorLog = parsed.behaviorLog || [];
 
     // Ensure all tabs have a color
     state.tabs.forEach((tab, i) => {
@@ -80,6 +84,7 @@ export function load() {
     state.tabs = [];
     state.notes = [];
     state.todos = [];
+    state.behaviorLog = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;
   }

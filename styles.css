@@ -1085,6 +1085,81 @@ body {
   color: #a19f9d;
 }
 
+.todo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.todo-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.todo-difficulty {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 1px 7px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.todo-difficulty:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+.todo-deadline {
+  font-size: 11px;
+  color: #8a8886;
+  cursor: pointer;
+}
+
+.todo-deadline:hover {
+  color: #7B2FA0;
+  text-decoration: underline;
+}
+
+.todo-deadline.overdue {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.todo-deadline.today {
+  color: #e67e22;
+  font-weight: 600;
+}
+
+.todo-deadline-input {
+  font-size: 11px;
+  border: 1px solid #d2b0e3;
+  border-radius: 4px;
+  padding: 1px 4px;
+  outline: none;
+  max-width: 130px;
+}
+
+.todo-text-input {
+  font-size: 13px;
+  border: 1px solid #d2b0e3;
+  border-radius: 4px;
+  padding: 1px 4px;
+  outline: none;
+  width: 100%;
+  line-height: 1.4;
+}
+
+.todo-item.done .todo-meta {
+  opacity: 0.5;
+}
+
 /* disabled state */
 .note-title-input:disabled {
   color: #c8c6c4;

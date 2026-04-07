@@ -12,6 +12,7 @@ import {
 import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
+import { buildBehaviorSummary } from './tracking/behavior.js';
 
 function rerender() {
   renderAll(rerender);
@@ -91,7 +92,8 @@ async function extractTodosFromCurrentNote() {
   extractTodoBtn.textContent = 'AI 분석 중...';
 
   try {
-    const sections = await extractTodosWithAI(note.content);
+    const behaviorSummary = buildBehaviorSummary();
+    const sections = await extractTodosWithAI(note.content, state.todos, behaviorSummary, note.createdAt);
 
     if (!sections.length) {
       alert('노트에서 추출할 할 일이 없습니다.');
@@ -100,10 +102,11 @@ async function extractTodosFromCurrentNote() {
 
     let addedCount = 0;
     sections.forEach((section) => {
-      section.todos.forEach((todoText) => {
+      section.todos.forEach((todoItem) => {
+        const todoText = todoItem.text;
         const isDup = state.todos.some((t) => t.text === todoText && t.project === section.project);
         if (!isDup) {
-          addTodo(todoText, note.id, section.project);
+          addTodo(todoText, note.id, section.project, todoItem.difficulty, todoItem.deadline);
           addedCount++;
         }
       });
