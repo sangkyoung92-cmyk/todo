@@ -15,12 +15,12 @@ export function saveApiKey(key) {
 }
 
 /**
- * 노트 HTML을 Gemini 2.5 Flash API로 분석해서 섹션별 할 일 목록을 반환한다.
+ * 노트 HTML을 Gemini 2.5 Flash API로 분석해서 할 일 목록을 반환한다.
  * @param {string} noteHtml
  * @param {Array} existingTodos - state.todos (기한 분배용)
  * @param {string} behaviorSummary - 사용자 행동 요약 (AI 학습용)
  * @param {string} noteCreatedAt - 노트 작성일 ISO string
- * @returns {Promise<Array<{project: string, todos: Array<{text: string, difficulty: string, deadline: string}>}>>}
+ * @returns {Promise<Array<{text: string, difficulty: string, deadline: string}>>}
  */
 export async function extractTodosWithAI(noteHtml, existingTodos = [], behaviorSummary = '', noteCreatedAt = '') {
   const apiKey = getApiKey();
@@ -96,9 +96,6 @@ function buildPrompt(content, today, noteDate, deadlineDist, behaviorSummary) {
   - 아래 기존 할 일 마감일 분포를 참고해 특정 날짜에 몰리지 않게 분산 배치
   - 난이도 "상"은 여유 있는 날짜에, "하"는 바쁜 날에도 배치 가능
 
-노트에 섹션 제목(=== 제목 === 또는 -- 제목 --으로 표시됨)이 있으면 프로젝트 이름으로 사용하고,
-제목이 없거나 특정 섹션에 속하지 않는 항목은 "기타"로 분류하세요.
-
 오늘 날짜: ${today}
 노트 작성일: ${noteDate}
 
@@ -118,10 +115,10 @@ ${behaviorSummary}`;
 ${content}
 
 응답 형식 (JSON 객체만 반환, 코드블록이나 다른 설명 없이):
-{"sections":[{"project":"프로젝트명","todos":[{"text":"할일요약","difficulty":"중","deadline":"${today}"}]}]}
+{"todos":[{"text":"할일요약","difficulty":"중","deadline":"${today}"}]}
 
 추출 규칙:
-- 프로젝트당 최대 10개, 전체 최대 25개
+- 전체 최대 25개
 - 한국어로 작성
 - text는 반드시 10자 이내`;
 
@@ -139,36 +136,29 @@ function parseAIResponse(text, existingTodos, fromDate) {
     throw new Error('AI 응답 파싱 실패. 다시 시도해주세요.');
   }
 
-  const sections = parsed.sections;
-  if (!Array.isArray(sections)) throw new Error('AI 응답 형식이 올바르지 않습니다.');
+  const todos = parsed.todos;
+  if (!Array.isArray(todos)) throw new Error('AI 응답 형식이 올바르지 않습니다.');
 
   const validDifficulties = ['상', '중', '하'];
 
-  return sections
-    .map((s) => ({
-      project: (s.project || '기타').trim(),
-      todos: Array.isArray(s.todos)
-        ? s.todos
-            .map((t) => {
-              // 기존 string[] 포맷 호환
-              if (typeof t === 'string') {
-                return {
-                  text: t.trim().slice(0, 10),
-                  difficulty: '중',
-                  deadline: validateDeadline(null, existingTodos, fromDate),
-                };
-              }
-              const todoText = String(t.text || '').trim().slice(0, 10);
-              const difficulty = validDifficulties.includes(t.difficulty) ? t.difficulty : '중';
-              const deadline = t.deadline
-                ? validateDeadline(t.deadline, existingTodos, fromDate)
-                : validateDeadline(null, existingTodos, fromDate);
-              return { text: todoText, difficulty, deadline };
-            })
-            .filter((t) => t.text)
-        : [],
-    }))
-    .filter((s) => s.todos.length > 0);
+  return todos
+    .map((t) => {
+      // 기존 string[] 포맷 호환
+      if (typeof t === 'string') {
+        return {
+          text: t.trim().slice(0, 10),
+          difficulty: '중',
+          deadline: validateDeadline(null, existingTodos, fromDate),
+        };
+      }
+      const todoText = String(t.text || '').trim().slice(0, 10);
+      const difficulty = validDifficulties.includes(t.difficulty) ? t.difficulty : '중';
+      const deadline = t.deadline
+        ? validateDeadline(t.deadline, existingTodos, fromDate)
+        : validateDeadline(null, existingTodos, fromDate);
+      return { text: todoText, difficulty, deadline };
+    })
+    .filter((t) => t.text);
 }
 
 function formatDateStr(date) {

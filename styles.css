@@ -1785,15 +1785,6 @@ body {
   background: #fde8e8;
 }
 
-.schedule-task-project {
-  font-size: 10px;
-  color: #7B2FA0;
-  font-weight: 600;
-  background: #f5eeff;
-  padding: 1px 5px;
-  border-radius: 3px;
-}
-
 /* ══════════════════════════════════════════════════
    캘린더 영역
 ══════════════════════════════════════════════════ */
