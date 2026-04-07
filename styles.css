@@ -1057,20 +1057,54 @@ body {
 }
 
 /* ── Todo ───────────────────────────────────────────── */
-.todo-group-header {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #7B2FA0;
-  padding: 10px 14px 4px;
-  border-bottom: 1px solid #ede9f3;
-  margin-top: 4px;
+.todo-section-header {
   list-style: none;
+  margin-top: 6px;
 }
 
-.todo-group-header:first-child {
+.todo-section-header:first-child {
   margin-top: 0;
+}
+
+.todo-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-bottom: 1px solid #ede9f3;
+  background: #faf7fd;
+  padding: 8px 14px 6px;
+  color: #7B2FA0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.todo-section-toggle:hover {
+  background: #f3eef7;
+}
+
+.todo-section-arrow {
+  width: 14px;
+  color: #7B2FA0;
+}
+
+.todo-section-title {
+  flex: 1;
+}
+
+.todo-section-count {
+  font-size: 11px;
+  color: #a19f9d;
+}
+
+.todo-section-empty {
+  font-size: 12px;
+  color: #a19f9d;
+  padding: 8px 16px 10px 34px;
+  list-style: none;
 }
 
 .todo-item {
@@ -1573,6 +1607,49 @@ body {
   padding: 8px 0;
   overflow-y: auto;
   flex: 1;
+}
+
+.schedule-task-section-header {
+  list-style: none;
+  margin: 4px 8px 0;
+}
+
+.schedule-task-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-bottom: 1px solid #ede9f3;
+  background: #faf7fd;
+  color: #7B2FA0;
+  padding: 8px 8px 6px;
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-task-section-arrow {
+  width: 14px;
+}
+
+.schedule-task-section-title {
+  flex: 1;
+  text-align: left;
+}
+
+.schedule-task-section-count {
+  font-size: 11px;
+  color: #a19f9d;
+}
+
+.schedule-task-section-empty {
+  list-style: none;
+  margin: 0 8px 2px;
+  padding: 7px 8px 10px 28px;
+  color: #a19f9d;
+  font-size: 12px;
 }
 
 /* 업무 카드 */

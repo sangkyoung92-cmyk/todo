@@ -28,6 +28,12 @@ export const state = {
   scheduleView: 'week',     // 'week' | 'month'
   scheduleWeekStart: null,  // 'YYYY-MM-DD' (현재 보고 있는 주의 월요일)
   scheduleMonth: null,      // 'YYYY-MM' (현재 보고 있는 월)
+  todoSectionCollapsed: {
+    today: false,
+    week: false,
+    month: false,
+    other: false,
+  },
 };
 
 export function uid() {
@@ -62,6 +68,7 @@ export function save() {
     scheduleView: state.scheduleView,
     scheduleWeekStart: state.scheduleWeekStart,
     scheduleMonth: state.scheduleMonth,
+    todoSectionCollapsed: state.todoSectionCollapsed,
   };
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -82,6 +89,7 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
     return;
   }
 
@@ -108,6 +116,12 @@ export function load() {
     state.scheduleView = parsed.scheduleView || 'week';
     state.scheduleWeekStart = parsed.scheduleWeekStart || getDefaultWeekStart();
     state.scheduleMonth = parsed.scheduleMonth || todayKey().slice(0, 7);
+    state.todoSectionCollapsed = {
+      today: parsed.todoSectionCollapsed?.today ?? false,
+      week: parsed.todoSectionCollapsed?.week ?? false,
+      month: parsed.todoSectionCollapsed?.month ?? false,
+      other: parsed.todoSectionCollapsed?.other ?? false,
+    };
   } catch (error) {
     console.error('Failed to parse storage:', error);
     state.tabs = [];
@@ -121,5 +135,6 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
   }
 }
