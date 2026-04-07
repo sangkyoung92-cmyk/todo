@@ -14,3 +14,16 @@ export const authAreaEl = document.getElementById('auth-area');
 export const todoListEl = document.getElementById('todo-list');
 export const addTodoBtn = document.getElementById('add-todo-btn');
 export const extractTodoBtn = document.getElementById('extract-todo-btn');
+
+// 스케줄 탭 관련 DOM
+export const appModeTabs = document.querySelectorAll('.app-mode-tab');
+export const notesViewEl = document.getElementById('notes-view');
+export const scheduleViewEl = document.getElementById('schedule-view');
+export const sectionTabsBarEl = document.querySelector('.section-tabs-bar');
+export const toolbarElSchedule = document.getElementById('toolbar');
+export const scheduleTaskListEl = document.getElementById('schedule-task-list');
+export const addScheduleTaskBtn = document.getElementById('add-schedule-task-btn');
+export const scheduleCalendarBodyEl = document.getElementById('schedule-calendar-body');
+export const scheduleRangeLabelEl = document.getElementById('schedule-range-label');
+export const schedulePrevBtn = document.getElementById('schedule-prev-btn');
+export const scheduleNextBtn = document.getElementById('schedule-next-btn');

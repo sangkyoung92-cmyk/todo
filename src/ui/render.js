@@ -255,6 +255,10 @@ export function renderEditor() {
 }
 
 export function renderAll(onRender) {
+  if (state.appMode === 'schedule') {
+    // 스케줄 탭 렌더링은 schedule.js에서 담당 (main.js에서 호출)
+    return;
+  }
   renderTabs(onRender);
   renderNotes(onRender);
   renderEditor();
