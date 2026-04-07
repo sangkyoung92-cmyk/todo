@@ -57,6 +57,7 @@ export function addScheduleTask(text, project, deadline, difficulty) {
   state.todos.push(todo);
   save();
   markStateDirty(); scheduleSync();
+  return todo.id;
 }
 
 // ── 날짜에 업무 배정 ──────────────────────────────
@@ -80,11 +81,41 @@ function assignToDate(todoId, dateKey) {
   markStateDirty(); scheduleSync();
 }
 
+export function assignTodoToDate(todoId, dateKey) {
+  assignToDate(todoId, dateKey);
+}
+
 // ── 날짜에서 업무 제거 ────────────────────────────
 function removeFromDate(entryId) {
   state.scheduleEntries = state.scheduleEntries.filter((e) => e.id !== entryId);
   save();
   markStateDirty(); scheduleSync();
+}
+
+function moveEntryToDate(entryId, targetDate) {
+  const entry = state.scheduleEntries.find((e) => e.id === entryId);
+  if (!entry) return;
+  if (entry.date === targetDate) return;
+
+  const exists = state.scheduleEntries.some(
+    (e) => e.todoId === entry.todoId && e.date === targetDate,
+  );
+  if (exists) {
+    // 이미 같은 할 일이 같은 날짜에 있으면 이동 대신 기존 엔트리 제거
+    removeFromDate(entryId);
+    return;
+  }
+
+  entry.date = targetDate;
+  entry.updatedAt = nowISO();
+  save();
+  markStateDirty(); scheduleSync();
+}
+
+function copyEntryToDate(entryId, targetDate) {
+  const entry = state.scheduleEntries.find((e) => e.id === entryId);
+  if (!entry) return;
+  assignToDate(entry.todoId, targetDate);
 }
 
 // ── 날짜별 완료 토글 ──────────────────────────────
@@ -143,6 +174,10 @@ function diffBadge(difficulty) {
   return `<span class="schedule-diff-badge ${cls}">${difficulty}</span>`;
 }
 
+function trashIconSvg() {
+  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>`;
+}
+
 // ── 기한 포맷 ─────────────────────────────────────
 function deadlineLabel(deadline) {
   if (!deadline) return '';
@@ -198,7 +233,7 @@ export function renderTaskList() {
               data-action="toggle-done" data-todo-id="${todo.id}"
               ${todo.done ? 'checked' : ''} />
             <span class="schedule-task-name">${escapeHtml(todo.text)}</span>
-            <button class="schedule-task-delete" data-action="delete" data-todo-id="${todo.id}" title="삭제">✕</button>
+            <button class="schedule-task-delete" data-action="delete" data-todo-id="${todo.id}" title="삭제">${trashIconSvg()}</button>
           </div>
           <div class="schedule-task-meta">
             ${diffBadge(todo.difficulty)}
@@ -243,7 +278,10 @@ function bindTaskListEvents() {
   // 드래그 시작
   scheduleTaskListEl.querySelectorAll('.schedule-task-card[draggable]').forEach((card) => {
     card.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', card.dataset.todoId);
+      e.dataTransfer.setData('application/x-schedule-drag', JSON.stringify({
+        type: 'todo',
+        todoId: card.dataset.todoId,
+      }));
       e.dataTransfer.effectAllowed = 'copy';
       card.classList.add('dragging');
     });
@@ -278,12 +316,12 @@ export function renderWeekView() {
         if (!todo) return;
         const doneClass = entry.done ? 'chip-done' : '';
         chipsHtml += `
-          <div class="cal-chip ${doneClass}" data-entry-id="${entry.id}">
+          <div class="cal-chip ${doneClass}" data-entry-id="${entry.id}" draggable="true">
             <input type="checkbox" class="cal-chip-check"
               data-action="toggle-entry" data-entry-id="${entry.id}"
               ${entry.done ? 'checked' : ''} />
             <span class="cal-chip-text" title="${escapeHtml(todo.text)}">${escapeHtml(todo.text)}</span>
-            <button class="cal-chip-remove" data-action="remove-entry" data-entry-id="${entry.id}" title="날짜에서 제거">✕</button>
+            <button class="cal-chip-remove" data-action="remove-entry" data-entry-id="${entry.id}" title="날짜에서 제거">${trashIconSvg()}</button>
           </div>`;
       });
     }
@@ -339,7 +377,14 @@ export function renderMonthView() {
         const todo = state.todos.find((t) => t.id === entry.todoId);
         if (!todo) return;
         const doneClass = entry.done ? 'chip-done' : '';
-        chipsHtml += `<div class="month-chip ${doneClass}" title="${escapeHtml(todo.text)}">${escapeHtml(todo.text)}</div>`;
+        chipsHtml += `
+          <div class="month-chip ${doneClass}" data-entry-id="${entry.id}" draggable="true">
+            <input type="checkbox" class="month-chip-check"
+              data-action="toggle-entry" data-entry-id="${entry.id}"
+              ${entry.done ? 'checked' : ''} />
+            <span class="month-chip-text" title="${escapeHtml(todo.text)}">${escapeHtml(todo.text)}</span>
+            <button class="month-chip-remove" data-action="remove-entry" data-entry-id="${entry.id}" title="날짜에서 제거">${trashIconSvg()}</button>
+          </div>`;
       });
       if (entries.length > MAX_CHIPS) {
         chipsHtml += `<div class="month-chip-more">+${entries.length - MAX_CHIPS}개</div>`;
@@ -362,6 +407,19 @@ export function renderMonthView() {
 
 // ── 캘린더 이벤트 바인딩 ─────────────────────────
 function bindCalendarEvents() {
+  function getDragData(dataTransfer) {
+    const raw = dataTransfer.getData('application/x-schedule-drag');
+    if (raw) {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    const todoId = dataTransfer.getData('text/plain');
+    return todoId ? { type: 'todo', todoId } : null;
+  }
+
   // 드롭 존
   scheduleCalendarBodyEl.querySelectorAll('[data-date]').forEach((zone) => {
     zone.addEventListener('dragover', (e) => {
@@ -377,12 +435,33 @@ function bindCalendarEvents() {
     zone.addEventListener('drop', (e) => {
       e.preventDefault();
       zone.closest('[data-date]')?.classList.remove('drag-over');
-      const todoId = e.dataTransfer.getData('text/plain');
+      const dragData = getDragData(e.dataTransfer);
       const dateKey = zone.dataset.date || zone.closest('[data-date]')?.dataset.date;
-      if (todoId && dateKey) {
-        assignToDate(todoId, dateKey);
+      if (dragData && dateKey) {
+        if (dragData.type === 'todo' && dragData.todoId) {
+          assignToDate(dragData.todoId, dateKey);
+        }
+        if (dragData.type === 'entry' && dragData.entryId) {
+          if (e.ctrlKey || e.metaKey) copyEntryToDate(dragData.entryId, dateKey);
+          else moveEntryToDate(dragData.entryId, dateKey);
+        }
         if (_onRender) _onRender();
       }
+    });
+  });
+
+  scheduleCalendarBodyEl.querySelectorAll('.cal-chip[draggable], .month-chip[draggable]').forEach((chip) => {
+    chip.addEventListener('dragstart', (e) => {
+      e.stopPropagation();
+      e.dataTransfer.setData('application/x-schedule-drag', JSON.stringify({
+        type: 'entry',
+        entryId: chip.dataset.entryId,
+      }));
+      e.dataTransfer.effectAllowed = 'copyMove';
+      chip.classList.add('dragging');
+    });
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('dragging');
     });
   });
 

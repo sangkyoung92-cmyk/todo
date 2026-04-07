@@ -4,6 +4,7 @@ import {
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
+  addAiScheduleTaskBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signOutUser, onAuthChange } from './auth.js';
@@ -14,10 +15,11 @@ import {
 import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
+import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
-import { renderSchedule, initScheduleNav, addScheduleTask } from './ui/schedule.js';
+import { renderSchedule, initScheduleNav, addScheduleTask, assignTodoToDate } from './ui/schedule.js';
 import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
@@ -61,6 +63,78 @@ addScheduleTaskBtn?.addEventListener('click', async () => {
   addScheduleTask(result.text, result.project, result.deadline, result.difficulty);
   rerender();
 });
+
+async function addAiScheduleTasks() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note || !note.content?.trim()) {
+    alert('AI 일정 추가를 위해 내용이 있는 페이지를 먼저 선택하세요.');
+    return;
+  }
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    openSettingsDrawer();
+    alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+    return;
+  }
+
+  const prefs = getScheduleAIPreferences();
+  const existingTodosForDist = prefs.useDeadlineDistribution ? state.todos : [];
+  const existingTodosForDup = prefs.useExistingTodoTexts ? state.todos : [];
+  const behaviorSummary = prefs.useBehaviorSummary ? buildBehaviorSummary() : '';
+  const existingTodos = prefs.useDeadlineDistribution || prefs.useExistingTodoTexts
+    ? (existingTodosForDist.length ? existingTodosForDist : existingTodosForDup)
+    : [];
+
+  addAiScheduleTaskBtn.disabled = true;
+  const prevLabel = addAiScheduleTaskBtn.textContent;
+  addAiScheduleTaskBtn.textContent = 'AI 추가 중...';
+
+  try {
+    const sections = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
+    if (!sections.length) {
+      alert('AI가 추가할 일정을 찾지 못했습니다.');
+      return;
+    }
+
+    let added = 0;
+    sections.forEach((section) => {
+      section.todos.forEach((todoItem) => {
+        const isDup = prefs.useExistingTodoTexts
+          && state.todos.some((t) => t.text === todoItem.text && t.project === section.project);
+        if (isDup) return;
+
+        const todoId = addScheduleTask(
+          todoItem.text,
+          section.project,
+          todoItem.deadline || null,
+          todoItem.difficulty || '중',
+        );
+        if (todoItem.deadline) {
+          assignTodoToDate(todoId, todoItem.deadline);
+        }
+        added += 1;
+      });
+    });
+
+    if (added === 0) {
+      alert('새로 추가할 일정이 없습니다. (중복 제외)');
+      return;
+    }
+    rerender();
+    alert(`AI 일정 ${added}개를 추가했습니다.`);
+  } catch (err) {
+    if (err.message === 'API_KEY_MISSING' || err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+    }
+    alert(`AI 일정 추가 실패: ${err.message}`);
+  } finally {
+    addAiScheduleTaskBtn.disabled = false;
+    addAiScheduleTaskBtn.textContent = prevLabel;
+  }
+}
+
+addAiScheduleTaskBtn?.addEventListener('click', addAiScheduleTasks);
 
 function addTab() {
   const name = prompt('섹션 이름을 입력하세요.', '새 섹션');
@@ -477,9 +551,19 @@ const geminiKeyToggle = document.getElementById('gemini-key-toggle');
 const geminiKeySave = document.getElementById('gemini-key-save');
 const geminiKeyClear = document.getElementById('gemini-key-clear');
 const geminiKeyStatus = document.getElementById('gemini-key-status');
+const scheduleAIPrefBehavior = document.getElementById('schedule-ai-pref-behavior');
+const scheduleAIPrefDeadline = document.getElementById('schedule-ai-pref-deadline');
+const scheduleAIPrefExisting = document.getElementById('schedule-ai-pref-existing');
+const scheduleAIPrefSave = document.getElementById('schedule-ai-pref-save');
+const scheduleAIPrefStatus = document.getElementById('schedule-ai-pref-status');
 
 function openSettingsDrawer() {
   geminiKeyInput.value = getApiKey();
+  const prefs = getScheduleAIPreferences();
+  scheduleAIPrefBehavior.checked = !!prefs.useBehaviorSummary;
+  scheduleAIPrefDeadline.checked = !!prefs.useDeadlineDistribution;
+  scheduleAIPrefExisting.checked = !!prefs.useExistingTodoTexts;
+  scheduleAIPrefStatus.textContent = '';
   updateKeyStatus();
   settingsDrawer.classList.add('open');
   settingsOverlay.classList.add('open');
@@ -525,6 +609,16 @@ geminiKeyClear.addEventListener('click', () => {
   geminiKeyInput.value = '';
   saveApiKey('');
   updateKeyStatus();
+});
+
+scheduleAIPrefSave.addEventListener('click', () => {
+  saveScheduleAIPreferences({
+    useBehaviorSummary: scheduleAIPrefBehavior.checked,
+    useDeadlineDistribution: scheduleAIPrefDeadline.checked,
+    useExistingTodoTexts: scheduleAIPrefExisting.checked,
+  });
+  scheduleAIPrefStatus.textContent = '✓ 저장됨';
+  scheduleAIPrefStatus.dataset.state = 'saved';
 });
 
 document.addEventListener('keydown', (e) => {
