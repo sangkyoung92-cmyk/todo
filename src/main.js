@@ -13,6 +13,8 @@ import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
+import { extractDeadlineFromText } from './utils/parse-date-kr.js';
+import { showAddTodoModal } from './ui/todo-modal.js';
 
 function rerender() {
   renderAll(rerender);
@@ -77,7 +79,8 @@ function addTodoFromSelection() {
     alert('에디터에서 할 일로 만들 텍스트를 먼저 선택하세요.');
     return;
   }
-  addTodo(text, state.selectedNoteId || null);
+  const { deadline, cleanedText } = extractDeadlineFromText(text);
+  addTodo(cleanedText, state.selectedNoteId || null, null, '중', deadline);
   rerender();
 }
 
@@ -414,10 +417,10 @@ searchInput.addEventListener('keydown', (e) => {
 // ── Event listeners ──────────────────────────────────
 addTabBtn.addEventListener('click', addTab);
 addNoteBtn.addEventListener('click', addNote);
-addTodoBtn.addEventListener('click', () => {
-  const text = prompt('할 일을 입력하세요.');
-  if (!text?.trim()) return;
-  addTodo(text.trim(), state.selectedNoteId || null);
+addTodoBtn.addEventListener('click', async () => {
+  const result = await showAddTodoModal();
+  if (!result) return;
+  addTodo(result.text, state.selectedNoteId || null, null, result.difficulty, result.deadline);
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);

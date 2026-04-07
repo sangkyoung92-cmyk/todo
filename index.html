@@ -172,6 +172,38 @@
       </section>
     </main>
 
+    <!-- Todo add modal -->
+    <div id="todo-modal-overlay" class="todo-modal-overlay"></div>
+    <div id="todo-modal" class="todo-modal" role="dialog" aria-modal="true" aria-label="할 일 추가">
+      <div class="todo-modal-header">
+        <h3>할 일 추가</h3>
+        <button id="todo-modal-cancel" class="settings-close-btn" title="닫기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+      <div class="todo-modal-body">
+        <label class="settings-label" for="todo-modal-text">할 일</label>
+        <input id="todo-modal-text" type="text" class="todo-modal-input settings-input" placeholder="할 일을 입력하세요" />
+        <div class="todo-modal-row">
+          <div class="todo-modal-field">
+            <label class="settings-label" for="todo-modal-deadline">기한 (선택)</label>
+            <input id="todo-modal-deadline" type="date" class="todo-modal-date" />
+          </div>
+          <div class="todo-modal-field">
+            <label class="settings-label">난이도</label>
+            <div class="todo-modal-difficulty-group">
+              <button class="todo-modal-diff-btn" data-diff="하">하</button>
+              <button class="todo-modal-diff-btn" data-diff="중">중</button>
+              <button class="todo-modal-diff-btn" data-diff="상">상</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="todo-modal-footer">
+        <button id="todo-modal-submit" class="todo-modal-submit-btn">추가</button>
+      </div>
+    </div>
+
     <!-- Settings drawer -->
     <div id="settings-overlay" class="settings-overlay"></div>
     <aside id="settings-drawer" class="settings-drawer" aria-label="설정">
