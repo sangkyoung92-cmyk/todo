@@ -3,7 +3,12 @@ import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { todoListEl } from './dom.js';
 import { escapeHtml, formatDeadline, isOverdue, isToday } from '../utils/format.js';
 import { logBehavior } from '../tracking/behavior.js';
-import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
+import {
+  buildTodoSectionsFromSchedule,
+  getMostRecentScheduledDate,
+  getTodoSectionCompletion,
+  toggleTodoSectionCompletion,
+} from '../utils/todo-buckets.js';
 
 export function addTodo(text, sourceNoteId = null, difficulty = null, deadline = null) {
   const clean = (text || '').trim();
@@ -15,7 +20,7 @@ export function addTodo(text, sourceNoteId = null, difficulty = null, deadline =
     done: false,
     sourceNoteId,
     difficulty: difficulty || null,
-    deadline: deadline || null,
+    deadline: deadline || getMostRecentScheduledDate(state.scheduleEntries) || null,
     completedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -79,13 +84,29 @@ function createSectionHeader(section, count, onRender) {
   return { header, collapsed };
 }
 
-function renderTodoItem(todo, onRender) {
+function syncTodoDoneFromEntries(todo) {
+  const entries = state.scheduleEntries.filter((entry) => entry.todoId === todo.id);
+  if (!entries.length) {
+    todo.done = false;
+    todo.completedAt = null;
+    todo.updatedAt = nowISO();
+    return;
+  }
+
+  const done = entries.every((entry) => entry.done);
+  todo.done = done;
+  todo.completedAt = done ? nowISO() : null;
+  todo.updatedAt = nowISO();
+}
+
+function renderTodoItem(todo, sectionKey, onRender) {
+  const sectionDone = getTodoSectionCompletion(todo.id, sectionKey, state.scheduleEntries);
   const li = document.createElement('li');
-  li.className = `todo-item ${todo.done ? 'done' : ''}`;
+  li.className = `todo-item ${sectionDone ? 'done' : ''}`;
 
   const deadlineStr = formatDeadline(todo.deadline);
-  const overdue = !todo.done && isOverdue(todo.deadline);
-  const today = !todo.done && isToday(todo.deadline);
+  const overdue = !sectionDone && isOverdue(todo.deadline);
+  const today = !sectionDone && isToday(todo.deadline);
   const diffColor = DIFFICULTY_COLORS[todo.difficulty] || '#999';
 
   let metaHtml = '';
@@ -102,28 +123,42 @@ function renderTodoItem(todo, onRender) {
   }
 
   li.innerHTML = `
-    <label class="todo-main">
-      <input type="checkbox" data-action="toggle" ${todo.done ? 'checked' : ''} />
+    <div class="todo-main">
+      <input type="checkbox" data-action="toggle" ${sectionDone ? 'checked' : ''} />
       <div class="todo-content">
         <span class="todo-text" data-action="edit-text" title="더블클릭으로 수정">${escapeHtml(todo.text)}</span>
         ${metaHtml}
       </div>
-    </label>
+    </div>
     <button class="icon-btn" data-action="delete" title="할 일 삭제">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
     </button>
   `;
 
   li.querySelector('[data-action="toggle"]').addEventListener('change', (e) => {
-    const wasDone = todo.done;
-    todo.done = e.target.checked;
-    todo.updatedAt = nowISO();
-    if (todo.done && !wasDone) {
-      todo.completedAt = nowISO();
-      logBehavior('complete', todo.id, false, true);
-    } else if (!todo.done && wasDone) {
-      todo.completedAt = null;
+    const changedCount = toggleTodoSectionCompletion(
+      todo.id,
+      sectionKey,
+      e.target.checked,
+      state.scheduleEntries,
+      nowISO(),
+    );
+
+    if (changedCount === 0 && sectionKey === 'other') {
+      const wasDone = todo.done;
+      todo.done = e.target.checked;
+      todo.updatedAt = nowISO();
+      todo.completedAt = todo.done ? nowISO() : null;
+      if (todo.done && !wasDone) {
+        logBehavior('complete', todo.id, false, true);
+      }
+    } else {
+      syncTodoDoneFromEntries(todo);
+      if (e.target.checked) {
+        logBehavior('complete', todo.id, false, true);
+      }
     }
+
     save();
     markStateDirty(); scheduleSync();
     onRender();
@@ -247,7 +282,7 @@ export function renderTodos(onRender) {
     }
 
     todos.forEach((todo) => {
-      todoListEl.appendChild(renderTodoItem(todo, onRender));
+      todoListEl.appendChild(renderTodoItem(todo, section.key, onRender));
     });
   });
 }
