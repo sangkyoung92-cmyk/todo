@@ -109,6 +109,7 @@ export async function loadFromCloud(rerender) {
       state.tabs = [];
       state.notes = [];
       state.todos = [];
+      state.behaviorLog = [];
       state.selectedTabId = null;
       state.selectedNoteId = null;
       save();
@@ -126,6 +127,7 @@ export async function loadFromCloud(rerender) {
 
     state.tabs = cloudData.tabs || [];
     state.todos = cloudData.todos || [];
+    state.behaviorLog = cloudData.behaviorLog || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
     state.selectedNoteId = cloudData.selectedNoteId || null;
     state.notes = cloudNotes;
@@ -158,6 +160,7 @@ export async function syncToCloud() {
     batch.set(stateRef, {
       tabs: state.tabs,
       todos: state.todos,
+      behaviorLog: state.behaviorLog,
       selectedTabId: state.selectedTabId,
       selectedNoteId: state.selectedNoteId,
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),

@@ -25,6 +25,34 @@ export function formatDateShort(iso) {
   return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
 }
 
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+/**
+ * "4/10(목)" 형태로 마감일 표시
+ */
+export function formatDeadline(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  return `${d.getMonth() + 1}/${d.getDate()}(${DAY_NAMES[d.getDay()]})`;
+}
+
+export function isOverdue(dateStr) {
+  if (!dateStr) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr + 'T00:00:00') < today;
+}
+
+export function isToday(dateStr) {
+  if (!dateStr) return false;
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  return dateStr === `${y}-${m}-${d}`;
+}
+
 export function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
