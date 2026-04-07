@@ -1057,20 +1057,54 @@ body {
 }
 
 /* ── Todo ───────────────────────────────────────────── */
-.todo-group-header {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #7B2FA0;
-  padding: 10px 14px 4px;
-  border-bottom: 1px solid #ede9f3;
-  margin-top: 4px;
+.todo-section-header {
   list-style: none;
+  margin-top: 6px;
 }
 
-.todo-group-header:first-child {
+.todo-section-header:first-child {
   margin-top: 0;
+}
+
+.todo-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-bottom: 1px solid #ede9f3;
+  background: #faf7fd;
+  padding: 8px 14px 6px;
+  color: #7B2FA0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.todo-section-toggle:hover {
+  background: #f3eef7;
+}
+
+.todo-section-arrow {
+  width: 14px;
+  color: #7B2FA0;
+}
+
+.todo-section-title {
+  flex: 1;
+}
+
+.todo-section-count {
+  font-size: 11px;
+  color: #a19f9d;
+}
+
+.todo-section-empty {
+  font-size: 12px;
+  color: #a19f9d;
+  padding: 8px 16px 10px 34px;
+  list-style: none;
 }
 
 .todo-item {
