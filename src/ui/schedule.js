@@ -25,7 +25,12 @@ import {
   isSameMonth,
 } from '../utils/date-utils.js';
 import { markStateDirty, scheduleSync } from '../sync/cloud.js';
-import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
+import {
+  buildTodoSectionsFromSchedule,
+  getMostRecentScheduledDate,
+  getTodoSectionCompletion,
+  toggleTodoSectionCompletion,
+} from '../utils/todo-buckets.js';
 import { showScheduleModal } from './schedule-modal.js';
 
 // ── 내부 상태 ─────────────────────────────────────
@@ -55,7 +60,7 @@ export function addScheduleTask(text, deadline, difficulty) {
     done: false,
     sourceNoteId: null,
     difficulty: difficulty || '중',
-    deadline: deadline || null,
+    deadline: deadline || getMostRecentScheduledDate(state.scheduleEntries) || null,
     completedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -150,22 +155,42 @@ function toggleEntryDone(entryId) {
   markStateDirty(); scheduleSync();
 }
 
-// ── 업무 전체 완료 토글 ───────────────────────────
-function toggleTaskDone(todoId) {
+// ── 섹션 범위 완료 토글 ───────────────────────
+function syncTodoDoneFromEntries(todo) {
+  const entries = state.scheduleEntries.filter((entry) => entry.todoId === todo.id);
+  if (!entries.length) {
+    todo.done = false;
+    todo.completedAt = null;
+    todo.updatedAt = nowISO();
+    return;
+  }
+
+  const done = entries.every((entry) => entry.done);
+  todo.done = done;
+  todo.completedAt = done ? nowISO() : null;
+  todo.updatedAt = nowISO();
+}
+
+function toggleTaskDone(todoId, sectionKey, checked) {
   const todo = state.todos.find((t) => t.id === todoId);
   if (!todo) return;
-  todo.done = !todo.done;
-  todo.completedAt = todo.done ? nowISO() : null;
-  todo.updatedAt = nowISO();
 
-  // 연관 entries도 동기화
-  state.scheduleEntries
-    .filter((e) => e.todoId === todoId)
-    .forEach((e) => {
-      e.done = todo.done;
-      e.completedAt = todo.done ? nowISO() : null;
-      e.updatedAt = nowISO();
-    });
+  const changedCount = toggleTodoSectionCompletion(
+    todoId,
+    sectionKey,
+    checked,
+    state.scheduleEntries,
+    nowISO(),
+  );
+
+  if (changedCount === 0 && sectionKey === 'other') {
+    todo.done = checked;
+    todo.completedAt = checked ? nowISO() : null;
+    todo.updatedAt = nowISO();
+  } else {
+    syncTodoDoneFromEntries(todo);
+  }
+
   save();
   markStateDirty(); scheduleSync();
 }
@@ -238,19 +263,20 @@ export function renderTaskList() {
 
     items.forEach((todo) => {
       const prog = getProgress(todo.id);
-      const doneClass = todo.done ? 'done-task' : '';
-      const percent = prog.total > 0 ? prog.percent : (todo.done ? 100 : 0);
+      const sectionDone = getTodoSectionCompletion(todo.id, section.key, state.scheduleEntries);
+      const doneClass = sectionDone ? 'done-task' : '';
+      const percent = prog.total > 0 ? prog.percent : (sectionDone ? 100 : 0);
       const label = prog.total > 0
         ? `${prog.done}/${prog.total} (${prog.percent}%)`
-        : todo.done ? '완료' : '미배정';
+        : sectionDone ? '완료' : '미배정';
       html += `
         <li class="schedule-task-card ${doneClass}"
             draggable="true"
             data-todo-id="${todo.id}">
           <div class="schedule-task-card-top">
             <input type="checkbox" class="schedule-task-check"
-              data-action="toggle-done" data-todo-id="${todo.id}"
-              ${todo.done ? 'checked' : ''} />
+              data-action="toggle-done" data-todo-id="${todo.id}" data-section="${section.key}"
+              ${sectionDone ? 'checked' : ''} />
             <span class="schedule-task-name">${escapeHtml(todo.text)}</span>
             <button class="schedule-task-delete" data-action="delete" data-todo-id="${todo.id}" title="삭제">${trashIconSvg()}</button>
           </div>
@@ -288,7 +314,7 @@ function bindTaskListEvents() {
   // 완료 체크
   scheduleTaskListEl.querySelectorAll('[data-action="toggle-done"]').forEach((el) => {
     el.addEventListener('change', () => {
-      toggleTaskDone(el.dataset.todoId);
+      toggleTaskDone(el.dataset.todoId, el.dataset.section, el.checked);
       if (_onRender) _onRender();
     });
   });
