@@ -702,6 +702,12 @@ body {
   background: #f3f2f1;
 }
 
+.ghost-btn--icon {
+  padding: 4px 6px;
+  font-size: 14px;
+  min-width: unset;
+}
+
 .note-actions-tip {
   font-size: 11px;
   color: #a19f9d;
@@ -769,6 +775,22 @@ body {
 }
 
 /* ── Todo ───────────────────────────────────────────── */
+.todo-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7B2FA0;
+  padding: 10px 14px 4px;
+  border-bottom: 1px solid #ede9f3;
+  margin-top: 4px;
+  list-style: none;
+}
+
+.todo-group-header:first-child {
+  margin-top: 0;
+}
+
 .todo-item {
   display: flex;
   align-items: center;

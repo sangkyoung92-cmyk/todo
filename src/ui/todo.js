@@ -3,7 +3,7 @@ import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { todoListEl } from './dom.js';
 import { escapeHtml } from '../utils/format.js';
 
-export function addTodo(text, sourceNoteId = null) {
+export function addTodo(text, sourceNoteId = null, project = null) {
   const clean = (text || '').trim();
   if (!clean) return;
   const now = nowISO();
@@ -11,6 +11,7 @@ export function addTodo(text, sourceNoteId = null) {
     id: uid(),
     text: clean,
     done: false,
+    project: project || null,
     sourceNoteId,
     createdAt: now,
     updatedAt: now,
@@ -30,9 +31,36 @@ export function renderTodos(onRender) {
     return;
   }
 
-  state.todos
-    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
-    .forEach((todo) => {
+  const sorted = [...state.todos].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+
+  // 프로젝트별 그룹화
+  const groups = new Map();
+  sorted.forEach((todo) => {
+    const key = todo.project || null;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(todo);
+  });
+
+  // 정렬: 이름 있는 프로젝트 먼저(가나다순), null(기타) 마지막
+  const named = [...groups.keys()]
+    .filter((k) => k !== null)
+    .sort((a, b) => a.localeCompare(b, 'ko'));
+  const orderedKeys = [...named, null];
+
+  const showHeaders = named.length > 0; // 프로젝트가 하나라도 있으면 헤더 표시
+
+  orderedKeys.forEach((key) => {
+    const todos = groups.get(key);
+    if (!todos) return;
+
+    if (showHeaders) {
+      const header = document.createElement('li');
+      header.className = 'todo-group-header';
+      header.textContent = key ?? '기타';
+      todoListEl.appendChild(header);
+    }
+
+    todos.forEach((todo) => {
       const li = document.createElement('li');
       li.className = `todo-item ${todo.done ? 'done' : ''}`;
       li.innerHTML = `
@@ -62,4 +90,5 @@ export function renderTodos(onRender) {
 
       todoListEl.appendChild(li);
     });
+  });
 }

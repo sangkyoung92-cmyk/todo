@@ -104,7 +104,17 @@
       <div class="toolbar-sep"></div>
       <div class="toolbar-group">
         <button class="tbtn" data-cmd="removeFormat" title="서식 지우기">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path d="M14.83 2.17a2 2 0 00-2.83 0L3.17 11a2 2 0 000 2.83l1.5 1.5H2a1 1 0 000 2h10a1 1 0 000-2H9.24l5.59-5.59a2 2 0 000-2.83l0 0zM6.41 14.83L4.59 13l6-6 1.83 1.83-6 6z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="toolbar-sep"></div>
+      <div class="toolbar-group">
+        <button class="tbtn" data-action="add-todo" title="선택한 텍스트를 할 일로 추가 (Ctrl+Q)">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -129,8 +139,9 @@
             <input id="note-title" type="text" class="note-title-input" placeholder="제목 없음" />
             <div id="note-date" class="note-date"></div>
             <div class="note-actions">
-              <button id="extract-todo-btn" class="ghost-btn" title="현재 노트에서 할 일 후보 추출">노트에서 할 일 추출</button>
-              <span class="note-actions-tip">선택 후 Ctrl/Cmd + K로도 추가</span>
+              <button id="extract-todo-btn" class="ghost-btn" title="AI로 노트에서 할 일 자동 추출 (Claude API 필요)">노트에서 할 일 추출</button>
+              <button id="set-api-key-btn" class="ghost-btn ghost-btn--icon" title="Claude API 키 설정">🔑</button>
+              <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 📋 버튼으로도 추가</span>
             </div>
             <div class="note-title-underline"></div>
           </div>

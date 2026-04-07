@@ -10,7 +10,8 @@ import {
   loadFromCloud, setSyncStatusCallback,
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
-import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
+import { getSelectedEditorText } from './todo/extract.js';
+import { extractTodosWithAI, promptForApiKey } from './ai/extract.js';
 
 function rerender() {
   renderAll(rerender);
@@ -79,23 +80,46 @@ function addTodoFromSelection() {
   rerender();
 }
 
-function extractTodosFromCurrentNote() {
+async function extractTodosFromCurrentNote() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
     alert('먼저 페이지를 선택하세요.');
     return;
   }
 
-  const candidates = extractTodoCandidatesFromHtml(note.content);
-  const unique = [...new Set(candidates)].filter((line) => !state.todos.some((t) => t.text === line));
+  extractTodoBtn.disabled = true;
+  extractTodoBtn.textContent = 'AI 분석 중...';
 
-  if (!unique.length) {
-    alert('추출할 새로운 할 일이 없습니다.');
-    return;
+  try {
+    const sections = await extractTodosWithAI(note.content);
+
+    if (!sections.length) {
+      alert('노트에서 추출할 할 일이 없습니다.');
+      return;
+    }
+
+    let addedCount = 0;
+    sections.forEach((section) => {
+      section.todos.forEach((todoText) => {
+        const isDup = state.todos.some((t) => t.text === todoText && t.project === section.project);
+        if (!isDup) {
+          addTodo(todoText, note.id, section.project);
+          addedCount++;
+        }
+      });
+    });
+
+    if (addedCount === 0) {
+      alert('추출할 새로운 할 일이 없습니다. (이미 모두 추가됨)');
+    } else {
+      rerender();
+    }
+  } catch (err) {
+    alert(`오류: ${err.message}`);
+  } finally {
+    extractTodoBtn.disabled = false;
+    extractTodoBtn.textContent = '노트에서 할 일 추출';
   }
-
-  unique.forEach((line) => addTodo(line, note.id));
-  rerender();
 }
 
 function scheduleAutoSave() {
@@ -132,6 +156,12 @@ toolbarEl.addEventListener('mousedown', (e) => {
   if (btn.id === 'color-btn') return;
 
   e.preventDefault(); // keep focus in editor
+
+  // 할 일 추가 버튼
+  if (btn.dataset.action === 'add-todo') {
+    addTodoFromSelection();
+    return;
+  }
 
   const cmd = btn.dataset.cmd;
   const val = btn.dataset.val || null;
@@ -380,10 +410,11 @@ addTodoBtn.addEventListener('click', () => {
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
+document.getElementById('set-api-key-btn').addEventListener('click', () => promptForApiKey());
 titleEl.addEventListener('input', scheduleAutoSave);
 contentEl.addEventListener('input', scheduleAutoSave);
 contentEl.addEventListener('keydown', (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+  if (e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'q') {
     e.preventDefault();
     addTodoFromSelection();
   }
