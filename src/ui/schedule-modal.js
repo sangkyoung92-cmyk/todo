@@ -7,7 +7,6 @@ const modal = document.getElementById('schedule-modal');
 const cancelBtn = document.getElementById('schedule-modal-cancel');
 const submitBtn = document.getElementById('schedule-modal-submit');
 const textInput = document.getElementById('schedule-modal-text');
-const projectInput = document.getElementById('schedule-modal-project');
 const deadlineInput = document.getElementById('schedule-modal-deadline');
 const diffBtns = modal.querySelectorAll('.todo-modal-diff-btn');
 
@@ -27,7 +26,6 @@ diffBtns.forEach((btn) => {
 
 function openModal(defaults = {}) {
   textInput.value = '';
-  projectInput.value = '';
   deadlineInput.value = defaults.deadline || '';
   setDiff(defaults.difficulty || '중');
   overlay.classList.add('open');
@@ -55,7 +53,6 @@ submitBtn.addEventListener('click', () => {
   }
   closeModal({
     text,
-    project: projectInput.value.trim() || null,
     deadline: deadlineInput.value || null,
     difficulty: selectedDiff,
   });
@@ -74,7 +71,7 @@ document.addEventListener('keydown', (e) => {
 
 /**
  * 업무 추가 모달을 열고 결과를 반환한다
- * @returns {Promise<{text, project, deadline, difficulty}|null>}
+ * @returns {Promise<{text, deadline, difficulty}|null>}
  */
 export function showScheduleModal(defaults = {}) {
   return new Promise((resolve) => {

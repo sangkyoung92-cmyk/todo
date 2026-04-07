@@ -47,13 +47,12 @@ function getProgress(todoId) {
 }
 
 // ── 업무 추가 ─────────────────────────────────────
-export function addScheduleTask(text, project, deadline, difficulty) {
+export function addScheduleTask(text, deadline, difficulty) {
   const now = nowISO();
   const todo = {
     id: uid(),
     text,
     done: false,
-    project: project || null,
     sourceNoteId: null,
     difficulty: difficulty || '중',
     deadline: deadline || null,
@@ -203,9 +202,7 @@ function deadlineLabel(deadline) {
 export function renderTaskList() {
   if (!scheduleTaskListEl) return;
 
-  let todos = state.todos.filter((t) => !t.sourceNoteId || t.project); // 스케줄용 업무
-  // 모든 todos를 스케줄에서도 사용
-  todos = state.todos;
+  let todos = state.todos;
 
   // 필터 적용
   if (_taskFilter === 'active') todos = todos.filter((t) => !t.done);
@@ -260,7 +257,6 @@ export function renderTaskList() {
           <div class="schedule-task-meta">
             ${diffBadge(todo.difficulty)}
             ${deadlineLabel(todo.deadline)}
-            ${todo.project ? `<span class="schedule-task-project">${escapeHtml(todo.project)}</span>` : ''}
           </div>
           <div class="schedule-task-progress">
             <div class="schedule-progress-label">
@@ -493,7 +489,6 @@ function bindCalendarEvents() {
 
       addScheduleTask(
         result.text,
-        result.project,
         result.deadline || dateKey,
         result.difficulty || '중',
       );

@@ -5,7 +5,7 @@ import { escapeHtml, formatDeadline, isOverdue, isToday } from '../utils/format.
 import { logBehavior } from '../tracking/behavior.js';
 import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
 
-export function addTodo(text, sourceNoteId = null, project = null, difficulty = null, deadline = null) {
+export function addTodo(text, sourceNoteId = null, difficulty = null, deadline = null) {
   const clean = (text || '').trim();
   if (!clean) return;
   const now = nowISO();
@@ -13,7 +13,6 @@ export function addTodo(text, sourceNoteId = null, project = null, difficulty = 
     id: uid(),
     text: clean,
     done: false,
-    project: project || null,
     sourceNoteId,
     difficulty: difficulty || null,
     deadline: deadline || null,

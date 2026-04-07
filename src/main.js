@@ -60,7 +60,7 @@ appModeTabs.forEach((tab) => {
 addScheduleTaskBtn?.addEventListener('click', async () => {
   const result = await showScheduleModal();
   if (!result) return;
-  addScheduleTask(result.text, result.project, result.deadline, result.difficulty);
+  addScheduleTask(result.text, result.deadline, result.difficulty);
   rerender();
 });
 
@@ -91,30 +91,27 @@ async function addAiScheduleTasks() {
   addAiScheduleTaskBtn.textContent = 'AI 추가 중...';
 
   try {
-    const sections = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
-    if (!sections.length) {
+    const todos = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
+    if (!todos.length) {
       alert('AI가 추가할 일정을 찾지 못했습니다.');
       return;
     }
 
     let added = 0;
-    sections.forEach((section) => {
-      section.todos.forEach((todoItem) => {
-        const isDup = prefs.useExistingTodoTexts
-          && state.todos.some((t) => t.text === todoItem.text && t.project === section.project);
-        if (isDup) return;
+    todos.forEach((todoItem) => {
+      const isDup = prefs.useExistingTodoTexts
+        && state.todos.some((t) => t.text === todoItem.text);
+      if (isDup) return;
 
-        const todoId = addScheduleTask(
-          todoItem.text,
-          section.project,
-          todoItem.deadline || null,
-          todoItem.difficulty || '중',
-        );
-        if (todoItem.deadline) {
-          assignTodoToDate(todoId, todoItem.deadline);
-        }
-        added += 1;
-      });
+      const todoId = addScheduleTask(
+        todoItem.text,
+        todoItem.deadline || null,
+        todoItem.difficulty || '중',
+      );
+      if (todoItem.deadline) {
+        assignTodoToDate(todoId, todoItem.deadline);
+      }
+      added += 1;
     });
 
     if (added === 0) {
@@ -196,7 +193,7 @@ function addTodoFromSelection() {
     return;
   }
   const { deadline, cleanedText } = extractDeadlineFromText(text);
-  addTodo(cleanedText, state.selectedNoteId || null, null, '중', deadline);
+  addTodo(cleanedText, state.selectedNoteId || null, '중', deadline);
   rerender();
 }
 
@@ -212,23 +209,21 @@ async function extractTodosFromCurrentNote() {
 
   try {
     const behaviorSummary = buildBehaviorSummary();
-    const sections = await extractTodosWithAI(note.content, state.todos, behaviorSummary, note.createdAt);
+    const todos = await extractTodosWithAI(note.content, state.todos, behaviorSummary, note.createdAt);
 
-    if (!sections.length) {
+    if (!todos.length) {
       alert('노트에서 추출할 할 일이 없습니다.');
       return;
     }
 
     let addedCount = 0;
-    sections.forEach((section) => {
-      section.todos.forEach((todoItem) => {
-        const todoText = todoItem.text;
-        const isDup = state.todos.some((t) => t.text === todoText && t.project === section.project);
-        if (!isDup) {
-          addTodo(todoText, note.id, section.project, todoItem.difficulty, todoItem.deadline);
-          addedCount++;
-        }
-      });
+    todos.forEach((todoItem) => {
+      const todoText = todoItem.text;
+      const isDup = state.todos.some((t) => t.text === todoText);
+      if (!isDup) {
+        addTodo(todoText, note.id, todoItem.difficulty, todoItem.deadline);
+        addedCount++;
+      }
     });
 
     if (addedCount === 0) {
@@ -536,7 +531,7 @@ addNoteBtn.addEventListener('click', addNote);
 addTodoBtn.addEventListener('click', async () => {
   const result = await showAddTodoModal();
   if (!result) return;
-  addTodo(result.text, state.selectedNoteId || null, result.project, result.difficulty, result.deadline);
+  addTodo(result.text, state.selectedNoteId || null, result.difficulty, result.deadline);
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
