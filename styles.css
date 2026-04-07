@@ -1430,3 +1430,578 @@ body {
 .todo-modal-submit-btn:hover {
   opacity: 0.88;
 }
+
+/* ══════════════════════════════════════════════════
+   앱 모드 탭 (노트 / 스케줄)
+══════════════════════════════════════════════════ */
+.app-mode-tabs {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-bottom: 2px solid #e1e1e1;
+  padding: 0 16px;
+  gap: 0;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.app-mode-tab {
+  padding: 8px 24px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #605e5c;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.app-mode-tab:hover {
+  color: #201f1e;
+  background: #f3f2f1;
+}
+
+.app-mode-tab.active {
+  color: #7B2FA0;
+  border-bottom-color: #7B2FA0;
+}
+
+/* ══════════════════════════════════════════════════
+   스케줄 탭 전체 레이아웃
+══════════════════════════════════════════════════ */
+.schedule-view {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: #f3f2f1;
+}
+
+/* 왼쪽 사이드바 (업무 목록) */
+.schedule-sidebar {
+  width: 280px;
+  min-width: 240px;
+  max-width: 340px;
+  background: #fff;
+  border-right: 1px solid #e1e1e1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.schedule-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f0eeec;
+}
+
+.schedule-sidebar-head h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #201f1e;
+  margin: 0;
+}
+
+.schedule-filter-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0eeec;
+}
+
+.schedule-filter-btn {
+  flex: 1;
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f2f1;
+  border: none;
+  border-radius: 4px;
+  color: #605e5c;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.schedule-filter-btn:hover {
+  background: #e8e6e4;
+}
+
+.schedule-filter-btn.active {
+  background: #7B2FA0;
+  color: #fff;
+}
+
+.schedule-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 업무 카드 */
+.schedule-task-card {
+  padding: 10px 12px;
+  margin: 2px 8px;
+  background: #fafafa;
+  border: 1px solid #e8e6e4;
+  border-radius: 6px;
+  cursor: grab;
+  transition: box-shadow 0.12s, border-color 0.12s;
+  user-select: none;
+}
+
+.schedule-task-card:hover {
+  border-color: #7B2FA0;
+  box-shadow: 0 1px 6px rgba(123,47,160,0.12);
+}
+
+.schedule-task-card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.schedule-task-card.done-task {
+  opacity: 0.55;
+}
+
+.schedule-task-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.schedule-task-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: #7B2FA0;
+}
+
+.schedule-task-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #201f1e;
+  word-break: break-all;
+}
+
+.schedule-task-card.done-task .schedule-task-name {
+  text-decoration: line-through;
+  color: #a19f9d;
+}
+
+.schedule-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #a19f9d;
+  margin-bottom: 6px;
+}
+
+.schedule-diff-badge {
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+.schedule-diff-badge.high { background: #c0392b; }
+.schedule-diff-badge.mid  { background: #d35400; }
+.schedule-diff-badge.low  { background: #107c10; }
+
+.schedule-deadline-overdue {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.schedule-task-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.schedule-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #605e5c;
+}
+
+.schedule-progress-bar-wrap {
+  height: 5px;
+  background: #e8e6e4;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.schedule-progress-bar-fill {
+  height: 100%;
+  background: #7B2FA0;
+  border-radius: 3px;
+  transition: width 0.25s;
+}
+
+.schedule-task-delete {
+  background: none;
+  border: none;
+  color: #a19f9d;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 13px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.schedule-task-delete:hover {
+  color: #c0392b;
+  background: #fde8e8;
+}
+
+.schedule-task-project {
+  font-size: 10px;
+  color: #7B2FA0;
+  font-weight: 600;
+  background: #f5eeff;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ══════════════════════════════════════════════════
+   캘린더 영역
+══════════════════════════════════════════════════ */
+.schedule-calendar-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f3f2f1;
+}
+
+.schedule-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e1e1e1;
+  flex-shrink: 0;
+}
+
+.schedule-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-nav-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f2f1;
+  border: none;
+  border-radius: 4px;
+  font-size: 20px;
+  color: #605e5c;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.schedule-nav-btn:hover {
+  background: #e8e6e4;
+  color: #201f1e;
+}
+
+.schedule-range-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #201f1e;
+  min-width: 220px;
+  text-align: center;
+}
+
+.schedule-view-toggle {
+  display: flex;
+  background: #f3f2f1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.schedule-view-btn {
+  padding: 5px 14px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #605e5c;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.schedule-view-btn.active {
+  background: #7B2FA0;
+  color: #fff;
+}
+
+.schedule-calendar-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+/* 주간 뷰 */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  min-height: calc(100% - 4px);
+}
+
+.week-day-col {
+  background: #fff;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 300px;
+  transition: border-color 0.12s;
+}
+
+.week-day-col.today {
+  border-color: #7B2FA0;
+  border-width: 2px;
+}
+
+.week-day-col.drag-over {
+  background: #f5eeff;
+  border-color: #7B2FA0;
+  border-style: dashed;
+}
+
+.week-day-header {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid #f0eeec;
+  flex-shrink: 0;
+}
+
+.week-day-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a19f9d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-day-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: #201f1e;
+  line-height: 1.2;
+}
+
+.week-day-col.today .week-day-num {
+  color: #7B2FA0;
+}
+
+.week-day-drop-zone {
+  flex: 1;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
+}
+
+.week-drop-hint {
+  font-size: 11px;
+  color: #c8c6c4;
+  text-align: center;
+  padding: 12px 0;
+  pointer-events: none;
+}
+
+/* 캘린더 칩 (배정된 업무) */
+.cal-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: #f5eeff;
+  border: 1px solid #d9b3f0;
+  font-size: 11px;
+  color: #4a1770;
+  font-weight: 500;
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.cal-chip.chip-done {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+  color: #2e7d32;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.cal-chip-check {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: #7B2FA0;
+}
+
+.cal-chip-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.cal-chip-remove {
+  background: none;
+  border: none;
+  color: #a19f9d;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.cal-chip-remove:hover {
+  color: #c0392b;
+}
+
+/* 월간 뷰 */
+.month-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.month-day-names {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.month-day-name-cell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a19f9d;
+  padding: 4px 0;
+}
+
+.month-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.month-day-cell {
+  background: #fff;
+  border: 1px solid #e8e6e4;
+  border-radius: 6px;
+  padding: 4px 6px;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.12s;
+  cursor: default;
+}
+
+.month-day-cell.other-month {
+  background: #f9f8f7;
+  opacity: 0.6;
+}
+
+.month-day-cell.today {
+  border-color: #7B2FA0;
+  border-width: 2px;
+}
+
+.month-day-cell.drag-over {
+  background: #f5eeff;
+  border-color: #7B2FA0;
+  border-style: dashed;
+}
+
+.month-day-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: #605e5c;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.month-day-cell.today .month-day-num {
+  color: #7B2FA0;
+}
+
+.month-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.month-chip {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #f5eeff;
+  border: 1px solid #d9b3f0;
+  color: #4a1770;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.month-chip.chip-done {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+  color: #2e7d32;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.month-chip-more {
+  font-size: 10px;
+  color: #7B2FA0;
+  font-weight: 600;
+  padding: 1px 4px;
+}
+
+.schedule-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: #a19f9d;
+  font-size: 13px;
+}
+
+/* notes-view 컨테이너가 flex-column body에서 남은 높이를 채우도록 */
+#notes-view {
+  display: contents;
+}

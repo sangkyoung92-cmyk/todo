@@ -112,6 +112,7 @@ export async function loadFromCloud(rerender) {
       state.behaviorLog = [];
       state.selectedTabId = null;
       state.selectedNoteId = null;
+      state.scheduleEntries = [];
       save();
       dirtyNoteIds.clear();
       hasDirtyState = false;
@@ -131,6 +132,11 @@ export async function loadFromCloud(rerender) {
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
     state.selectedNoteId = cloudData.selectedNoteId || null;
     state.notes = cloudNotes;
+    state.scheduleEntries = cloudData.scheduleEntries || [];
+    if (cloudData.appMode) state.appMode = cloudData.appMode;
+    if (cloudData.scheduleView) state.scheduleView = cloudData.scheduleView;
+    if (cloudData.scheduleWeekStart) state.scheduleWeekStart = cloudData.scheduleWeekStart;
+    if (cloudData.scheduleMonth) state.scheduleMonth = cloudData.scheduleMonth;
 
     // Persist to localStorage and clear pending local sync queue
     save();
@@ -163,6 +169,11 @@ export async function syncToCloud() {
       behaviorLog: state.behaviorLog,
       selectedTabId: state.selectedTabId,
       selectedNoteId: state.selectedNoteId,
+      scheduleEntries: state.scheduleEntries,
+      appMode: state.appMode,
+      scheduleView: state.scheduleView,
+      scheduleWeekStart: state.scheduleWeekStart,
+      scheduleMonth: state.scheduleMonth,
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),
     });
 

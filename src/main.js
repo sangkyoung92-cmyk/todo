@@ -2,6 +2,8 @@ import { load, nowISO, save, state, uid, getNextSectionColor } from './state/sto
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
+  appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
+  addScheduleTaskBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signOutUser, onAuthChange } from './auth.js';
@@ -15,10 +17,50 @@ import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
+import { renderSchedule, initScheduleNav, addScheduleTask } from './ui/schedule.js';
+import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
-  renderAll(rerender);
+  if (state.appMode === 'schedule') {
+    renderSchedule(rerender);
+  } else {
+    renderAll(rerender);
+  }
 }
+
+// ── 앱 모드 전환 (노트 / 스케줄) ─────────────────
+function applyAppMode(mode) {
+  state.appMode = mode;
+  save();
+
+  const isSchedule = mode === 'schedule';
+
+  // 뷰 전환
+  if (notesViewEl) notesViewEl.style.display = isSchedule ? 'none' : '';
+  if (scheduleViewEl) scheduleViewEl.style.display = isSchedule ? 'flex' : 'none';
+  if (sectionTabsBarEl) sectionTabsBarEl.style.display = isSchedule ? 'none' : '';
+  if (toolbarEl) toolbarEl.style.display = isSchedule ? 'none' : '';
+
+  // 탭 버튼 active 상태
+  appModeTabs.forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.mode === mode);
+  });
+
+  rerender();
+}
+
+// 앱 모드 탭 클릭 이벤트
+appModeTabs.forEach((tab) => {
+  tab.addEventListener('click', () => applyAppMode(tab.dataset.mode));
+});
+
+// 스케줄 업무 추가 버튼
+addScheduleTaskBtn?.addEventListener('click', async () => {
+  const result = await showScheduleModal();
+  if (!result) return;
+  addScheduleTask(result.text, result.project, result.deadline, result.difficulty);
+  rerender();
+});
 
 function addTab() {
   const name = prompt('섹션 이름을 입력하세요.', '새 섹션');
@@ -567,4 +609,6 @@ onAuthChange((user) => {
 });
 
 load();
-rerender();
+initScheduleNav(rerender);
+// 저장된 모드로 초기 UI 적용
+applyAppMode(state.appMode || 'notes');

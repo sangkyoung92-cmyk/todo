@@ -41,6 +41,12 @@
       </div>
     </header>
 
+    <!-- App mode tabs (노트 / 스케줄) -->
+    <nav class="app-mode-tabs">
+      <button class="app-mode-tab active" data-mode="notes">노트</button>
+      <button class="app-mode-tab" data-mode="schedule">스케줄</button>
+    </nav>
+
     <!-- Section tabs bar (OneNote style) -->
     <nav class="section-tabs-bar">
       <ul id="tab-list" class="section-tabs-list"></ul>
@@ -124,6 +130,42 @@
       </div>
     </div>
 
+    <!-- Schedule view (스케줄 탭 전용) -->
+    <div id="schedule-view" class="schedule-view" style="display:none">
+      <aside class="schedule-sidebar">
+        <div class="schedule-sidebar-head">
+          <h2>업무 목록</h2>
+          <button id="add-schedule-task-btn" class="add-btn">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+            업무
+          </button>
+        </div>
+        <div class="schedule-filter-bar">
+          <button class="schedule-filter-btn active" data-filter="all">전체</button>
+          <button class="schedule-filter-btn" data-filter="active">진행중</button>
+          <button class="schedule-filter-btn" data-filter="done">완료</button>
+        </div>
+        <ul id="schedule-task-list" class="schedule-task-list"></ul>
+      </aside>
+
+      <div class="schedule-calendar-area">
+        <div class="schedule-calendar-header">
+          <div class="schedule-nav">
+            <button id="schedule-prev-btn" class="schedule-nav-btn">&#8249;</button>
+            <span id="schedule-range-label" class="schedule-range-label"></span>
+            <button id="schedule-next-btn" class="schedule-nav-btn">&#8250;</button>
+          </div>
+          <div class="schedule-view-toggle">
+            <button class="schedule-view-btn active" data-view="week">주간</button>
+            <button class="schedule-view-btn" data-view="month">월간</button>
+          </div>
+        </div>
+        <div id="schedule-calendar-body" class="schedule-calendar-body"></div>
+      </div>
+    </div>
+
+    <!-- Notes view (기존 레이아웃) -->
+    <div id="notes-view">
     <main class="layout">
       <!-- Pages panel -->
       <section class="panel pages-panel">
@@ -171,6 +213,41 @@
         <ul id="todo-list" class="list"></ul>
       </section>
     </main>
+    </div><!-- end #notes-view -->
+
+    <!-- Schedule task add modal -->
+    <div id="schedule-modal-overlay" class="todo-modal-overlay"></div>
+    <div id="schedule-modal" class="todo-modal" role="dialog" aria-modal="true" aria-label="업무 추가">
+      <div class="todo-modal-header">
+        <h3>업무 추가</h3>
+        <button id="schedule-modal-cancel" class="settings-close-btn" title="닫기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+      <div class="todo-modal-body">
+        <label class="settings-label" for="schedule-modal-text">업무명</label>
+        <input id="schedule-modal-text" type="text" class="todo-modal-input settings-input" placeholder="업무를 입력하세요" />
+        <label class="settings-label" for="schedule-modal-project">프로젝트 (선택)</label>
+        <input id="schedule-modal-project" type="text" class="todo-modal-input settings-input" placeholder="프로젝트명" />
+        <div class="todo-modal-row">
+          <div class="todo-modal-field">
+            <label class="settings-label" for="schedule-modal-deadline">기한 (선택)</label>
+            <input id="schedule-modal-deadline" type="date" class="todo-modal-date" />
+          </div>
+          <div class="todo-modal-field">
+            <label class="settings-label">난이도</label>
+            <div class="todo-modal-difficulty-group">
+              <button class="todo-modal-diff-btn" data-diff="하">하</button>
+              <button class="todo-modal-diff-btn" data-diff="중">중</button>
+              <button class="todo-modal-diff-btn" data-diff="상">상</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="todo-modal-footer">
+        <button id="schedule-modal-submit" class="todo-modal-submit-btn">추가</button>
+      </div>
+    </div>
 
     <!-- Todo add modal -->
     <div id="todo-modal-overlay" class="todo-modal-overlay"></div>
