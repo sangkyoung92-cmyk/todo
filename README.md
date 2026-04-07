@@ -81,6 +81,13 @@
 ```
 
 ## 4. 실행 방법
+현재 서비스는 Netlify에 배포되어 있습니다.
+
+- 배포 플랫폼: Netlify
+- 배포 URL: https://gregarious-eclair-bcce20.netlify.app/
+- 배포 브랜치: `main` (main 브랜치에 push 시 자동 배포)
+
+### 로컬에서 실행(개발용)
 별도 빌드 도구 없이 정적 파일로 동작합니다.
 
 ```bash
