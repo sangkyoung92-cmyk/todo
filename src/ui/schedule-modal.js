@@ -25,11 +25,11 @@ diffBtns.forEach((btn) => {
   btn.addEventListener('click', () => setDiff(btn.dataset.diff));
 });
 
-function openModal() {
+function openModal(defaults = {}) {
   textInput.value = '';
   projectInput.value = '';
-  deadlineInput.value = '';
-  setDiff('중');
+  deadlineInput.value = defaults.deadline || '';
+  setDiff(defaults.difficulty || '중');
   overlay.classList.add('open');
   modal.classList.add('open');
   setTimeout(() => textInput.focus(), 50);
@@ -76,9 +76,9 @@ document.addEventListener('keydown', (e) => {
  * 업무 추가 모달을 열고 결과를 반환한다
  * @returns {Promise<{text, project, deadline, difficulty}|null>}
  */
-export function showScheduleModal() {
+export function showScheduleModal(defaults = {}) {
   return new Promise((resolve) => {
     resolveFn = resolve;
-    openModal();
+    openModal(defaults);
   });
 }

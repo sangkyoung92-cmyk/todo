@@ -26,6 +26,7 @@ import {
 } from '../utils/date-utils.js';
 import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
+import { showScheduleModal } from './schedule-modal.js';
 
 // ── 내부 상태 ─────────────────────────────────────
 let _onRender = null;
@@ -62,8 +63,12 @@ export function addScheduleTask(text, project, deadline, difficulty) {
     scheduledDates: [], // 하위 호환 (사용 안 함 – scheduleEntries로 관리)
   };
   state.todos.push(todo);
-  save();
-  markStateDirty(); scheduleSync();
+  if (todo.deadline) {
+    assignToDate(todo.id, todo.deadline);
+  } else {
+    save();
+    markStateDirty(); scheduleSync();
+  }
   return todo.id;
 }
 
@@ -474,6 +479,25 @@ function bindCalendarEvents() {
         }
         if (_onRender) _onRender();
       }
+    });
+  });
+
+  scheduleCalendarBodyEl.querySelectorAll('.week-day-col, .month-day-cell').forEach((cell) => {
+    cell.addEventListener('dblclick', async (e) => {
+      if (e.target.closest('.cal-chip, .month-chip, [data-action]')) return;
+      const dateKey = cell.dataset.date;
+      if (!dateKey) return;
+
+      const result = await showScheduleModal({ deadline: dateKey, difficulty: '중' });
+      if (!result) return;
+
+      addScheduleTask(
+        result.text,
+        result.project,
+        result.deadline || dateKey,
+        result.difficulty || '중',
+      );
+      if (_onRender) _onRender();
     });
   });
 
