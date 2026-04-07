@@ -25,10 +25,17 @@ import {
   isSameMonth,
 } from '../utils/date-utils.js';
 import { markStateDirty, scheduleSync } from '../sync/cloud.js';
+import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
 
 // ── 내부 상태 ─────────────────────────────────────
 let _onRender = null;
 let _taskFilter = 'all'; // 'all' | 'active' | 'done'
+const SCHEDULE_SECTIONS = [
+  { key: 'today', label: '오늘 할 일' },
+  { key: 'week', label: '이번 주 할 일' },
+  { key: 'month', label: '이번 달 할 일' },
+  { key: 'other', label: '기타 할 일' },
+];
 
 // ── 진행률 계산 ───────────────────────────────────
 function getProgress(todoId) {
@@ -203,20 +210,30 @@ export function renderTaskList() {
     scheduleTaskListEl.innerHTML = `<li class="schedule-empty">업무가 없습니다.<br>+ 업무 버튼으로 추가하세요.</li>`;
     return;
   }
-
-  // 프로젝트별 그룹
-  const groups = {};
-  todos.forEach((t) => {
-    const key = t.project || '';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(t);
-  });
-
+  const sorted = [...todos].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const sectionMap = buildTodoSectionsFromSchedule(sorted, state.scheduleEntries);
   let html = '';
-  Object.entries(groups).forEach(([project, items]) => {
-    if (project) {
-      html += `<li class="schedule-task-group-label">${project}</li>`;
+
+  SCHEDULE_SECTIONS.forEach((section) => {
+    const items = sectionMap[section.key] || [];
+    const collapsed = state.todoSectionCollapsed?.[section.key] ?? false;
+
+    html += `
+      <li class="schedule-task-section-header">
+        <button class="schedule-task-section-toggle" data-action="toggle-section" data-section="${section.key}" type="button">
+          <span class="schedule-task-section-arrow">${collapsed ? '▸' : '▾'}</span>
+          <span class="schedule-task-section-title">${section.label}</span>
+          <span class="schedule-task-section-count">${items.length}</span>
+        </button>
+      </li>
+    `;
+
+    if (collapsed) return;
+    if (!items.length) {
+      html += '<li class="schedule-task-section-empty">항목이 없습니다.</li>';
+      return;
     }
+
     items.forEach((todo) => {
       const prog = getProgress(todo.id);
       const doneClass = todo.done ? 'done-task' : '';
@@ -257,6 +274,16 @@ export function renderTaskList() {
 }
 
 function bindTaskListEvents() {
+  scheduleTaskListEl.querySelectorAll('[data-action="toggle-section"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const key = el.dataset.section;
+      state.todoSectionCollapsed[key] = !state.todoSectionCollapsed[key];
+      save();
+      markStateDirty(); scheduleSync();
+      renderTaskList();
+    });
+  });
+
   // 완료 체크
   scheduleTaskListEl.querySelectorAll('[data-action="toggle-done"]').forEach((el) => {
     el.addEventListener('change', () => {

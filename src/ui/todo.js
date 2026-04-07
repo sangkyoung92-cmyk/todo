@@ -3,7 +3,7 @@ import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { todoListEl } from './dom.js';
 import { escapeHtml, formatDeadline, isOverdue, isToday } from '../utils/format.js';
 import { logBehavior } from '../tracking/behavior.js';
-import { buildTodoSections } from '../utils/todo-buckets.js';
+import { buildTodoSectionsFromSchedule } from '../utils/todo-buckets.js';
 
 export function addTodo(text, sourceNoteId = null, project = null, difficulty = null, deadline = null) {
   const clean = (text || '').trim();
@@ -210,7 +210,7 @@ export function renderTodos(onRender) {
   }
 
   const sorted = [...state.todos].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-  const sectionMap = buildTodoSections(sorted);
+  const sectionMap = buildTodoSectionsFromSchedule(sorted, state.scheduleEntries);
 
   TODO_SECTIONS.forEach((section) => {
     const todos = sectionMap[section.key] || [];

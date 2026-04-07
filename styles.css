@@ -1609,6 +1609,49 @@ body {
   flex: 1;
 }
 
+.schedule-task-section-header {
+  list-style: none;
+  margin: 4px 8px 0;
+}
+
+.schedule-task-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-bottom: 1px solid #ede9f3;
+  background: #faf7fd;
+  color: #7B2FA0;
+  padding: 8px 8px 6px;
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.schedule-task-section-arrow {
+  width: 14px;
+}
+
+.schedule-task-section-title {
+  flex: 1;
+  text-align: left;
+}
+
+.schedule-task-section-count {
+  font-size: 11px;
+  color: #a19f9d;
+}
+
+.schedule-task-section-empty {
+  list-style: none;
+  margin: 0 8px 2px;
+  padding: 7px 8px 10px 28px;
+  color: #a19f9d;
+  font-size: 12px;
+}
+
 /* 업무 카드 */
 .schedule-task-card {
   padding: 10px 12px;

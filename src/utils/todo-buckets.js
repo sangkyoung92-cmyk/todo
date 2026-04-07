@@ -54,3 +54,49 @@ export function buildTodoSections(todos, now = new Date()) {
 
   return sections;
 }
+
+function hasDateInRange(dates, start, end) {
+  return dates.some((dateKey) => {
+    const date = parseLocalDate(dateKey);
+    return date && date >= start && date <= end;
+  });
+}
+
+export function buildTodoSectionsFromSchedule(todos, scheduleEntries, now = new Date()) {
+  const sections = {
+    today: [],
+    week: [],
+    month: [],
+    other: [],
+  };
+
+  const today = getDateAtStart(now);
+  const endOfWeek = getEndOfWeek(today);
+  const endOfMonth = getEndOfMonth(today);
+
+  const dateMap = new Map();
+  scheduleEntries.forEach((entry) => {
+    if (!dateMap.has(entry.todoId)) dateMap.set(entry.todoId, []);
+    dateMap.get(entry.todoId).push(entry.date);
+  });
+
+  todos.forEach((todo) => {
+    const dates = dateMap.get(todo.id) || [];
+
+    if (hasDateInRange(dates, today, today)) {
+      sections.today.push(todo);
+      return;
+    }
+    if (hasDateInRange(dates, new Date(today.getTime() + 86400000), endOfWeek)) {
+      sections.week.push(todo);
+      return;
+    }
+    if (hasDateInRange(dates, new Date(endOfWeek.getTime() + 86400000), endOfMonth)) {
+      sections.month.push(todo);
+      return;
+    }
+    sections.other.push(todo);
+  });
+
+  return sections;
+}
