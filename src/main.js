@@ -420,7 +420,7 @@ addNoteBtn.addEventListener('click', addNote);
 addTodoBtn.addEventListener('click', async () => {
   const result = await showAddTodoModal();
   if (!result) return;
-  addTodo(result.text, state.selectedNoteId || null, null, result.difficulty, result.deadline);
+  addTodo(result.text, state.selectedNoteId || null, result.project, result.difficulty, result.deadline);
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
