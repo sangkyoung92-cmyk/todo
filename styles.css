@@ -331,6 +331,32 @@ body {
   gap: 8px;
 }
 
+.settings-section-divider {
+  border: 0;
+  border-top: 1px solid #e8e6e4;
+  margin: 14px 0 10px;
+}
+
+.settings-subtitle {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #201f1e;
+}
+
+.settings-checkbox-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #323130;
+  margin-bottom: 8px;
+}
+
+.settings-checkbox-row input {
+  margin-top: 2px;
+  accent-color: #7B2FA0;
+}
+
 .settings-btn {
   height: 30px;
   padding: 0 14px;
@@ -1507,6 +1533,11 @@ body {
   margin: 0;
 }
 
+.schedule-sidebar-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .schedule-filter-bar {
   display: flex;
   gap: 4px;
@@ -1657,10 +1688,19 @@ body {
   color: #a19f9d;
   cursor: pointer;
   padding: 2px;
-  font-size: 13px;
   border-radius: 3px;
-  line-height: 1;
+  line-height: 0;
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.schedule-task-delete svg {
+  width: 13px;
+  height: 13px;
 }
 
 .schedule-task-delete:hover {
@@ -1846,8 +1886,13 @@ body {
   font-size: 11px;
   color: #4a1770;
   font-weight: 500;
-  cursor: default;
+  cursor: grab;
   transition: background 0.1s;
+}
+
+.cal-chip.dragging,
+.month-chip.dragging {
+  opacity: 0.5;
 }
 
 .cal-chip.chip-done {
@@ -1880,11 +1925,18 @@ body {
   color: #a19f9d;
   cursor: pointer;
   padding: 0;
-  font-size: 12px;
   line-height: 1;
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.cal-chip-remove svg {
+  width: 12px;
+  height: 12px;
 }
 
 .cal-chip-remove:hover {
@@ -1968,15 +2020,51 @@ body {
 
 .month-chip {
   font-size: 10px;
-  padding: 2px 5px;
+  padding: 2px 4px;
   border-radius: 3px;
   background: #f5eeff;
   border: 1px solid #d9b3f0;
   color: #4a1770;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: grab;
+}
+
+.month-chip-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: default;
+  flex: 1;
+}
+
+.month-chip-check {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  accent-color: #7B2FA0;
+}
+
+.month-chip-remove {
+  width: 12px;
+  height: 12px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #a19f9d;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-chip-remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+.month-chip-remove:hover {
+  color: #c0392b;
 }
 
 .month-chip.chip-done {

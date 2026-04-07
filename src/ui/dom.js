@@ -23,6 +23,7 @@ export const sectionTabsBarEl = document.querySelector('.section-tabs-bar');
 export const toolbarElSchedule = document.getElementById('toolbar');
 export const scheduleTaskListEl = document.getElementById('schedule-task-list');
 export const addScheduleTaskBtn = document.getElementById('add-schedule-task-btn');
+export const addAiScheduleTaskBtn = document.getElementById('add-ai-schedule-task-btn');
 export const scheduleCalendarBodyEl = document.getElementById('schedule-calendar-body');
 export const scheduleRangeLabelEl = document.getElementById('schedule-range-label');
 export const schedulePrevBtn = document.getElementById('schedule-prev-btn');

@@ -135,10 +135,13 @@
       <aside class="schedule-sidebar">
         <div class="schedule-sidebar-head">
           <h2>업무 목록</h2>
-          <button id="add-schedule-task-btn" class="add-btn">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-            업무
-          </button>
+          <div class="schedule-sidebar-actions">
+            <button id="add-schedule-task-btn" class="add-btn">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+              업무
+            </button>
+            <button id="add-ai-schedule-task-btn" class="ghost-btn">AI 일정 추가</button>
+          </div>
         </div>
         <div class="schedule-filter-bar">
           <button class="schedule-filter-btn active" data-filter="all">전체</button>
@@ -319,6 +322,26 @@
             <button id="gemini-key-save" class="settings-btn settings-btn--primary">저장</button>
             <button id="gemini-key-clear" class="settings-btn">초기화</button>
             <span id="gemini-key-status" class="settings-key-status"></span>
+          </div>
+
+          <hr class="settings-section-divider" />
+          <h4 class="settings-subtitle">AI 일정 추가 시 참조 내용</h4>
+          <p class="settings-desc">아래 항목은 "AI 일정 추가" 버튼 클릭 시 프롬프트에 포함할지 선택하며 브라우저에 저장됩니다.</p>
+          <label class="settings-checkbox-row">
+            <input type="checkbox" id="schedule-ai-pref-behavior" />
+            <span>사용자 수정 패턴 (난이도/마감일 변경, 완료/삭제 경향)</span>
+          </label>
+          <label class="settings-checkbox-row">
+            <input type="checkbox" id="schedule-ai-pref-deadline" />
+            <span>기존 미완료 일정의 마감일 분포</span>
+          </label>
+          <label class="settings-checkbox-row">
+            <input type="checkbox" id="schedule-ai-pref-existing" />
+            <span>기존 할 일 텍스트 (중복 생성 방지)</span>
+          </label>
+          <div class="settings-btn-row">
+            <button id="schedule-ai-pref-save" class="settings-btn settings-btn--primary">참조 설정 저장</button>
+            <span id="schedule-ai-pref-status" class="settings-key-status"></span>
           </div>
         </section>
 
