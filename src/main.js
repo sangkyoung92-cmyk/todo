@@ -11,7 +11,7 @@ import {
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
-import { extractTodosWithAI, promptForApiKey } from './ai/extract.js';
+import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
 
 function rerender() {
   renderAll(rerender);
@@ -115,7 +115,15 @@ async function extractTodosFromCurrentNote() {
       rerender();
     }
   } catch (err) {
-    alert(`오류: ${err.message}`);
+    if (err.message === 'API_KEY_MISSING') {
+      openSettingsDrawer();
+      alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+    } else if (err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+      alert('API 키가 유효하지 않습니다. 설정에서 올바른 키를 입력해주세요.');
+    } else {
+      alert(`오류: ${err.message}`);
+    }
   } finally {
     extractTodoBtn.disabled = false;
     extractTodoBtn.textContent = '노트에서 할 일 추출';
@@ -410,7 +418,72 @@ addTodoBtn.addEventListener('click', () => {
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
-document.getElementById('set-api-key-btn').addEventListener('click', () => promptForApiKey());
+
+// ── Settings Drawer ──────────────────────────────────
+const settingsBtn = document.getElementById('settings-btn');
+const settingsDrawer = document.getElementById('settings-drawer');
+const settingsOverlay = document.getElementById('settings-overlay');
+const settingsCloseBtn = document.getElementById('settings-close-btn');
+const geminiKeyInput = document.getElementById('gemini-api-key-input');
+const geminiKeyToggle = document.getElementById('gemini-key-toggle');
+const geminiKeySave = document.getElementById('gemini-key-save');
+const geminiKeyClear = document.getElementById('gemini-key-clear');
+const geminiKeyStatus = document.getElementById('gemini-key-status');
+
+function openSettingsDrawer() {
+  geminiKeyInput.value = getApiKey();
+  updateKeyStatus();
+  settingsDrawer.classList.add('open');
+  settingsOverlay.classList.add('open');
+}
+
+function closeSettingsDrawer() {
+  settingsDrawer.classList.remove('open');
+  settingsOverlay.classList.remove('open');
+}
+
+function updateKeyStatus() {
+  const key = getApiKey();
+  if (key) {
+    geminiKeyStatus.textContent = '✓ 저장됨';
+    geminiKeyStatus.dataset.state = 'saved';
+  } else {
+    geminiKeyStatus.textContent = '미설정';
+    geminiKeyStatus.dataset.state = 'empty';
+  }
+}
+
+settingsBtn.addEventListener('click', openSettingsDrawer);
+settingsCloseBtn.addEventListener('click', closeSettingsDrawer);
+settingsOverlay.addEventListener('click', closeSettingsDrawer);
+
+geminiKeyToggle.addEventListener('click', () => {
+  const isPassword = geminiKeyInput.type === 'password';
+  geminiKeyInput.type = isPassword ? 'text' : 'password';
+});
+
+geminiKeySave.addEventListener('click', () => {
+  const key = geminiKeyInput.value.trim();
+  if (!key) {
+    geminiKeyStatus.textContent = '키를 입력해주세요';
+    geminiKeyStatus.dataset.state = 'error';
+    return;
+  }
+  saveApiKey(key);
+  updateKeyStatus();
+});
+
+geminiKeyClear.addEventListener('click', () => {
+  geminiKeyInput.value = '';
+  saveApiKey('');
+  updateKeyStatus();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsDrawer.classList.contains('open')) {
+    closeSettingsDrawer();
+  }
+});
 titleEl.addEventListener('input', scheduleAutoSave);
 contentEl.addEventListener('input', scheduleAutoSave);
 contentEl.addEventListener('keydown', (e) => {

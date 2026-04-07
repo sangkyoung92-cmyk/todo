@@ -30,6 +30,11 @@
         </div>
         <span id="save-status" class="save-status">저장됨</span>
         <span id="sync-status" class="sync-status"></span>
+        <button id="settings-btn" class="topbar-icon-btn" title="설정">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+        </button>
         <div id="auth-area" class="auth-area">
           <button id="login-btn" class="login-btn">Google 로그인</button>
         </div>
@@ -139,9 +144,8 @@
             <input id="note-title" type="text" class="note-title-input" placeholder="제목 없음" />
             <div id="note-date" class="note-date"></div>
             <div class="note-actions">
-              <button id="extract-todo-btn" class="ghost-btn" title="AI로 노트에서 할 일 자동 추출 (Claude API 필요)">노트에서 할 일 추출</button>
-              <button id="set-api-key-btn" class="ghost-btn ghost-btn--icon" title="Claude API 키 설정">🔑</button>
-              <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 📋 버튼으로도 추가</span>
+              <button id="extract-todo-btn" class="ghost-btn" title="AI로 노트에서 할 일 자동 추출 (Gemini API)">노트에서 할 일 추출</button>
+              <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
             </div>
             <div class="note-title-underline"></div>
           </div>
@@ -167,6 +171,59 @@
         <ul id="todo-list" class="list"></ul>
       </section>
     </main>
+
+    <!-- Settings drawer -->
+    <div id="settings-overlay" class="settings-overlay"></div>
+    <aside id="settings-drawer" class="settings-drawer" aria-label="설정">
+      <div class="settings-drawer-header">
+        <h2>설정</h2>
+        <button id="settings-close-btn" class="settings-close-btn" title="닫기">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+
+      <div class="settings-body">
+        <!-- AI 설정 -->
+        <section class="settings-section">
+          <h3 class="settings-section-title">AI 설정</h3>
+          <p class="settings-desc">
+            "노트에서 할 일 추출" 기능에 사용됩니다.<br>
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>에서 무료로 발급받을 수 있습니다.
+          </p>
+          <label class="settings-label" for="gemini-api-key-input">Gemini API 키</label>
+          <div class="settings-input-row">
+            <input
+              id="gemini-api-key-input"
+              type="password"
+              class="settings-input"
+              placeholder="AIza..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="gemini-key-toggle" class="settings-input-icon" title="보기/숨기기">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+            </button>
+          </div>
+          <div class="settings-btn-row">
+            <button id="gemini-key-save" class="settings-btn settings-btn--primary">저장</button>
+            <button id="gemini-key-clear" class="settings-btn">초기화</button>
+            <span id="gemini-key-status" class="settings-key-status"></span>
+          </div>
+        </section>
+
+        <!-- 앱 정보 -->
+        <section class="settings-section">
+          <h3 class="settings-section-title">앱 정보</h3>
+          <p class="settings-desc">내 노트북 — 로컬 우선 메모 &amp; 할 일 관리</p>
+          <div class="settings-info-row">
+            <span>데이터 저장 위치</span><span>브라우저 로컬 스토리지</span>
+          </div>
+          <div class="settings-info-row">
+            <span>클라우드 동기화</span><span>Google 로그인 시 Firebase</span>
+          </div>
+        </section>
+      </div>
+    </aside>
 
     <!-- Tab color popup (body-level to avoid stacking context issues) -->
     <div id="tab-color-popup" class="tab-color-popup"></div>
