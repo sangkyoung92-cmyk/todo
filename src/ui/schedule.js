@@ -24,6 +24,7 @@ import {
   fromDateKey,
   isSameMonth,
 } from '../utils/date-utils.js';
+import { getHolidayName, isHoliday, isWeekend } from '../utils/holiday-utils.js';
 import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import {
   buildTodoSectionsFromSchedule,
@@ -397,12 +398,15 @@ export function renderWeekView() {
   const weekDates = getWeekDates(monday);
   scheduleRangeLabelEl.textContent = getWeekRangeLabel(weekDates);
 
-  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
   let html = '<div class="week-grid">';
   weekDates.forEach((date, i) => {
     const dateKey = toDateKey(date);
     const todayClass = isToday(dateKey) ? 'today' : '';
+    const weekendClass = isWeekend(date) ? 'weekend' : '';
+    const holidayClass = isHoliday(date) ? 'holiday' : '';
+    const holidayName = getHolidayName(date);
     const entries = state.scheduleEntries.filter((e) => e.date === dateKey);
 
     let chipsHtml = '';
@@ -425,10 +429,10 @@ export function renderWeekView() {
     }
 
     html += `
-      <div class="week-day-col ${todayClass}"
+      <div class="week-day-col ${todayClass} ${weekendClass} ${holidayClass}"
            data-date="${dateKey}">
         <div class="week-day-header">
-          <div class="week-day-name">${dayNames[i]}</div>
+          <div class="week-day-name" title="${holidayName || ''}">${dayNames[i]}</div>
           <div class="week-day-num">${date.getDate()}</div>
         </div>
         <div class="week-day-drop-zone" data-date="${dateKey}">
@@ -450,14 +454,17 @@ export function renderMonthView() {
   scheduleRangeLabelEl.textContent = getMonthLabel(year, month);
 
   const grid = getMonthGrid(year, month);
-  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
   let html = '<div class="month-grid">';
 
   // 요일 헤더
   html += '<div class="month-day-names">';
-  dayNames.forEach((n) => {
-    html += `<div class="month-day-name-cell">${n}</div>`;
+  dayNames.forEach((n, i) => {
+    const isSun = i === 0;
+    const isSat = i === 6;
+    const cls = isSun ? 'sun' : isSat ? 'sat' : '';
+    html += `<div class="month-day-name-cell ${cls}">${n}</div>`;
   });
   html += '</div>';
 
@@ -467,6 +474,9 @@ export function renderMonthView() {
       const dateKey = toDateKey(date);
       const otherClass = !isSameMonth(date, year, month) ? 'other-month' : '';
       const todayClass = isToday(dateKey) ? 'today' : '';
+      const weekendClass = isWeekend(date) ? 'weekend' : '';
+      const holidayClass = isHoliday(date) ? 'holiday' : '';
+      const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((e) => e.date === dateKey);
       const MAX_CHIPS = 3;
 
@@ -489,9 +499,9 @@ export function renderMonthView() {
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass}"
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass}"
              data-date="${dateKey}">
-          <div class="month-day-num">${date.getDate()}</div>
+          <div class="month-day-num" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>`;
     });

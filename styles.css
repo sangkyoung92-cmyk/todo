@@ -2186,3 +2186,137 @@ body {
 #notes-view {
   display: contents;
 }
+
+/* ══════════════════════════════════════════════════
+   2026 Spring refresh (Toss-inspired light UI)
+══════════════════════════════════════════════════ */
+:root {
+  --bg: #f5f8ff;
+  --surface: #ffffff;
+  --surface-soft: #f7faff;
+  --line: #e6edf8;
+  --text-strong: #1b2a4a;
+  --text-muted: #6f7f9e;
+  --brand: #3182f6;
+  --brand-soft: #eaf2ff;
+  --danger-soft: #ffeef1;
+  --holiday: #ff4d6d;
+  --sat: #4c6fff;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 0%, #eaf2ff 0%, transparent 35%),
+    radial-gradient(circle at 88% 0%, #e9fbf5 0%, transparent 28%),
+    var(--bg);
+  color: var(--text-strong);
+  font-family: 'Pretendard', 'SUIT', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.topbar {
+  height: 58px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, #3a86ff 0%, #2a7bf6 45%, #35a0ff 100%);
+  box-shadow: 0 8px 24px rgba(35, 82, 175, 0.22);
+}
+
+#search-input {
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 12px;
+}
+
+.app-mode-tab.active,
+.schedule-view-btn.active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.schedule-main {
+  background: transparent;
+}
+
+.schedule-sidebar,
+.schedule-calendar-header,
+.week-day-col,
+.month-day-cell {
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 20px rgba(28, 55, 111, 0.06);
+}
+
+.schedule-sidebar,
+.schedule-calendar-header {
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(8px);
+}
+
+.schedule-calendar-area {
+  background: transparent;
+}
+
+.schedule-nav-btn {
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.schedule-nav-btn:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.week-day-col,
+.month-day-cell {
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.week-day-col.weekend,
+.month-day-cell.weekend {
+  background: #fbfdff;
+}
+
+.week-day-col.holiday,
+.month-day-cell.holiday {
+  background: #fff8fa;
+  border-color: #ffd6df;
+}
+
+.week-day-name,
+.month-day-name-cell {
+  color: var(--text-muted);
+}
+
+.month-day-name-cell.sun,
+.week-day-col.holiday .week-day-name,
+.week-day-col.holiday .week-day-num,
+.month-day-cell.holiday .month-day-num {
+  color: var(--holiday);
+}
+
+.month-day-name-cell.sat,
+.week-day-col.weekend:not(.holiday) .week-day-name,
+.week-day-col.weekend:not(.holiday) .week-day-num,
+.month-day-cell.weekend:not(.holiday) .month-day-num {
+  color: var(--sat);
+}
+
+.week-day-col.today,
+.month-day-cell.today {
+  border-color: #8cb8ff;
+  box-shadow: 0 12px 26px rgba(49, 130, 246, 0.2);
+}
+
+.cal-chip,
+.month-chip {
+  border-radius: 10px;
+  background: var(--brand-soft);
+  border: 1px solid #cfe1ff;
+  color: #2056a8;
+}
+
+.cal-chip.chip-done,
+.month-chip.chip-done {
+  background: #e9f8ef;
+  border-color: #bbe9ca;
+  color: #227a45;
+}

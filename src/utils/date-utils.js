@@ -3,26 +3,26 @@
  */
 
 /**
- * 주어진 날짜가 속한 주의 월요일 반환
+ * 주어진 날짜가 속한 주의 일요일 반환
  * @param {Date|string} date
  * @returns {Date}
  */
 export function getMonday(date) {
   const d = new Date(date);
   const day = d.getDay(); // 0=일, 1=월, ..., 6=토
-  const diff = (day === 0 ? -6 : 1 - day); // 월요일로 이동
+  const diff = -day; // 일요일로 이동
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
 /**
- * 주어진 월요일 기준 7일 날짜 배열 반환
- * @param {Date|string} monday
+ * 주어진 주 시작일(일요일) 기준 7일 날짜 배열 반환
+ * @param {Date|string} weekStart
  * @returns {Date[]}
  */
-export function getWeekDates(monday) {
-  const start = new Date(monday);
+export function getWeekDates(weekStart) {
+  const start = new Date(weekStart);
   start.setHours(0, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
@@ -33,7 +33,7 @@ export function getWeekDates(monday) {
 
 /**
  * 주어진 연/월의 달력 그리드 반환 (주 배열 -> 날짜 배열)
- * 항상 월요일 시작, 6주 그리드
+ * 항상 일요일 시작, 5~6주 그리드
  * @param {number} year
  * @param {number} month (1-12)
  * @returns {Date[][]}
@@ -41,9 +41,9 @@ export function getWeekDates(monday) {
 export function getMonthGrid(year, month) {
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
-  const startMonday = getMonday(firstDay);
+  const startSunday = getMonday(firstDay);
   const weeks = [];
-  const current = new Date(startMonday);
+  const current = new Date(startSunday);
 
   while (current <= lastDay || weeks.length < 5) {
     const week = [];
