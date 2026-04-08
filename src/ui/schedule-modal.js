@@ -25,7 +25,7 @@ diffBtns.forEach((btn) => {
 });
 
 function openModal(defaults = {}) {
-  textInput.value = '';
+  textInput.value = defaults.text || '';
   deadlineInput.value = defaults.deadline || '';
   setDiff(defaults.difficulty || '중');
   overlay.classList.add('open');
