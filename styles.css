@@ -1972,6 +1972,8 @@ body {
   font-weight: 500;
   cursor: grab;
   transition: background 0.1s;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .cal-chip.dragging,
@@ -1997,6 +1999,7 @@ body {
 
 .cal-chip-text {
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2100,6 +2103,7 @@ body {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-width: 0;
 }
 
 .month-chip {
@@ -2113,6 +2117,8 @@ body {
   align-items: center;
   gap: 3px;
   cursor: grab;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .month-chip-text {
@@ -2120,6 +2126,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  min-width: 0;
 }
 
 .month-chip-check {
