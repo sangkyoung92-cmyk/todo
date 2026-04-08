@@ -1133,6 +1133,12 @@ body {
   margin-top: 2px;
 }
 
+.todo-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .todo-text {
   font-size: 13px;
   line-height: 1.4;
@@ -1696,10 +1702,13 @@ body {
 
 .schedule-task-name {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: #201f1e;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .schedule-task-card.done-task .schedule-task-name {
@@ -1759,6 +1768,7 @@ body {
   transition: width 0.25s;
 }
 
+.schedule-task-edit,
 .schedule-task-delete {
   background: none;
   border: none;
@@ -1775,9 +1785,15 @@ body {
   justify-content: center;
 }
 
+.schedule-task-edit svg,
 .schedule-task-delete svg {
   width: 13px;
   height: 13px;
+}
+
+.schedule-task-edit:hover {
+  color: #7B2FA0;
+  background: #f5eeff;
 }
 
 .schedule-task-delete:hover {

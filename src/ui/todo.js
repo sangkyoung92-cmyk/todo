@@ -130,9 +130,14 @@ function renderTodoItem(todo, sectionKey, onRender) {
         ${metaHtml}
       </div>
     </div>
-    <button class="icon-btn" data-action="delete" title="할 일 삭제">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
-    </button>
+    <div class="todo-actions">
+      <button class="icon-btn" data-action="edit" title="할 일 수정">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.854 1.646a.5.5 0 0 1 .708 0l.792.792a.5.5 0 0 1 0 .708l-8.5 8.5L4 12l.354-1.854 8.5-8.5zM3.5 13A1.5 1.5 0 0 0 5 14.5h8a.5.5 0 0 0 0-1H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 0-1 0v8z"/></svg>
+      </button>
+      <button class="icon-btn" data-action="delete" title="할 일 삭제">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
+      </button>
+    </div>
   `;
 
   li.querySelector('[data-action="toggle"]').addEventListener('change', (e) => {
@@ -216,38 +221,40 @@ function renderTodoItem(todo, sectionKey, onRender) {
     });
   }
 
-  const textEl = li.querySelector('[data-action="edit-text"]');
-  if (textEl) {
-    textEl.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = todo.text;
-      input.className = 'todo-text-input';
-      textEl.replaceWith(input);
-      input.focus();
-      input.select();
+  const openTextEdit = (e) => {
+    e.stopPropagation();
+    const textEl = li.querySelector('[data-action="edit-text"]');
+    if (!textEl) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = todo.text;
+    input.className = 'todo-text-input';
+    textEl.replaceWith(input);
+    input.focus();
+    input.select();
 
-      const commit = () => {
-        const oldText = todo.text;
-        const newText = input.value.trim();
-        if (newText && newText !== oldText) {
-          todo.text = newText;
-          todo.updatedAt = nowISO();
-          logBehavior('name_edit', todo.id, oldText, newText);
-          save();
-          markStateDirty(); scheduleSync();
-        }
-        onRender();
-      };
+    const commit = () => {
+      const oldText = todo.text;
+      const newText = input.value.trim();
+      if (newText && newText !== oldText) {
+        todo.text = newText;
+        todo.updatedAt = nowISO();
+        logBehavior('name_edit', todo.id, oldText, newText);
+        save();
+        markStateDirty(); scheduleSync();
+      }
+      onRender();
+    };
 
-      input.addEventListener('blur', commit);
-      input.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
-        if (ev.key === 'Escape') onRender();
-      });
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+      if (ev.key === 'Escape') onRender();
     });
-  }
+  };
+
+  li.querySelector('[data-action="edit"]')?.addEventListener('click', openTextEdit);
+  li.querySelector('[data-action="edit-text"]')?.addEventListener('dblclick', openTextEdit);
 
   return li;
 }

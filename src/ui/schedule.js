@@ -203,6 +203,36 @@ function deleteTask(todoId) {
   markStateDirty(); scheduleSync();
 }
 
+async function editTask(todoId) {
+  const todo = state.todos.find((item) => item.id === todoId);
+  if (!todo) return;
+
+  const result = await showScheduleModal({
+    text: todo.text,
+    deadline: todo.deadline || '',
+    difficulty: todo.difficulty || '중',
+  });
+  if (!result) return;
+
+  const nextText = (result.text || '').trim();
+  if (!nextText) return;
+
+  const prevDeadline = todo.deadline;
+  todo.text = nextText;
+  todo.difficulty = result.difficulty || '중';
+  todo.deadline = result.deadline || null;
+  todo.updatedAt = nowISO();
+
+  if (todo.deadline) {
+    assignToDate(todo.id, todo.deadline);
+  } else if (prevDeadline) {
+    state.scheduleEntries = state.scheduleEntries.filter((entry) => entry.todoId !== todo.id);
+  }
+
+  save();
+  markStateDirty(); scheduleSync();
+}
+
 // ── 난이도 뱃지 HTML ──────────────────────────────
 function diffBadge(difficulty) {
   if (!difficulty) return '';
@@ -212,6 +242,10 @@ function diffBadge(difficulty) {
 
 function trashIconSvg() {
   return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>`;
+}
+
+function editIconSvg() {
+  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854 1.646a.5.5 0 0 1 .708 0l.792.792a.5.5 0 0 1 0 .708l-8.5 8.5L4 12l.354-1.854 8.5-8.5zM3.5 13A1.5 1.5 0 0 0 5 14.5h8a.5.5 0 0 0 0-1H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 0-1 0v8z"/></svg>`;
 }
 
 // ── 기한 포맷 ─────────────────────────────────────
@@ -277,7 +311,8 @@ export function renderTaskList() {
             <input type="checkbox" class="schedule-task-check"
               data-action="toggle-done" data-todo-id="${todo.id}" data-section="${section.key}"
               ${sectionDone ? 'checked' : ''} />
-            <span class="schedule-task-name">${escapeHtml(todo.text)}</span>
+            <span class="schedule-task-name" title="${escapeHtml(todo.text)}">${escapeHtml(todo.text)}</span>
+            <button class="schedule-task-edit" data-action="edit" data-todo-id="${todo.id}" title="수정">${editIconSvg()}</button>
             <button class="schedule-task-delete" data-action="delete" data-todo-id="${todo.id}" title="삭제">${trashIconSvg()}</button>
           </div>
           <div class="schedule-task-meta">
@@ -325,6 +360,15 @@ function bindTaskListEvents() {
       e.stopPropagation();
       if (!confirm('이 업무를 삭제할까요?')) return;
       deleteTask(el.dataset.todoId);
+      if (_onRender) _onRender();
+    });
+  });
+
+  // 수정
+  scheduleTaskListEl.querySelectorAll('[data-action="edit"]').forEach((el) => {
+    el.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await editTask(el.dataset.todoId);
       if (_onRender) _onRender();
     });
   });
