@@ -2065,7 +2065,6 @@ body {
   padding: 4px 6px;
   min-height: 80px;
   min-width: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: border-color 0.12s;
