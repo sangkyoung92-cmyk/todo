@@ -1,12 +1,3 @@
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { auth } from '../shared/firebase-config.js';
-import { loadScheduleDocument, saveScheduleDocument } from '../shared/schedule-repository.js';
 import { createEmptyScheduleState } from '../shared/schedule-state.js';
 import {
   addTask,
@@ -27,7 +18,8 @@ import {
   todayKey,
 } from '../shared/date-utils.js';
 
-const provider = new GoogleAuthProvider();
+const firebaseAuth = window.Capacitor?.Plugins?.FirebaseAuthentication;
+const firestore = window.Capacitor?.Plugins?.FirebaseFirestore;
 
 const els = {
   authButton: document.getElementById('auth-button'),
@@ -39,8 +31,6 @@ const els = {
   modeButtons: document.querySelectorAll('.mode-btn'),
   todayView: document.getElementById('today-view'),
   weekView: document.getElementById('week-view'),
-  calendarView: document.getElementById('calendar-view'),
-  quickAddView: document.getElementById('quick-add-view'),
   quickAddForm: document.getElementById('quick-add-form'),
   calendarPrev: document.getElementById('calendar-prev'),
   calendarNext: document.getElementById('calendar-next'),
@@ -62,16 +52,58 @@ const appState = {
   rawDoc: {},
 };
 
-function helpers() {
+function helperBundle() {
   return {
-    uid: crypto.randomUUID,
+    uid: () => crypto.randomUUID(),
     nowISO: () => new Date().toISOString(),
   };
 }
 
+function ensurePlugins() {
+  if (firebaseAuth && firestore) return true;
+  alert('이 화면은 Android Capacitor 앱에서 테스트해야 합니다. Android Studio로 실행해 주세요.');
+  return false;
+}
+
+async function loadStateDocument(uid) {
+  const { snapshot } = await firestore.getDocument({
+    reference: `users/${uid}/data/state`,
+  });
+  const data = snapshot?.data || {};
+  return {
+    raw: data,
+    schedule: {
+      todos: data.todos || [],
+      scheduleEntries: data.scheduleEntries || [],
+      scheduleView: data.scheduleView || 'week',
+      scheduleWeekStart: data.scheduleWeekStart || toDateKey(new Date()),
+      scheduleMonth: data.scheduleMonth || todayKey().slice(0, 7),
+    },
+  };
+}
+
+async function saveStateDocument(uid) {
+  const nextDoc = {
+    ...appState.rawDoc,
+    todos: appState.state.todos,
+    scheduleEntries: appState.state.scheduleEntries,
+    scheduleView: appState.state.scheduleView,
+    scheduleWeekStart: appState.state.scheduleWeekStart,
+    scheduleMonth: appState.state.scheduleMonth,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await firestore.setDocument({
+    reference: `users/${uid}/data/state`,
+    data: nextDoc,
+    merge: true,
+  });
+  appState.rawDoc = nextDoc;
+}
+
 async function persist() {
   if (!appState.uid) return;
-  appState.rawDoc = await saveScheduleDocument(appState.uid, appState.state, appState.rawDoc);
+  await saveStateDocument(appState.uid);
 }
 
 function setActiveView(view) {
@@ -239,7 +271,7 @@ function renderAll() {
 function bindActionButtons() {
   document.querySelectorAll('[data-action="toggle-section"]').forEach((el) => {
     el.addEventListener('change', async () => {
-      toggleTaskSectionDone(appState.state, el.dataset.taskId, el.dataset.section, el.checked, helpers());
+      toggleTaskSectionDone(appState.state, el.dataset.taskId, el.dataset.section, el.checked, helperBundle());
       await persist();
       renderAll();
     });
@@ -268,7 +300,7 @@ function closeTaskModal() {
 }
 
 async function loadForUser(uid) {
-  const { raw, schedule } = await loadScheduleDocument(uid);
+  const { raw, schedule } = await loadStateDocument(uid);
   appState.uid = uid;
   appState.rawDoc = raw;
   appState.state = schedule;
@@ -279,24 +311,40 @@ async function loadForUser(uid) {
   renderAll();
 }
 
+async function refreshCurrentUser() {
+  const { user } = await firebaseAuth.getCurrentUser();
+  if (!user) {
+    appState.uid = null;
+    appState.rawDoc = {};
+    appState.state = createEmptyScheduleState();
+    els.authButton.textContent = 'Google 로그인';
+    els.authEmpty.classList.remove('hidden');
+    els.contentShell.classList.add('hidden');
+    els.fab.classList.add('hidden');
+    return;
+  }
+
+  await loadForUser(user.uid);
+}
+
 async function handleAuthClick() {
-  if (appState.uid) {
-    await signOut(auth);
+  if (!ensurePlugins()) return;
+
+  const { user } = await firebaseAuth.getCurrentUser();
+  if (user) {
+    await firebaseAuth.signOut();
+    await refreshCurrentUser();
     return;
   }
 
-  if (window.Capacitor) {
-    await signInWithRedirect(auth, provider);
-    return;
-  }
-
-  await signInWithPopup(auth, provider);
+  await firebaseAuth.signInWithGoogle();
+  await refreshCurrentUser();
 }
 
 els.authButton.addEventListener('click', () => {
   handleAuthClick().catch((error) => {
     console.error(error);
-    alert(`로그인 처리 중 오류가 발생했습니다: ${error.message}`);
+    alert(`로그인 처리 중 오류가 발생했습니다: ${error.message || error}`);
   });
 });
 
@@ -344,7 +392,7 @@ els.quickAddForm.addEventListener('submit', async (event) => {
   const difficulty = document.getElementById('quick-add-difficulty').value;
   if (!text) return;
 
-  addTask(appState.state, { text, deadline, difficulty }, helpers());
+  addTask(appState.state, { text, deadline, difficulty }, helperBundle());
   await persist();
   els.quickAddForm.reset();
   setActiveView('today');
@@ -364,7 +412,7 @@ els.taskEditForm.addEventListener('submit', async (event) => {
     text: els.editTaskText.value,
     difficulty: els.editTaskDifficulty.value,
     deadline: els.editTaskDeadline.value || null,
-  }, helpers());
+  }, helperBundle());
   await persist();
   closeTaskModal();
   renderAll();
@@ -378,19 +426,19 @@ els.deleteTaskBtn.addEventListener('click', async () => {
   renderAll();
 });
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    appState.uid = null;
-    appState.rawDoc = {};
-    appState.state = createEmptyScheduleState();
-    els.authButton.textContent = 'Google 로그인';
-    els.authEmpty.classList.remove('hidden');
-    els.contentShell.classList.add('hidden');
-    els.fab.classList.add('hidden');
-    return;
-  }
+async function bootstrap() {
+  if (!ensurePlugins()) return;
 
-  await loadForUser(user.uid);
+  await firebaseAuth.addListener('authStateChange', async () => {
+    await refreshCurrentUser();
+  });
+
+  await refreshCurrentUser();
+}
+
+bootstrap().catch((error) => {
+  console.error(error);
+  alert(`앱 초기화 중 오류가 발생했습니다: ${error.message || error}`);
 });
 
 function escapeHtml(str) {
