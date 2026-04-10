@@ -250,6 +250,7 @@ export function renderEditor() {
 
   titleEl.value = note.title;
   contentEl.innerHTML = note.content;
+  contentEl.classList.toggle('ruled-paper', state.notePaperMode !== 'plain');
   noteDateEl.textContent = `최종 수정: ${formatDate(note.updatedAt)}`;
   saveStatusEl.textContent = '저장됨';
 }

@@ -3,8 +3,8 @@ import { todayKey, toDateKey, getMonday } from '../utils/date-utils.js';
 export const STORAGE_KEY = 'onenote_mvp_v2';
 
 export const SECTION_COLORS = [
-  '#7B2FA0', '#1f4db6', '#107c10', '#d83b01',
-  '#0078d4', '#b4009e', '#038387', '#c19c00',
+  '#5B8DEF', '#37A987', '#F29F67', '#E87EA1',
+  '#8A7CF6', '#4FA3B8', '#9D7FEA', '#F3B562',
 ];
 
 function getDefaultWeekStart() {
@@ -22,12 +22,13 @@ export const state = {
   saveTimer: null,
   searchQuery: '',
   pendingDeleteNoteIds: [], // tracks note IDs to delete from Firestore (not persisted)
-  // 스케줄 탭 관련
+  // ?��?�???관??
   scheduleEntries: [],      // { id, todoId, date, done, completedAt, createdAt, updatedAt }
   appMode: 'notes',         // 'notes' | 'schedule'
   scheduleView: 'week',     // 'week' | 'month'
-  scheduleWeekStart: null,  // 'YYYY-MM-DD' (현재 보고 있는 주의 월요일)
-  scheduleMonth: null,      // 'YYYY-MM' (현재 보고 있는 월)
+  scheduleWeekStart: null,  // 'YYYY-MM-DD' (?�재 보고 ?�는 주의 ?�요??
+  scheduleMonth: null,      // 'YYYY-MM' (?�재 보고 ?�는 ??
+  notePaperMode: 'ruled',
   todoSectionCollapsed: {
     today: false,
     week: false,
@@ -68,6 +69,7 @@ export function save() {
     scheduleView: state.scheduleView,
     scheduleWeekStart: state.scheduleWeekStart,
     scheduleMonth: state.scheduleMonth,
+    notePaperMode: state.notePaperMode,
     todoSectionCollapsed: state.todoSectionCollapsed,
   };
 
@@ -89,6 +91,7 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
     return;
   }
@@ -116,6 +119,7 @@ export function load() {
     state.scheduleView = parsed.scheduleView || 'week';
     state.scheduleWeekStart = parsed.scheduleWeekStart || getDefaultWeekStart();
     state.scheduleMonth = parsed.scheduleMonth || todayKey().slice(0, 7);
+    state.notePaperMode = parsed.notePaperMode || 'ruled';
     state.todoSectionCollapsed = {
       today: parsed.todoSectionCollapsed?.today ?? false,
       week: parsed.todoSectionCollapsed?.week ?? false,
@@ -135,6 +139,8 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
   }
 }
+

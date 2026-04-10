@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -119,6 +119,11 @@
             <path d="M14.83 2.17a2 2 0 00-2.83 0L3.17 11a2 2 0 000 2.83l1.5 1.5H2a1 1 0 000 2h10a1 1 0 000-2H9.24l5.59-5.59a2 2 0 000-2.83l0 0zM6.41 14.83L4.59 13l6-6 1.83 1.83-6 6z"/>
           </svg>
         </button>
+        <button class="tbtn" id="toggle-ruled-btn" data-action="toggle-ruled" title="노트지 배경 전환">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+          </svg>
+        </button>
       </div>
       <div class="toolbar-sep"></div>
       <div class="toolbar-group">
@@ -140,7 +145,6 @@
               <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
               업무
             </button>
-            <button id="add-ai-schedule-task-btn" class="ghost-btn">AI 일정 추가</button>
           </div>
         </div>
         <div class="schedule-filter-bar">
@@ -190,6 +194,7 @@
             <div id="note-date" class="note-date"></div>
             <div class="note-actions">
               <button id="extract-todo-btn" class="ghost-btn" title="AI로 노트에서 할 일 자동 추출 (Gemini API)">노트에서 할 일 추출</button>
+              <button id="add-ai-schedule-task-btn" class="ghost-btn" title="현재 노트 내용을 바탕으로 AI 일정 생성">AI 일정 추가</button>
               <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
             </div>
             <div class="note-title-underline"></div>
@@ -206,14 +211,19 @@
 
       <!-- Todo panel -->
       <section class="panel todo-panel">
-        <div class="panel-head">
-          <h2>할 일</h2>
+        <div class="panel-head todo-panel-head">
+          <h2>업무 목록</h2>
           <button id="add-todo-btn" class="add-btn">
             <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-            할 일
+            업무
           </button>
         </div>
-        <ul id="todo-list" class="list"></ul>
+        <div class="schedule-filter-bar note-todo-filter-bar">
+          <button class="schedule-filter-btn active" data-filter="all">전체</button>
+          <button class="schedule-filter-btn" data-filter="active">진행중</button>
+          <button class="schedule-filter-btn" data-filter="done">완료</button>
+        </div>
+        <ul id="todo-list" class="list schedule-task-list"></ul>
       </section>
     </main>
     </div><!-- end #notes-view -->

@@ -28,6 +28,14 @@ function rerender() {
   } else {
     renderAll(rerender);
   }
+  syncEditorChrome();
+}
+
+function syncEditorChrome() {
+  if (!contentEl) return;
+  const isRuled = state.notePaperMode !== 'plain';
+  contentEl.classList.toggle('ruled-paper', isRuled);
+  document.getElementById('toggle-ruled-btn')?.classList.toggle('active', isRuled);
 }
 
 // ── 앱 모드 전환 (노트 / 스케줄) ─────────────────
@@ -134,13 +142,10 @@ async function addAiScheduleTasks() {
 addAiScheduleTaskBtn?.addEventListener('click', addAiScheduleTasks);
 
 function addTab() {
-  const name = prompt('섹션 이름을 입력하세요.', '새 섹션');
-  if (!name?.trim()) return;
-
   const now = nowISO();
   const tab = {
     id: uid(),
-    name: name.trim(),
+    name: '새 섹션',
     color: getNextSectionColor(),
     createdAt: now,
     updatedAt: now,
@@ -288,6 +293,16 @@ toolbarEl.addEventListener('mousedown', (e) => {
     return;
   }
 
+  if (btn.dataset.action === 'toggle-ruled') {
+    state.notePaperMode = state.notePaperMode === 'plain' ? 'ruled' : 'plain';
+    save();
+    markStateDirty();
+    scheduleSync();
+    syncEditorChrome();
+    contentEl.focus();
+    return;
+  }
+
   const cmd = btn.dataset.cmd;
   const val = btn.dataset.val || null;
 
@@ -306,6 +321,7 @@ function updateToolbarState() {
       btn.classList.toggle('active', document.queryCommandState(cmd));
     }
   });
+  syncEditorChrome();
 }
 
 contentEl.addEventListener('keyup', updateToolbarState);
@@ -325,10 +341,10 @@ colorBtn.addEventListener('mousedown', (e) => {
 // ── Tab Color Popup (body-level) ─────────────────────
 const tabColorPopup = document.getElementById('tab-color-popup');
 const TAB_COLORS = [
-  '#7B2FA0', '#1f4db6', '#107c10', '#d83b01',
-  '#0078d4', '#b4009e', '#038387', '#c19c00',
-  '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71',
-  '#3498db', '#9b59b6', '#1abc9c', '#e91e63',
+  '#5B8DEF', '#6E9AF7', '#8A7CF6', '#A77CF0',
+  '#37A987', '#4FA3B8', '#73B6E6', '#9CCF6A',
+  '#F29F67', '#F3B562', '#E87EA1', '#F08DA8',
+  '#D97A63', '#C98BD9', '#7BC8B1', '#F0A7C2',
 ];
 tabColorPopup.innerHTML = TAB_COLORS
   .map((c) => `<button class="color-swatch" data-color="${c}" style="background:${c}" title="${c}"></button>`)
