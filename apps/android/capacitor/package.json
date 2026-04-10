@@ -1,0 +1,16 @@
+{
+  "name": "todo-companion-android",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:shared": "node ./scripts/prepare-www.mjs",
+    "sync": "npm run prepare:shared && npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.1.0",
+    "@capacitor/cli": "^7.1.0",
+    "@capacitor/core": "^7.1.0"
+  }
+}

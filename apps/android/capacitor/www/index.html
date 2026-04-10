@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Todo Companion</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="mobile-topbar">
+        <div>
+          <p class="eyebrow">Companion</p>
+          <h1>내 일정</h1>
+        </div>
+        <button id="auth-button" class="auth-btn">Google 로그인</button>
+      </header>
+
+      <main class="mobile-main">
+        <section id="auth-empty" class="state-card">
+          <h2>일정을 휴대폰에서 확인하세요</h2>
+          <p>웹과 같은 Google 계정으로 로그인하면 오늘 일정과 이번 주 일정을 바로 확인할 수 있습니다.</p>
+        </section>
+
+        <section id="content-shell" class="content-shell hidden">
+          <nav class="segmented-nav">
+            <button class="segmented-nav__item active" data-view="today">오늘</button>
+            <button class="segmented-nav__item" data-view="week">이번 주</button>
+            <button class="segmented-nav__item" data-view="calendar">캘린더</button>
+            <button class="segmented-nav__item" data-view="quick-add">빠른 추가</button>
+          </nav>
+
+          <section id="today-view" class="view-panel"></section>
+          <section id="week-view" class="view-panel hidden"></section>
+          <section id="calendar-view" class="view-panel hidden">
+            <div class="calendar-toolbar">
+              <button id="calendar-prev" class="ghost-btn">이전</button>
+              <strong id="calendar-label"></strong>
+              <button id="calendar-next" class="ghost-btn">다음</button>
+            </div>
+            <div class="calendar-mode-switch">
+              <button class="mode-btn active" data-mode="week">주간</button>
+              <button class="mode-btn" data-mode="month">월간</button>
+            </div>
+            <div id="calendar-grid"></div>
+          </section>
+          <section id="quick-add-view" class="view-panel hidden">
+            <form id="quick-add-form" class="state-card form-card">
+              <label>
+                <span>업무명</span>
+                <input id="quick-add-text" type="text" placeholder="예: 발표자료 검토" required />
+              </label>
+              <label>
+                <span>기한</span>
+                <input id="quick-add-deadline" type="date" />
+              </label>
+              <label>
+                <span>난이도</span>
+                <select id="quick-add-difficulty">
+                  <option value="하">하</option>
+                  <option value="중" selected>중</option>
+                  <option value="상">상</option>
+                </select>
+              </label>
+              <button type="submit" class="primary-btn">일정 추가</button>
+            </form>
+          </section>
+        </section>
+      </main>
+
+      <button id="fab" class="fab hidden" aria-label="일정 추가">+</button>
+    </div>
+
+    <div id="task-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal__backdrop" data-close-modal="true"></div>
+      <div class="modal__sheet">
+        <div class="modal__header">
+          <h2>일정 수정</h2>
+          <button type="button" class="ghost-btn" data-close-modal="true">닫기</button>
+        </div>
+        <form id="task-edit-form" class="form-card form-card--flat">
+          <input id="edit-task-id" type="hidden" />
+          <label>
+            <span>업무명</span>
+            <input id="edit-task-text" type="text" required />
+          </label>
+          <label>
+            <span>기한</span>
+            <input id="edit-task-deadline" type="date" />
+          </label>
+          <label>
+            <span>난이도</span>
+            <select id="edit-task-difficulty">
+              <option value="하">하</option>
+              <option value="중">중</option>
+              <option value="상">상</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="delete-task-btn" class="danger-btn">삭제</button>
+            <button type="submit" class="primary-btn">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+  </html>

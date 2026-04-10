@@ -22,22 +22,35 @@ import { getHolidayName, isHoliday, isWeekend } from '../utils/holiday-utils.js'
 import { markStateDirty, scheduleSync } from '../sync/cloud.js';
 import {
   buildTodoSectionsFromSchedule,
-  getMostRecentScheduledDate,
   getTodoSectionCompletion,
-  toggleTodoSectionCompletion,
-} from '../utils/todo-buckets.js';
+} from '../../packages/schedule-core/sections.js';
+import {
+  addTask as addCoreTask,
+  assignTaskToDate as assignCoreTaskToDate,
+  copyEntryToDate as copyCoreEntryToDate,
+  cycleTaskDifficulty as cycleCoreTaskDifficulty,
+  deleteTask as deleteCoreTask,
+  editTask as editCoreTask,
+  getTaskProgress,
+  moveEntryToDate as moveCoreEntryToDate,
+  removeEntry as removeCoreEntry,
+  setTaskDeadline,
+  toggleEntryDone as toggleCoreEntryDone,
+  toggleTaskSectionDone,
+} from '../../packages/schedule-core/tasks.js';
 import { showScheduleModal } from './schedule-modal.js';
 
-let _onRender = null;
-let _taskFilter = 'all';
+let onRenderCallback = null;
+let taskFilter = 'all';
 
-const DIFFICULTY_CYCLE = ['하', '중', '상'];
 const SCHEDULE_SECTIONS = [
-  { key: 'today', label: '오늘 할 일' },
-  { key: 'week', label: '이번 주 할 일' },
-  { key: 'month', label: '이번 달 할 일' },
-  { key: 'other', label: '기타 할 일' },
+  { key: 'today', label: '오늘 일정' },
+  { key: 'week', label: '이번 주 일정' },
+  { key: 'month', label: '이번 달 일정' },
+  { key: 'other', label: '기타 일정' },
 ];
+
+const taskHelpers = { uid, nowISO };
 
 function persistAndSync() {
   save();
@@ -46,187 +59,60 @@ function persistAndSync() {
 }
 
 function rerenderSchedule() {
-  if (_onRender) _onRender();
+  if (onRenderCallback) onRenderCallback();
 }
 
 function syncFilterButtons() {
   document.querySelectorAll('.schedule-filter-btn').forEach((item) => {
-    item.classList.toggle('active', item.dataset.filter === _taskFilter);
+    item.classList.toggle('active', item.dataset.filter === taskFilter);
   });
-}
-
-function getProgress(todoId) {
-  const entries = state.scheduleEntries.filter((entry) => entry.todoId === todoId);
-  if (!entries.length) return { total: 0, done: 0, percent: 0 };
-  const done = entries.filter((entry) => entry.done).length;
-  return {
-    total: entries.length,
-    done,
-    percent: Math.round((done / entries.length) * 100),
-  };
 }
 
 export function addScheduleTask(text, deadline, difficulty) {
-  const now = nowISO();
-  const todo = {
-    id: uid(),
+  const todoId = addCoreTask(state, {
     text,
-    done: false,
-    sourceNoteId: null,
-    difficulty: difficulty || '중',
-    deadline: deadline || getMostRecentScheduledDate(state.scheduleEntries) || null,
-    completedAt: null,
-    createdAt: now,
-    updatedAt: now,
-    scheduledDates: [],
-  };
-  state.todos.push(todo);
-  if (todo.deadline) {
-    assignToDate(todo.id, todo.deadline);
-  } else {
-    persistAndSync();
-  }
-  return todo.id;
-}
+    deadline,
+    difficulty,
+  }, taskHelpers);
 
-function assignToDate(todoId, dateKey) {
-  const exists = state.scheduleEntries.some(
-    (entry) => entry.todoId === todoId && entry.date === dateKey,
-  );
-  if (exists) return;
-
-  const now = nowISO();
-  state.scheduleEntries.push({
-    id: uid(),
-    todoId,
-    date: dateKey,
-    done: false,
-    completedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  });
+  if (!todoId) return null;
   persistAndSync();
+  return todoId;
 }
 
 export function assignTodoToDate(todoId, dateKey) {
-  assignToDate(todoId, dateKey);
+  if (!assignCoreTaskToDate(state, todoId, dateKey, taskHelpers)) return;
+  persistAndSync();
 }
 
 function removeFromDate(entryId) {
-  state.scheduleEntries = state.scheduleEntries.filter((entry) => entry.id !== entryId);
+  if (!removeCoreEntry(state, entryId)) return;
   persistAndSync();
 }
 
 function moveEntryToDate(entryId, targetDate) {
-  const entry = state.scheduleEntries.find((item) => item.id === entryId);
-  if (!entry || entry.date === targetDate) return;
-
-  const exists = state.scheduleEntries.some(
-    (item) => item.todoId === entry.todoId && item.date === targetDate,
-  );
-  if (exists) {
-    removeFromDate(entryId);
-    return;
-  }
-
-  entry.date = targetDate;
-  entry.updatedAt = nowISO();
+  if (!moveCoreEntryToDate(state, entryId, targetDate, taskHelpers)) return;
   persistAndSync();
 }
 
 function copyEntryToDate(entryId, targetDate) {
-  const entry = state.scheduleEntries.find((item) => item.id === entryId);
-  if (!entry) return;
-  assignToDate(entry.todoId, targetDate);
-}
-
-function toggleEntryDone(entryId) {
-  const entry = state.scheduleEntries.find((item) => item.id === entryId);
-  if (!entry) return;
-
-  entry.done = !entry.done;
-  entry.completedAt = entry.done ? nowISO() : null;
-  entry.updatedAt = nowISO();
-
-  const allEntries = state.scheduleEntries.filter((item) => item.todoId === entry.todoId);
-  const todo = state.todos.find((item) => item.id === entry.todoId);
-  if (todo) {
-    const done = allEntries.length > 0 && allEntries.every((item) => item.done);
-    todo.done = done;
-    todo.completedAt = done ? nowISO() : null;
-    todo.updatedAt = nowISO();
-  }
-
+  if (!copyCoreEntryToDate(state, entryId, targetDate, taskHelpers)) return;
   persistAndSync();
 }
 
-function syncTodoDoneFromEntries(todo) {
-  const entries = state.scheduleEntries.filter((entry) => entry.todoId === todo.id);
-  if (!entries.length) {
-    todo.done = false;
-    todo.completedAt = null;
-    todo.updatedAt = nowISO();
-    return;
-  }
-
-  const done = entries.every((entry) => entry.done);
-  todo.done = done;
-  todo.completedAt = done ? nowISO() : null;
-  todo.updatedAt = nowISO();
+function toggleEntryDone(entryId) {
+  if (!toggleCoreEntryDone(state, entryId, taskHelpers)) return;
+  persistAndSync();
 }
 
 function toggleTaskDone(todoId, sectionKey, checked) {
-  const todo = state.todos.find((item) => item.id === todoId);
-  if (!todo) return;
-
-  const changedCount = toggleTodoSectionCompletion(
-    todoId,
-    sectionKey,
-    checked,
-    state.scheduleEntries,
-    nowISO(),
-  );
-
-  if (changedCount === 0 && sectionKey === 'other') {
-    todo.done = checked;
-    todo.completedAt = checked ? nowISO() : null;
-    todo.updatedAt = nowISO();
-  } else {
-    syncTodoDoneFromEntries(todo);
-  }
-
+  if (!toggleTaskSectionDone(state, todoId, sectionKey, checked, taskHelpers)) return;
   persistAndSync();
 }
 
 function deleteTask(todoId) {
-  state.todos = state.todos.filter((todo) => todo.id !== todoId);
-  state.scheduleEntries = state.scheduleEntries.filter((entry) => entry.todoId !== todoId);
+  if (!deleteCoreTask(state, todoId)) return;
   persistAndSync();
-}
-
-function syncTaskDeadline(todo, nextDeadline) {
-  const prevDeadline = todo.deadline || null;
-  todo.deadline = nextDeadline || null;
-  todo.updatedAt = nowISO();
-
-  if (todo.deadline) {
-    const exists = state.scheduleEntries.some(
-      (entry) => entry.todoId === todo.id && entry.date === todo.deadline,
-    );
-    if (!exists) {
-      state.scheduleEntries.push({
-        id: uid(),
-        todoId: todo.id,
-        date: todo.deadline,
-        done: false,
-        completedAt: null,
-        createdAt: nowISO(),
-        updatedAt: nowISO(),
-      });
-    }
-  } else if (prevDeadline) {
-    state.scheduleEntries = state.scheduleEntries.filter((entry) => entry.todoId !== todo.id);
-  }
 }
 
 async function editTask(todoId) {
@@ -243,19 +129,14 @@ async function editTask(todoId) {
   const nextText = (result.text || '').trim();
   if (!nextText) return;
 
-  todo.text = nextText;
-  todo.difficulty = result.difficulty || '중';
-  syncTaskDeadline(todo, result.deadline || null);
-  persistAndSync();
-}
+  if (!editCoreTask(state, todoId, {
+    text: nextText,
+    difficulty: result.difficulty || '중',
+    deadline: result.deadline || null,
+  }, taskHelpers)) {
+    return;
+  }
 
-function cycleTaskDifficulty(todoId) {
-  const todo = state.todos.find((item) => item.id === todoId);
-  if (!todo) return;
-
-  const index = DIFFICULTY_CYCLE.indexOf(todo.difficulty);
-  todo.difficulty = DIFFICULTY_CYCLE[(index + 1 + DIFFICULTY_CYCLE.length) % DIFFICULTY_CYCLE.length];
-  todo.updatedAt = nowISO();
   persistAndSync();
 }
 
@@ -277,8 +158,7 @@ function openTaskTextEdit(card, todoId, rerender = rerenderSchedule) {
   const commit = () => {
     const nextText = input.value.trim();
     if (nextText && nextText !== todo.text) {
-      todo.text = nextText;
-      todo.updatedAt = nowISO();
+      editCoreTask(state, todoId, { text: nextText }, taskHelpers);
       persistAndSync();
     }
     rerender();
@@ -309,7 +189,7 @@ function openTaskDeadlineEdit(trigger, todoId, rerender = rerenderSchedule) {
     const oldDeadline = todo.deadline || '';
     const nextDeadline = input.value || null;
     if (oldDeadline !== (nextDeadline || '')) {
-      syncTaskDeadline(todo, nextDeadline);
+      setTaskDeadline(state, todoId, nextDeadline, taskHelpers);
       persistAndSync();
     }
     rerender();
@@ -326,6 +206,11 @@ function openTaskDeadlineEdit(trigger, todoId, rerender = rerenderSchedule) {
   });
 }
 
+function cycleTaskDifficulty(todoId) {
+  if (!cycleCoreTaskDifficulty(state, todoId, taskHelpers)) return;
+  persistAndSync();
+}
+
 function diffBadge(todo) {
   const difficulty = todo.difficulty || '하';
   const cls = difficulty === '상' ? 'high' : difficulty === '중' ? 'mid' : 'low';
@@ -334,20 +219,27 @@ function diffBadge(todo) {
 
 function deadlineLabel(todo) {
   if (!todo.deadline) {
-    return `<button class="schedule-inline-badge schedule-inline-badge-empty" data-action="edit-deadline" data-todo-id="${todo.id}" type="button" title="기한 입력">기한 없음</button>`;
+    return '<button class="schedule-inline-badge schedule-inline-badge-empty" data-action="edit-deadline" '
+      + `data-todo-id="${todo.id}" type="button" title="기한 입력">기한 없음</button>`;
   }
 
   const cls = todo.deadline < todayKey() ? 'schedule-deadline-overdue' : '';
   const [, month, day] = todo.deadline.split('-');
-  return `<button class="schedule-inline-badge ${cls}" data-action="edit-deadline" data-todo-id="${todo.id}" type="button" title="기한 변경">~${parseInt(month, 10)}/${parseInt(day, 10)}</button>`;
+  return `<button class="schedule-inline-badge ${cls}" data-action="edit-deadline" `
+    + `data-todo-id="${todo.id}" type="button" title="기한 변경">~${parseInt(month, 10)}/${parseInt(day, 10)}</button>`;
 }
 
 function trashIconSvg() {
-  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>`;
+  return '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
+    + '<path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>'
+    + '<path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/>'
+    + '</svg>';
 }
 
 function editIconSvg() {
-  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854 1.646a.5.5 0 0 1 .708 0l.792.792a.5.5 0 0 1 0 .708l-8.5 8.5L4 12l.354-1.854 8.5-8.5zM3.5 13A1.5 1.5 0 0 0 5 14.5h8a.5.5 0 0 0 0-1H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 0-1 0v8z"/></svg>`;
+  return '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
+    + '<path d="M12.854 1.646a.5.5 0 0 1 .708 0l.792.792a.5.5 0 0 1 0 .708l-8.5 8.5L4 12l.354-1.854 8.5-8.5zM3.5 13A1.5 1.5 0 0 0 5 14.5h8a.5.5 0 0 0 0-1H5a.5.5 0 0 1-.5-.5V5a.5.5 0 0 0-1 0v8z"/>'
+    + '</svg>';
 }
 
 export function renderTaskListInto(targetEl, onRender = rerenderSchedule, options = {}) {
@@ -355,12 +247,12 @@ export function renderTaskListInto(targetEl, onRender = rerenderSchedule, option
 
   const {
     draggable = true,
-    emptyMessage = '업무가 없습니다.<br>+ 업무 버튼으로 추가하세요.',
+    emptyMessage = '업무가 없습니다.<br>+ 업무 버튼으로 추가해보세요.',
   } = options;
 
   let todos = state.todos;
-  if (_taskFilter === 'active') todos = todos.filter((todo) => !todo.done);
-  if (_taskFilter === 'done') todos = todos.filter((todo) => todo.done);
+  if (taskFilter === 'active') todos = todos.filter((todo) => !todo.done);
+  if (taskFilter === 'done') todos = todos.filter((todo) => todo.done);
   syncFilterButtons();
 
   if (todos.length === 0) {
@@ -393,12 +285,12 @@ export function renderTaskListInto(targetEl, onRender = rerenderSchedule, option
     }
 
     items.forEach((todo) => {
-      const progress = getProgress(todo.id);
+      const progress = getTaskProgress(state, todo.id);
       const sectionDone = getTodoSectionCompletion(todo.id, section.key, state.scheduleEntries);
       const percent = progress.total > 0 ? progress.percent : (sectionDone ? 100 : 0);
       const label = progress.total > 0
         ? `${progress.done}/${progress.total} (${progress.percent}%)`
-        : sectionDone ? '완료' : '미배정';
+        : sectionDone ? '완료' : '미완료';
 
       html += `
         <li class="schedule-task-card ${sectionDone ? 'done-task' : ''}" ${draggable ? 'draggable="true"' : ''} data-todo-id="${todo.id}">
@@ -678,7 +570,7 @@ function bindCalendarEvents() {
       if (!dragData || !dateKey) return;
 
       if (dragData.type === 'todo' && dragData.todoId) {
-        assignToDate(dragData.todoId, dateKey);
+        assignTodoToDate(dragData.todoId, dateKey);
       }
       if (dragData.type === 'entry' && dragData.entryId) {
         if (event.ctrlKey || event.metaKey) copyEntryToDate(dragData.entryId, dateKey);
@@ -777,7 +669,7 @@ function nextMonth() {
 }
 
 export function renderSchedule(onRender) {
-  _onRender = onRender;
+  onRenderCallback = onRender;
 
   if (!state.scheduleWeekStart) {
     state.scheduleWeekStart = toDateKey(getMonday(new Date()));
@@ -822,7 +714,7 @@ export function initScheduleNav(onRender) {
 
   document.querySelectorAll('.schedule-filter-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      _taskFilter = btn.dataset.filter;
+      taskFilter = btn.dataset.filter;
       syncFilterButtons();
       onRender();
     });
