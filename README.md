@@ -134,6 +134,7 @@ python3 -m http.server 4173
 1. `Google 로그인` 클릭 시 팝업이 즉시 닫히며 실패하면 브라우저 알림 메시지를 확인
 2. 안내대로 Firebase Console > Authentication > Settings > Authorized domains에 `sangkyoung92-cmyk.github.io`가 등록되어 있는지 확인
 3. 등록 후 다시 로그인 시 정상적으로 계정 선택/로그인이 되는지 확인
+4. 로그인 후 우측 상단 사용자 정보 옆 `로그아웃` 버튼이 보이고, 클릭 시 로그아웃되는지 확인
 
 ### G. 할 일 기능 확인
 1. 우측 `할 일` 패널에서 `+ 할 일` 클릭 후 항목 생성
