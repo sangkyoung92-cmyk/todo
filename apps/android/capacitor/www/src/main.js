@@ -337,7 +337,9 @@ async function handleAuthClick() {
     return;
   }
 
-  await firebaseAuth.signInWithGoogle();
+  await firebaseAuth.signInWithGoogle({
+    useCredentialManager: false,
+  });
   await refreshCurrentUser();
 }
 
