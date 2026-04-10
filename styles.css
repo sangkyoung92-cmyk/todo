@@ -2414,8 +2414,22 @@ body {
   color: var(--text);
 }
 
+.logout-btn {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-soft);
+  min-height: 34px;
+  padding: 0 12px;
+}
+
 .login-btn:hover,
 .topbar-icon-btn:hover {
+  background: var(--accent-soft);
+  border-color: rgba(40, 124, 255, 0.3);
+  color: var(--accent);
+}
+
+.logout-btn:hover {
   background: var(--accent-soft);
   border-color: rgba(40, 124, 255, 0.3);
   color: var(--accent);
