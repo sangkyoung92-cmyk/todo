@@ -50,6 +50,7 @@ const appState = {
   activeView: 'today',
   state: createEmptyScheduleState(),
   rawDoc: {},
+  authBusy: false,
 };
 
 function helperBundle() {
@@ -329,23 +330,36 @@ async function refreshCurrentUser() {
 
 async function handleAuthClick() {
   if (!ensurePlugins()) return;
+  if (appState.authBusy) return;
 
-  const { user } = await firebaseAuth.getCurrentUser();
-  if (user) {
-    await firebaseAuth.signOut();
+  appState.authBusy = true;
+  els.authButton.disabled = true;
+
+  try {
+    const { user } = await firebaseAuth.getCurrentUser();
+    if (user) {
+      await firebaseAuth.signOut();
+      await refreshCurrentUser();
+      return;
+    }
+
+    await firebaseAuth.signInWithGoogle({
+      useCredentialManager: false,
+    });
     await refreshCurrentUser();
-    return;
+  } finally {
+    appState.authBusy = false;
+    els.authButton.disabled = false;
   }
-
-  await firebaseAuth.signInWithGoogle({
-    useCredentialManager: false,
-  });
-  await refreshCurrentUser();
 }
 
 els.authButton.addEventListener('click', () => {
   handleAuthClick().catch((error) => {
     console.error(error);
+    if (String(error?.message || error).includes('12502')) {
+      refreshCurrentUser().catch(console.error);
+      return;
+    }
     alert(`로그인 처리 중 오류가 발생했습니다: ${error.message || error}`);
   });
 });
