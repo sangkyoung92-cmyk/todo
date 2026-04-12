@@ -5,6 +5,11 @@ import {
   scheduleRangeLabelEl,
   schedulePrevBtn,
   scheduleNextBtn,
+  plannerPlanListEl,
+  plannerInboxListEl,
+  plannerPreviewListEl,
+  plannerPreviewBtn,
+  plannerApplyBtn,
 } from './dom.js';
 import {
   getMonday,
@@ -38,10 +43,16 @@ import {
   toggleEntryDone as toggleCoreEntryDone,
   toggleTaskSectionDone,
 } from '../../packages/schedule-core/tasks.js';
+import {
+  applyAutoSchedulePreview,
+  buildAutoSchedulePreview,
+  getPlannerSnapshot,
+} from '../../packages/schedule-core/planner.js';
 import { showScheduleModal } from './schedule-modal.js';
 
 let onRenderCallback = null;
 let taskFilter = 'all';
+let pendingPlannerPreview = [];
 
 const SCHEDULE_SECTIONS = [
   { key: 'today', label: '오늘 일정' },
@@ -68,6 +79,169 @@ function syncFilterButtons() {
   });
 }
 
+function renderPlanner() {
+  renderPlannerSummary();
+  renderPlannerInbox();
+  renderPlannerPreview();
+}
+
+function renderPlannerSummary() {
+  if (!plannerPlanListEl) return;
+  const snapshot = getPlannerSnapshot(state);
+  if (!snapshot.planItems.length) {
+    plannerPlanListEl.innerHTML = '<li class="planner-empty">오늘 바로 볼 업무가 없습니다.</li>';
+    return;
+  }
+
+  plannerPlanListEl.innerHTML = snapshot.planItems.map((item) => `
+    <li class="planner-item">
+      <div class="planner-item-main">
+        <div>
+          <span class="planner-item-title">${escapeHtml(item.text)}</span>
+          <span class="planner-item-note">${escapeHtml(item.reason)}</span>
+        </div>
+        <span class="planner-chip ${item.reason === '기한 지남' ? 'planner-chip--urgent' : ''}">${escapeHtml(item.difficulty)}</span>
+      </div>
+      <div class="planner-item-meta">
+        ${item.deadline ? `<span class="planner-chip planner-chip--date">~${formatShortDate(item.deadline)}</span>` : ''}
+        <span class="planner-chip">${getPriorityLabel(item.score)}</span>
+      </div>
+    </li>
+  `).join('');
+}
+
+function renderPlannerInbox() {
+  if (!plannerInboxListEl) return;
+  const items = [...(state.todoInbox || [])].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  if (!items.length) {
+    plannerInboxListEl.innerHTML = '<li class="planner-empty">검토할 후보가 없습니다. 현재 노트 후보 추출을 눌러보세요.</li>';
+    return;
+  }
+
+  plannerInboxListEl.innerHTML = items.map((item) => `
+    <li class="planner-item" data-inbox-id="${item.id}">
+      <label>
+        <span class="planner-item-note">업무명</span>
+        <input class="planner-inline-input" data-action="edit-inbox-text" value="${escapeHtml(item.text)}" />
+      </label>
+      <div class="planner-item-meta">
+        <input class="planner-inline-date" type="date" data-action="edit-inbox-deadline" value="${escapeHtml(item.deadline || '')}" />
+        <select class="planner-inline-select" data-action="edit-inbox-difficulty">
+          ${['상', '중', '하'].map((diff) => `<option value="${diff}" ${diff === (item.difficulty || '중') ? 'selected' : ''}>${diff}</option>`).join('')}
+        </select>
+      </div>
+      <div class="planner-item-actions">
+        <button class="planner-action-btn" data-action="confirm-inbox" type="button">확정</button>
+        <button class="planner-action-btn" data-action="defer-inbox" type="button">나중에</button>
+        <button class="planner-action-btn planner-action-btn--danger" data-action="delete-inbox" type="button">삭제</button>
+      </div>
+    </li>
+  `).join('');
+
+  bindPlannerInboxEvents();
+}
+
+function renderPlannerPreview() {
+  if (!plannerPreviewListEl || !plannerApplyBtn) return;
+  plannerApplyBtn.disabled = pendingPlannerPreview.length === 0;
+
+  if (!pendingPlannerPreview.length) {
+    const unscheduledCount = getPlannerSnapshot(state).unscheduledTodos.length;
+    plannerPreviewListEl.innerHTML = `<li class="planner-empty">미배정 업무 ${unscheduledCount}개. 미리보기를 만들면 여기에 추천 날짜가 표시됩니다.</li>`;
+    return;
+  }
+
+  plannerPreviewListEl.innerHTML = pendingPlannerPreview.map((item) => `
+    <li class="planner-item">
+      <div class="planner-item-main">
+        <div>
+          <span class="planner-item-title">${escapeHtml(item.text)}</span>
+          <span class="planner-item-note">${escapeHtml(item.reason)}</span>
+        </div>
+        <span class="planner-chip planner-chip--date">${formatShortDate(item.date)}</span>
+      </div>
+      <div class="planner-item-meta">
+        <span class="planner-chip">${escapeHtml(item.difficulty)}</span>
+        <span class="planner-chip">적용 대기</span>
+      </div>
+    </li>
+  `).join('');
+}
+
+function bindPlannerInboxEvents() {
+  plannerInboxListEl.querySelectorAll('[data-inbox-id]').forEach((card) => {
+    const inboxId = card.dataset.inboxId;
+    card.querySelector('[data-action="edit-inbox-text"]')?.addEventListener('change', (event) => {
+      updateInboxItem(inboxId, { text: event.target.value });
+    });
+    card.querySelector('[data-action="edit-inbox-deadline"]')?.addEventListener('change', (event) => {
+      updateInboxItem(inboxId, { deadline: event.target.value || null });
+    });
+    card.querySelector('[data-action="edit-inbox-difficulty"]')?.addEventListener('change', (event) => {
+      updateInboxItem(inboxId, { difficulty: event.target.value || '중' });
+    });
+    card.querySelector('[data-action="confirm-inbox"]')?.addEventListener('click', () => {
+      confirmInboxItem(inboxId);
+    });
+    card.querySelector('[data-action="defer-inbox"]')?.addEventListener('click', () => {
+      updateInboxItem(inboxId, { updatedAt: '1970-01-01T00:00:00.000Z' });
+      rerenderSchedule();
+    });
+    card.querySelector('[data-action="delete-inbox"]')?.addEventListener('click', () => {
+      deleteInboxItem(inboxId);
+    });
+  });
+}
+
+function updateInboxItem(inboxId, patch) {
+  const item = state.todoInbox.find((candidate) => candidate.id === inboxId);
+  if (!item) return;
+  if (Object.prototype.hasOwnProperty.call(patch, 'text')) {
+    const nextText = (patch.text || '').trim();
+    if (!nextText) {
+      rerenderSchedule();
+      return;
+    }
+    item.text = nextText;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'deadline')) {
+    item.deadline = patch.deadline || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'difficulty')) {
+    item.difficulty = patch.difficulty || '중';
+  }
+  item.updatedAt = patch.updatedAt || nowISO();
+  persistAndSync();
+}
+
+function confirmInboxItem(inboxId) {
+  const item = state.todoInbox.find((candidate) => candidate.id === inboxId);
+  if (!item) return;
+  if (state.todos.some((todo) => todo.text === item.text)) {
+    alert('이미 같은 이름의 업무가 있습니다.');
+    return;
+  }
+
+  const todoId = addCoreTask(state, {
+    text: item.text,
+    sourceNoteId: item.sourceNoteId || null,
+    difficulty: item.difficulty || '중',
+    deadline: item.deadline || null,
+  }, taskHelpers);
+  if (!todoId) return;
+
+  state.todoInbox = state.todoInbox.filter((candidate) => candidate.id !== inboxId);
+  pendingPlannerPreview = [];
+  persistAndSync();
+  rerenderSchedule();
+}
+
+function deleteInboxItem(inboxId) {
+  state.todoInbox = state.todoInbox.filter((candidate) => candidate.id !== inboxId);
+  persistAndSync();
+  rerenderSchedule();
+}
+
 export function addScheduleTask(text, deadline, difficulty) {
   const todoId = addCoreTask(state, {
     text,
@@ -78,6 +252,28 @@ export function addScheduleTask(text, deadline, difficulty) {
   if (!todoId) return null;
   persistAndSync();
   return todoId;
+}
+
+export function renderSmartPlanner() {
+  renderPlanner();
+}
+
+export function clearPlannerPreview() {
+  pendingPlannerPreview = [];
+  renderPlannerPreview();
+}
+
+export function buildPlannerSchedulePreview() {
+  pendingPlannerPreview = buildAutoSchedulePreview(state);
+  renderPlannerPreview();
+}
+
+export function applyPlannerSchedulePreview() {
+  const applied = applyAutoSchedulePreview(state, pendingPlannerPreview, taskHelpers);
+  pendingPlannerPreview = [];
+  if (applied > 0) persistAndSync();
+  rerenderSchedule();
+  return applied;
 }
 
 export function assignTodoToDate(todoId, dateKey) {
@@ -679,6 +875,7 @@ export function renderSchedule(onRender) {
   }
 
   renderTaskList();
+  renderPlanner();
 
   if (state.scheduleView === 'month') {
     renderMonthView();
@@ -719,6 +916,28 @@ export function initScheduleNav(onRender) {
       onRender();
     });
   });
+
+  plannerPreviewBtn?.addEventListener('click', () => {
+    buildPlannerSchedulePreview();
+  });
+
+  plannerApplyBtn?.addEventListener('click', () => {
+    const applied = applyPlannerSchedulePreview();
+    if (applied === 0) alert('적용할 미리보기가 없습니다.');
+    else alert(`추천 일정 ${applied}개를 적용했습니다.`);
+  });
+}
+
+function formatShortDate(dateKey) {
+  if (!dateKey) return '날짜 없음';
+  const [, month, day] = dateKey.split('-');
+  return `${parseInt(month, 10)}/${parseInt(day, 10)}`;
+}
+
+function getPriorityLabel(score) {
+  if (score >= 900) return '우선순위 높음';
+  if (score >= 500) return '오늘 집중';
+  return '이번 주 확인';
 }
 
 function escapeHtml(str) {

@@ -137,37 +137,77 @@
 
     <!-- Schedule view (스케줄 탭 전용) -->
     <div id="schedule-view" class="schedule-view" style="display:none">
-      <aside class="schedule-sidebar">
-        <div class="schedule-sidebar-head">
-          <h2>업무 목록</h2>
-          <div class="schedule-sidebar-actions">
-            <button id="add-schedule-task-btn" class="add-btn">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-              업무
-            </button>
+      <section class="smart-planner" aria-label="스마트 플래너">
+        <div class="smart-planner-head">
+          <div>
+            <p class="smart-planner-kicker">Smart Planner</p>
+            <h2>오늘의 업무 흐름</h2>
+          </div>
+          <div class="smart-planner-actions">
+            <button id="planner-ai-advice-btn" class="ghost-btn">AI 추천 보기</button>
+            <button id="planner-preview-btn" class="ghost-btn">자동 배치 미리보기</button>
+            <button id="planner-apply-btn" class="add-btn" disabled>미리보기 적용</button>
           </div>
         </div>
-        <div class="schedule-filter-bar">
-          <button class="schedule-filter-btn active" data-filter="all">전체</button>
-          <button class="schedule-filter-btn" data-filter="active">진행중</button>
-          <button class="schedule-filter-btn" data-filter="done">완료</button>
+        <div id="planner-ai-advice" class="planner-ai-advice" hidden></div>
+        <div class="smart-planner-grid">
+          <section class="smart-planner-card">
+            <div class="smart-planner-card-head">
+              <h3>오늘 계획</h3>
+              <span class="smart-planner-card-copy">기한과 배정일 기준</span>
+            </div>
+            <ul id="planner-plan-list" class="planner-list"></ul>
+          </section>
+          <section class="smart-planner-card">
+            <div class="smart-planner-card-head">
+              <h3>업무 인박스</h3>
+              <button id="planner-extract-btn" class="ghost-btn ghost-btn--small">현재 노트 후보 추출</button>
+            </div>
+            <ul id="planner-inbox-list" class="planner-list"></ul>
+          </section>
+          <section class="smart-planner-card">
+            <div class="smart-planner-card-head">
+              <h3>배치 미리보기</h3>
+              <span class="smart-planner-card-copy">적용 전에는 저장되지 않음</span>
+            </div>
+            <ul id="planner-preview-list" class="planner-list"></ul>
+          </section>
         </div>
-        <ul id="schedule-task-list" class="schedule-task-list"></ul>
-      </aside>
+      </section>
 
-      <div class="schedule-calendar-area">
-        <div class="schedule-calendar-header">
-          <div class="schedule-nav">
-            <button id="schedule-prev-btn" class="schedule-nav-btn">&#8249;</button>
-            <span id="schedule-range-label" class="schedule-range-label"></span>
-            <button id="schedule-next-btn" class="schedule-nav-btn">&#8250;</button>
+      <div class="schedule-workspace">
+        <aside class="schedule-sidebar">
+          <div class="schedule-sidebar-head">
+            <h2>업무 목록</h2>
+            <div class="schedule-sidebar-actions">
+              <button id="add-schedule-task-btn" class="add-btn">
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+                업무
+              </button>
+            </div>
           </div>
-          <div class="schedule-view-toggle">
-            <button class="schedule-view-btn active" data-view="week">주간</button>
-            <button class="schedule-view-btn" data-view="month">월간</button>
+          <div class="schedule-filter-bar">
+            <button class="schedule-filter-btn active" data-filter="all">전체</button>
+            <button class="schedule-filter-btn" data-filter="active">진행중</button>
+            <button class="schedule-filter-btn" data-filter="done">완료</button>
           </div>
+          <ul id="schedule-task-list" class="schedule-task-list"></ul>
+        </aside>
+
+        <div class="schedule-calendar-area">
+          <div class="schedule-calendar-header">
+            <div class="schedule-nav">
+              <button id="schedule-prev-btn" class="schedule-nav-btn">&#8249;</button>
+              <span id="schedule-range-label" class="schedule-range-label"></span>
+              <button id="schedule-next-btn" class="schedule-nav-btn">&#8250;</button>
+            </div>
+            <div class="schedule-view-toggle">
+              <button class="schedule-view-btn active" data-view="week">주간</button>
+              <button class="schedule-view-btn" data-view="month">월간</button>
+            </div>
+          </div>
+          <div id="schedule-calendar-body" class="schedule-calendar-body"></div>
         </div>
-        <div id="schedule-calendar-body" class="schedule-calendar-body"></div>
       </div>
     </div>
 

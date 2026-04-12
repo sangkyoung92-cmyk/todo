@@ -67,6 +67,41 @@ export async function extractTodosWithAI(noteHtml, existingTodos = [], behaviorS
   return parseAIResponse(text, existingTodos, today);
 }
 
+export async function getPlannerAdviceWithAI(snapshot) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('API_KEY_MISSING');
+  }
+
+  let response;
+  try {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: buildPlannerPrompt(snapshot) }] }],
+          generationConfig: { maxOutputTokens: 512, temperature: 0.25 },
+        }),
+      },
+    );
+  } catch (err) {
+    throw new Error(`네트워크 오류: ${err.message}`);
+  }
+
+  if (!response.ok) {
+    if (response.status === 400 || response.status === 403) {
+      throw new Error('API_KEY_INVALID');
+    }
+    const body = await response.text().catch(() => '');
+    throw new Error(`API 오류 ${response.status}: ${body.slice(0, 120)}`);
+  }
+
+  const data = await response.json();
+  return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+}
+
 // ── helpers ──────────────────────────────────────────
 
 function parseNoteContent(html) {
@@ -123,6 +158,37 @@ ${content}
 - text는 반드시 10자 이내`;
 
   return prompt;
+}
+
+function buildPlannerPrompt(snapshot) {
+  const planItems = (snapshot.planItems || [])
+    .map((item) => `- ${item.text} (${item.reason}, 난이도 ${item.difficulty}, 기한 ${item.deadline || '없음'})`)
+    .join('\n') || '- 없음';
+  const inboxItems = (snapshot.inboxItems || [])
+    .slice(0, 8)
+    .map((item) => `- ${item.text} (난이도 ${item.difficulty || '중'}, 기한 ${item.deadline || '없음'})`)
+    .join('\n') || '- 없음';
+  const unscheduled = (snapshot.unscheduledTodos || [])
+    .slice(0, 8)
+    .map((item) => `- ${item.text} (난이도 ${item.difficulty || '중'}, 기한 ${item.deadline || '없음'})`)
+    .join('\n') || '- 없음';
+
+  return `아래 업무 현황을 보고 오늘 바로 실행할 수 있는 짧은 한국어 조언을 작성하세요.
+
+규칙:
+- 최대 4문장
+- 저장/적용을 했다고 말하지 말 것
+- 우선순위, 인박스 정리, 미배정 업무 배치 관점에서만 말할 것
+- 사용자를 압박하지 말고 실용적으로 쓸 것
+
+오늘 계획:
+${planItems}
+
+업무 인박스:
+${inboxItems}
+
+미배정 업무:
+${unscheduled}`;
 }
 
 function parseAIResponse(text, existingTodos, fromDate) {

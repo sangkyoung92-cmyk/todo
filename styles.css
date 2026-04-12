@@ -2591,6 +2591,219 @@ body {
   padding: 0 24px 24px;
   gap: 18px;
   background: transparent;
+  flex-direction: column;
+}
+
+.schedule-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 18px;
+}
+
+.smart-planner {
+  padding: 18px;
+  border: 1px solid rgba(219, 229, 242, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(17, 39, 77, 0.08);
+}
+
+.smart-planner-head,
+.smart-planner-card-head,
+.smart-planner-actions,
+.planner-item-main,
+.planner-item-actions,
+.planner-item-meta {
+  display: flex;
+  align-items: center;
+}
+
+.smart-planner-head {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.smart-planner-kicker,
+.smart-planner-card-copy {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.smart-planner-head h2,
+.smart-planner-card h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.smart-planner-head h2 {
+  font-size: 20px;
+}
+
+.smart-planner-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.smart-planner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.smart-planner-card {
+  min-width: 0;
+}
+
+.smart-planner-card-head {
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.smart-planner-card h3 {
+  font-size: 15px;
+}
+
+.planner-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planner-item,
+.planner-empty,
+.planner-ai-advice {
+  border: 1px solid rgba(219, 229, 242, 0.95);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.planner-item {
+  padding: 10px;
+}
+
+.planner-empty {
+  padding: 16px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.planner-item-main {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.planner-item-title {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.planner-item-note {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.planner-item-meta {
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.planner-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.planner-chip--urgent {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.planner-chip--date {
+  background: #eef6ff;
+  color: #1f67b3;
+}
+
+.planner-item-actions {
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.ghost-btn--small,
+.planner-action-btn {
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.planner-action-btn {
+  border: 1px solid rgba(219, 229, 242, 0.95);
+  background: #fff;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.planner-action-btn:hover {
+  border-color: rgba(40, 124, 255, 0.24);
+  color: var(--accent);
+}
+
+.planner-action-btn--danger:hover {
+  border-color: rgba(192, 57, 43, 0.24);
+  color: var(--danger);
+}
+
+.planner-inline-input,
+.planner-inline-date,
+.planner-inline-select {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid rgba(219, 229, 242, 0.95);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.planner-inline-date,
+.planner-inline-select {
+  width: auto;
+}
+
+.planner-ai-advice {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .schedule-sidebar {
@@ -2911,7 +3124,8 @@ body {
 @media (max-width: 1200px) {
   .layout { grid-template-columns: 240px minmax(0, 1fr); }
   .todo-panel { display: none; }
-  .schedule-view { flex-direction: column; }
+  .schedule-workspace { flex-direction: column; }
+  .smart-planner-grid { grid-template-columns: 1fr; }
   .schedule-sidebar { width: 100%; max-width: none; min-width: 0; }
 }
 
@@ -2934,6 +3148,8 @@ body {
   .layout { grid-template-columns: 1fr; gap: 14px; }
   .note-header-area, .note-content { padding-left: 24px; padding-right: 24px; }
   .schedule-calendar-header { flex-direction: column; align-items: stretch; gap: 14px; }
+  .smart-planner-head { align-items: flex-start; flex-direction: column; }
+  .smart-planner-actions { justify-content: flex-start; }
   .schedule-nav { justify-content: space-between; }
   .schedule-range-label { min-width: 0; flex: 1; font-size: 18px; }
   .week-grid, .month-day-names, .month-week-row { gap: 10px; }

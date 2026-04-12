@@ -16,18 +16,19 @@ export const state = {
   tabs: [],
   notes: [],
   todos: [],
+  todoInbox: [],
   behaviorLog: [],
   selectedTabId: null,
   selectedNoteId: null,
   saveTimer: null,
   searchQuery: '',
   pendingDeleteNoteIds: [], // tracks note IDs to delete from Firestore (not persisted)
-  // ?§Ï?Ï§???Í¥Ä??
+  // Schedule state
   scheduleEntries: [],      // { id, todoId, date, done, completedAt, createdAt, updatedAt }
   appMode: 'notes',         // 'notes' | 'schedule'
   scheduleView: 'week',     // 'week' | 'month'
-  scheduleWeekStart: null,  // 'YYYY-MM-DD' (?ÑÏû¨ Î≥¥Í≥† ?àÎäî Ï£ºÏùò ?îÏöî??
-  scheduleMonth: null,      // 'YYYY-MM' (?ÑÏû¨ Î≥¥Í≥† ?àÎäî ??
+  scheduleWeekStart: null,  // 'YYYY-MM-DD'
+  scheduleMonth: null,      // 'YYYY-MM'
   notePaperMode: 'ruled',
   todoSectionCollapsed: {
     today: false,
@@ -61,6 +62,7 @@ export function save() {
     tabs: state.tabs,
     notes: state.notes,
     todos: state.todos,
+    todoInbox: state.todoInbox,
     behaviorLog: state.behaviorLog,
     selectedTabId: state.selectedTabId,
     selectedNoteId: state.selectedNoteId,
@@ -83,6 +85,7 @@ export function load() {
     state.tabs = [];
     state.notes = [];
     state.todos = [];
+    state.todoInbox = [];
     state.behaviorLog = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;
@@ -101,6 +104,7 @@ export function load() {
     state.tabs = parsed.tabs || [];
     state.notes = parsed.notes || [];
     state.todos = parsed.todos || [];
+    state.todoInbox = parsed.todoInbox || [];
     state.behaviorLog = parsed.behaviorLog || [];
 
     // Ensure all tabs have a color
@@ -131,6 +135,7 @@ export function load() {
     state.tabs = [];
     state.notes = [];
     state.todos = [];
+    state.todoInbox = [];
     state.behaviorLog = [];
     state.selectedTabId = null;
     state.selectedNoteId = null;

@@ -5,6 +5,9 @@ import {
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
   addAiScheduleTaskBtn,
+  plannerExtractBtn,
+  plannerAiAdviceBtn,
+  plannerAiAdviceEl,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
@@ -14,13 +17,14 @@ import {
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
-import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
+import { extractTodosWithAI, getApiKey, getPlannerAdviceWithAI, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
-import { renderSchedule, initScheduleNav, addScheduleTask, assignTodoToDate } from './ui/schedule.js';
+import { renderSchedule, initScheduleNav, addScheduleTask, assignTodoToDate, renderSmartPlanner } from './ui/schedule.js';
 import { showScheduleModal } from './ui/schedule-modal.js';
+import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 
 function rerender() {
   if (state.appMode === 'schedule') {
@@ -202,6 +206,35 @@ function addTodoFromSelection() {
   rerender();
 }
 
+function addTodosToInbox(todoItems, sourceNoteId) {
+  let addedCount = 0;
+  todoItems.forEach((todoItem) => {
+    const todoText = (todoItem.text || '').trim();
+    const isDup = state.todos.some((t) => t.text === todoText)
+      || state.todoInbox.some((t) => t.text === todoText);
+    if (!todoText || isDup) return;
+
+    const inboxItem = createInboxItem({
+      text: todoText,
+      sourceNoteId,
+      difficulty: todoItem.difficulty || '중',
+      deadline: todoItem.deadline || null,
+    }, { nowISO, uid });
+    if (!inboxItem) return;
+    state.todoInbox.push(inboxItem);
+    addedCount += 1;
+  });
+
+  if (addedCount > 0) {
+    save();
+    markStateDirty();
+    scheduleSync();
+    renderSmartPlanner();
+  }
+
+  return addedCount;
+}
+
 async function extractTodosFromCurrentNote() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
@@ -221,19 +254,12 @@ async function extractTodosFromCurrentNote() {
       return;
     }
 
-    let addedCount = 0;
-    todos.forEach((todoItem) => {
-      const todoText = todoItem.text;
-      const isDup = state.todos.some((t) => t.text === todoText);
-      if (!isDup) {
-        addTodo(todoText, note.id, todoItem.difficulty, todoItem.deadline);
-        addedCount++;
-      }
-    });
+    const addedCount = addTodosToInbox(todos, note.id);
 
     if (addedCount === 0) {
-      alert('추출할 새로운 할 일이 없습니다. (이미 모두 추가됨)');
+      alert('추출할 새로운 후보가 없습니다. (이미 업무 목록 또는 인박스에 있음)');
     } else {
+      alert(`업무 인박스에 후보 ${addedCount}개를 추가했습니다. 스케줄 탭에서 확정해주세요.`);
       rerender();
     }
   } catch (err) {
@@ -249,6 +275,36 @@ async function extractTodosFromCurrentNote() {
   } finally {
     extractTodoBtn.disabled = false;
     extractTodoBtn.textContent = '노트에서 할 일 추출';
+  }
+}
+
+async function showPlannerAdvice() {
+  if (!plannerAiAdviceEl || !plannerAiAdviceBtn) return;
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    openSettingsDrawer();
+    alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+    return;
+  }
+
+  plannerAiAdviceBtn.disabled = true;
+  const prevLabel = plannerAiAdviceBtn.textContent;
+  plannerAiAdviceBtn.textContent = 'AI 확인 중...';
+  plannerAiAdviceEl.hidden = false;
+  plannerAiAdviceEl.textContent = '업무 흐름을 보고 있습니다...';
+
+  try {
+    const advice = await getPlannerAdviceWithAI(getPlannerSnapshot(state));
+    plannerAiAdviceEl.textContent = advice || '지금은 추가 조언이 없습니다.';
+  } catch (err) {
+    if (err.message === 'API_KEY_MISSING' || err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+    }
+    plannerAiAdviceEl.textContent = `AI 추천 실패: ${err.message}`;
+  } finally {
+    plannerAiAdviceBtn.disabled = false;
+    plannerAiAdviceBtn.textContent = prevLabel;
   }
 }
 
@@ -551,6 +607,8 @@ addTodoBtn.addEventListener('click', async () => {
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
+plannerExtractBtn?.addEventListener('click', extractTodosFromCurrentNote);
+plannerAiAdviceBtn?.addEventListener('click', showPlannerAdvice);
 
 // ── Settings Drawer ──────────────────────────────────
 const settingsBtn = document.getElementById('settings-btn');
@@ -721,6 +779,7 @@ function renderAuthArea(user) {
 
 function hasPotentialLocalDraft() {
   if (state.tabs.length > 0) return true;
+  if (state.todoInbox.length > 0) return true;
   return state.notes.some((note) => (note.title || '').trim() || (note.content || '').trim());
 }
 
