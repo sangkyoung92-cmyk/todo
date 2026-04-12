@@ -1,0 +1,12 @@
+{
+  "appId": "com.sangkyoung.todo.companion",
+  "appName": "Todo Companion",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"]
+    }
+  }
+}

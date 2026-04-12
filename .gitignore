@@ -1,0 +1,6 @@
+apps/android/capacitor/node_modules/
+apps/android/capacitor/android/.gradle/
+apps/android/capacitor/android/app/build/
+apps/android/capacitor/android/build/
+apps/android/capacitor/android/.idea/
+apps/android/capacitor/android/app/google-services.json
