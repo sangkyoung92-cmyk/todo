@@ -67,12 +67,13 @@ export async function extractTodosWithAI(noteHtml, existingTodos = [], behaviorS
   return parseAIResponse(text, existingTodos, today);
 }
 
-export async function getPlannerAdviceWithAI(snapshot) {
+export async function getPlannerSuggestionsWithAI(snapshot, localSuggestions = [], noteContext = {}) {
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error('API_KEY_MISSING');
   }
 
+  const noteContent = parseNoteContent(noteContext.noteHtml || '');
   let response;
   try {
     response = await fetch(
@@ -81,8 +82,15 @@ export async function getPlannerAdviceWithAI(snapshot) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPlannerPrompt(snapshot) }] }],
-          generationConfig: { maxOutputTokens: 512, temperature: 0.25 },
+          contents: [{
+            parts: [{
+              text: buildPlannerSuggestionPrompt(snapshot, localSuggestions, {
+                noteContent,
+                noteCreatedAt: noteContext.noteCreatedAt || '',
+              }),
+            }],
+          }],
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.2 },
         }),
       },
     );
@@ -99,7 +107,8 @@ export async function getPlannerAdviceWithAI(snapshot) {
   }
 
   const data = await response.json();
-  return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return parsePlannerSuggestionResponse(text, snapshot, localSuggestions);
 }
 
 // ── helpers ──────────────────────────────────────────
@@ -160,35 +169,48 @@ ${content}
   return prompt;
 }
 
-function buildPlannerPrompt(snapshot) {
-  const planItems = (snapshot.planItems || [])
-    .map((item) => `- ${item.text} (${item.reason}, 난이도 ${item.difficulty}, 기한 ${item.deadline || '없음'})`)
+function buildPlannerSuggestionPrompt(snapshot, localSuggestions, noteContext) {
+  const local = (localSuggestions || [])
+    .slice(0, 12)
+    .map((item) => `- todoId:${item.todoId || 'new'} / ${item.text} / ${item.date}(${item.deadline || '없음'}) / ${item.difficulty || '중'} / ${item.reason || ''}`)
     .join('\n') || '- 없음';
-  const inboxItems = (snapshot.inboxItems || [])
-    .slice(0, 8)
-    .map((item) => `- ${item.text} (난이도 ${item.difficulty || '중'}, 기한 ${item.deadline || '없음'})`)
+  const planItems = (snapshot.planItems || [])
+    .slice(0, 10)
+    .map((item) => `- todoId:${item.todoId} / ${item.text} / 기한 ${item.deadline || '없음'} / ${item.reason} / 난이도 ${item.difficulty || '중'}`)
     .join('\n') || '- 없음';
   const unscheduled = (snapshot.unscheduledTodos || [])
-    .slice(0, 8)
-    .map((item) => `- ${item.text} (난이도 ${item.difficulty || '중'}, 기한 ${item.deadline || '없음'})`)
+    .slice(0, 10)
+    .map((item) => `- todoId:${item.id} / ${item.text} / 기한 ${item.deadline || '없음'} / 난이도 ${item.difficulty || '중'}`)
     .join('\n') || '- 없음';
 
-  return `아래 업무 현황을 보고 오늘 바로 실행할 수 있는 짧은 한국어 조언을 작성하세요.
+  return `아래 업무 현황과 로컬 알고리즘 제안을 참고해서 할 일 제안을 만드세요.
 
 규칙:
-- 최대 4문장
-- 저장/적용을 했다고 말하지 말 것
-- 우선순위, 인박스 정리, 미배정 업무 배치 관점에서만 말할 것
-- 사용자를 압박하지 말고 실용적으로 쓸 것
+- 로컬 제안이 타당하면 유지하거나 더 나은 사유로 같은 제안을 반환
+- 현재 노트에서 실행해야 할 새 업무가 있으면 type "task"로 추가
+- 기존 업무를 옮기거나 배정해야 하면 type "schedule"로 반환
+- schedule 항목은 제공된 todoId 중 하나만 사용할 것
+- 적용일자는 기한보다 늦으면 안 됨
+- 사유는 한국어 한 문장, 35자 안팎으로 짧게
+- 최대 10개
 
-오늘 계획:
+오늘: ${snapshot.today}
+노트 작성일: ${noteContext.noteCreatedAt ? noteContext.noteCreatedAt.slice(0, 10) : snapshot.today}
+
+로컬 알고리즘 제안:
+${local}
+
+오늘/이번 주 확인 업무:
 ${planItems}
 
-업무 인박스:
-${inboxItems}
-
 미배정 업무:
-${unscheduled}`;
+${unscheduled}
+
+현재 노트:
+${noteContext.noteContent || '(내용 없음)'}
+
+응답 형식(JSON 객체만 반환):
+{"suggestions":[{"type":"schedule","todoId":"기존todoId","date":"YYYY-MM-DD","difficulty":"중","deadline":"YYYY-MM-DD 또는 null","reason":"짧은 사유"},{"type":"task","text":"새업무","date":"YYYY-MM-DD","difficulty":"중","deadline":"YYYY-MM-DD 또는 null","reason":"짧은 사유"}]}`;
 }
 
 function parseAIResponse(text, existingTodos, fromDate) {
@@ -225,6 +247,93 @@ function parseAIResponse(text, existingTodos, fromDate) {
       return { text: todoText, difficulty, deadline };
     })
     .filter((t) => t.text);
+}
+
+function parsePlannerSuggestionResponse(text, snapshot, localSuggestions = []) {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('AI 응답에서 JSON을 찾을 수 없습니다. 다시 시도해주세요.');
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    throw new Error('AI 응답 파싱 실패. 다시 시도해주세요.');
+  }
+
+  const items = parsed.suggestions;
+  if (!Array.isArray(items)) throw new Error('AI 응답 형식이 올바르지 않습니다.');
+
+  const validDifficulties = ['상', '중', '하'];
+  const todosById = new Map();
+  const todosByText = new Map();
+  (snapshot.planItems || []).forEach((todo) => {
+    todosById.set(todo.todoId, todo);
+    todosByText.set(todo.text, todo.todoId);
+  });
+  (snapshot.unscheduledTodos || []).forEach((todo) => {
+    todosById.set(todo.id, todo);
+    todosByText.set(todo.text, todo.id);
+  });
+  (localSuggestions || []).forEach((item) => {
+    if (!item.todoId) return;
+    todosById.set(item.todoId, item);
+    todosByText.set(item.text, item.todoId);
+  });
+
+  return items
+    .map((item, index) => {
+      const type = item.type === 'task' || item.type === 'new_task' ? 'task' : 'schedule';
+      const difficulty = validDifficulties.includes(item.difficulty) ? item.difficulty : '중';
+      const deadline = normalizeDate(item.deadline);
+      let date = normalizeDate(item.date) || deadline;
+      if (deadline && date && date > deadline) date = deadline;
+      const reason = compactReason(item.reason || 'AI가 업무 흐름을 보고 제안했습니다');
+
+      if (type === 'task') {
+        const taskText = String(item.text || '').trim().slice(0, 20);
+        if (!taskText || !date) return null;
+        return {
+          id: `ai-task-${index}-${taskText}`,
+          type: 'task',
+          source: 'ai',
+          text: taskText,
+          difficulty,
+          deadline,
+          date,
+          reason,
+        };
+      }
+
+      const todoId = String(item.todoId || '').trim() || todosByText.get(String(item.text || '').trim());
+      const todo = todosById.get(todoId);
+      if (!todo || !date) return null;
+      return {
+        id: `ai-schedule-${todoId}-${date}-${index}`,
+        type: 'schedule',
+        source: 'ai',
+        action: item.action === 'assign' ? 'assign' : 'move',
+        todoId,
+        text: item.text || todo.text,
+        difficulty,
+        deadline: deadline || todo.deadline || null,
+        date,
+        reason,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function compactReason(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
 }
 
 function formatDateStr(date) {

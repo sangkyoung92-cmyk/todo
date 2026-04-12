@@ -1,4 +1,4 @@
-import { assignTaskToDate } from './tasks.js';
+import { addTask, assignTaskToDate, moveEntryToDate } from './tasks.js';
 
 const DIFFICULTY_WEIGHT = {
   '상': 30,
@@ -56,11 +56,161 @@ export function buildAutoSchedulePreview(state, now = new Date(), limit = 8) {
   });
 }
 
+export function buildLocalPlannerSuggestions(state, now = new Date(), limit = 10) {
+  const today = toDateKey(now);
+  const dateKeys = getNextDateKeys(now, 7);
+  const weekEnd = dateKeys[dateKeys.length - 1];
+  const loadByDate = getLoadByDate(state.scheduleEntries || [], dateKeys);
+  const todosById = new Map((state.todos || []).map((todo) => [todo.id, todo]));
+  const suggestions = [];
+  const usedTodoIds = new Set();
+
+  function pushSuggestion(item) {
+    if (!item?.todoId || !item?.date || usedTodoIds.has(item.todoId) || suggestions.length >= limit) return;
+    usedTodoIds.add(item.todoId);
+    loadByDate.set(item.date, (loadByDate.get(item.date) || 0) + 1);
+    suggestions.push({
+      id: `local-${item.action || 'assign'}-${item.todoId}-${item.date}`,
+      type: 'schedule',
+      source: 'local',
+      action: item.action || 'assign',
+      entryId: item.entryId || null,
+      todoId: item.todoId,
+      text: item.text,
+      difficulty: item.difficulty || '중',
+      deadline: item.deadline || null,
+      date: item.date,
+      reason: item.reason,
+    });
+  }
+
+  getUnscheduledTodos(state).forEach((todo) => {
+    if (suggestions.length >= limit) return;
+
+    let date = null;
+    let reason = '';
+    if (todo.deadline && todo.deadline < today) {
+      date = today;
+      reason = '기한이 지났는데 완료처리가 안됐네요. 이번주에 처리하시죠';
+    } else if (!todo.deadline) {
+      date = chooseBestDate(todo, dateKeys, loadByDate);
+      reason = '업무기한이 없어서 적당한 날짜에 올렸습니다';
+    } else if (todo.deadline <= weekEnd) {
+      const availableDates = dateKeys.filter((dateKey) => dateKey <= todo.deadline);
+      date = chooseBestDate(todo, availableDates, loadByDate);
+      reason = '기한 전에 여유로운 날로 올렸습니다';
+    }
+
+    if (!date) return;
+    pushSuggestion({
+      action: 'assign',
+      todoId: todo.id,
+      text: todo.text,
+      difficulty: todo.difficulty,
+      deadline: todo.deadline,
+      date,
+      reason,
+    });
+  });
+
+  const activeEntries = (state.scheduleEntries || [])
+    .filter((entry) => !entry.done && (dateKeys.includes(entry.date) || entry.date < today))
+    .sort((a, b) => (loadByDate.get(b.date) || 0) - (loadByDate.get(a.date) || 0));
+  const averageLoad = dateKeys.reduce((sum, dateKey) => sum + (loadByDate.get(dateKey) || 0), 0) / dateKeys.length;
+  const overloadThreshold = Math.max(3, Math.ceil(averageLoad + 1));
+
+  activeEntries.forEach((entry) => {
+    if (suggestions.length >= limit) return;
+    const todo = todosById.get(entry.todoId);
+    if (!todo || todo.done || usedTodoIds.has(todo.id)) return;
+
+    const isOverdue = todo.deadline && todo.deadline < today;
+    const isOverloaded = (loadByDate.get(entry.date) || 0) >= overloadThreshold;
+    const isFlexible = !todo.deadline || todo.deadline > weekEnd;
+    if (!isOverdue && (!isOverloaded || !isFlexible)) return;
+
+    const availableDates = todo.deadline
+      ? dateKeys.filter((dateKey) => dateKey <= todo.deadline)
+      : dateKeys;
+    const date = isOverdue
+      ? today
+      : chooseBestDate(todo, availableDates, loadByDate, entry.date);
+
+    if (!date || date === entry.date) return;
+    loadByDate.set(entry.date, Math.max(0, (loadByDate.get(entry.date) || 0) - 1));
+    pushSuggestion({
+      action: 'move',
+      entryId: entry.id,
+      todoId: todo.id,
+      text: todo.text,
+      difficulty: todo.difficulty,
+      deadline: todo.deadline,
+      date,
+      reason: isOverdue
+        ? '기한이 지났는데 완료처리가 안됐네요. 이번주에 처리하시죠'
+        : (todo.deadline
+          ? '이번주 업무가 몰려서 기한 안쪽 여유로운 날로 옮깁니다'
+          : '업무기한이 없어서 과중한 날에서 분산합니다'),
+    });
+  });
+
+  return suggestions.sort((a, b) => {
+    const priorityDiff = getSuggestionPriority(b, today) - getSuggestionPriority(a, today);
+    if (priorityDiff) return priorityDiff;
+    return (a.date || '').localeCompare(b.date || '');
+  });
+}
+
 export function applyAutoSchedulePreview(state, previewItems, helpers = {}) {
   let applied = 0;
   (previewItems || []).forEach((item) => {
     if (!item?.todoId || !item?.date) return;
     if (!(state.todos || []).some((todo) => todo.id === item.todoId && !todo.done)) return;
+    if (assignTaskToDate(state, item.todoId, item.date, helpers)) applied += 1;
+  });
+  return applied;
+}
+
+export function applyPlannerSuggestions(state, suggestions, helpers = {}) {
+  let applied = 0;
+  (suggestions || []).forEach((item) => {
+    if (!item?.date && item?.type !== 'task') return;
+
+    if (item.type === 'task') {
+      const text = (item.text || '').trim();
+      if (!text || (state.todos || []).some((todo) => todo.text === text)) return;
+      const todoId = addTask(state, {
+        text,
+        sourceNoteId: item.sourceNoteId || null,
+        difficulty: item.difficulty || '중',
+        deadline: item.deadline || item.date || null,
+        skipDeadlineAssignment: true,
+      }, helpers);
+      if (!todoId) return;
+      if (item.date) assignTaskToDate(state, todoId, item.date, helpers);
+      if (item.inboxId) {
+        state.todoInbox = (state.todoInbox || []).filter((candidate) => candidate.id !== item.inboxId);
+      }
+      applied += 1;
+      return;
+    }
+
+    if (!item.todoId || !(state.todos || []).some((todo) => todo.id === item.todoId && !todo.done)) return;
+    if (item.action === 'move') {
+      const entry = (state.scheduleEntries || []).find((candidate) => candidate.id === item.entryId);
+      if (entry && moveEntryToDate(state, entry.id, item.date, helpers)) {
+        applied += 1;
+        return;
+      }
+    }
+
+    const movableEntry = (state.scheduleEntries || [])
+      .find((entry) => entry.todoId === item.todoId && !entry.done && entry.date !== item.date);
+    if (movableEntry && moveEntryToDate(state, movableEntry.id, item.date, helpers)) {
+      applied += 1;
+      return;
+    }
+
     if (assignTaskToDate(state, item.todoId, item.date, helpers)) applied += 1;
   });
   return applied;
@@ -123,12 +273,14 @@ function getPlanReason(flags) {
   return '확인 필요';
 }
 
-function chooseBestDate(todo, dateKeys, loadByDate) {
-  if (todo.deadline && dateKeys.includes(todo.deadline)) return todo.deadline;
+function chooseBestDate(todo, dateKeys, loadByDate, excludeDate = null) {
+  if (!dateKeys.length) return null;
+  if (todo.deadline && dateKeys.includes(todo.deadline) && todo.deadline !== excludeDate) return todo.deadline;
 
-  let bestDate = dateKeys[0];
+  let bestDate = null;
   let bestScore = Infinity;
   dateKeys.forEach((dateKey, index) => {
+    if (dateKey === excludeDate) return;
     const load = loadByDate.get(dateKey) || 0;
     const highDifficultyPenalty = todo.difficulty === '상' && index === 0 ? 2 : 0;
     const score = load * 10 + highDifficultyPenalty + index * 0.2;
@@ -144,6 +296,12 @@ function buildScheduleReason(todo, date, nextLoad) {
   if (todo.deadline === date) return '기한 날짜 우선';
   if (todo.difficulty === '상') return `부담이 낮은 날로 분산 (${nextLoad}개)`;
   return `가장 여유로운 날로 배치 (${nextLoad}개)`;
+}
+
+function getSuggestionPriority(item, today) {
+  if (item.deadline && item.deadline < today) return 3;
+  if (item.action === 'move') return 2;
+  return 1;
 }
 
 function groupEntriesByTodo(entries) {

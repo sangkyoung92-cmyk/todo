@@ -5,12 +5,10 @@ import {
   scheduleRangeLabelEl,
   schedulePrevBtn,
   scheduleNextBtn,
-  plannerPlanListEl,
   plannerInboxListEl,
-  plannerPreviewListEl,
-  plannerPreviewBtn,
   plannerApplyBtn,
   plannerToggleBtn,
+  plannerAiAdviceEl,
 } from './dom.js';
 import {
   getMonday,
@@ -45,15 +43,15 @@ import {
   toggleTaskSectionDone,
 } from '../../packages/schedule-core/tasks.js';
 import {
-  applyAutoSchedulePreview,
-  buildAutoSchedulePreview,
-  getPlannerSnapshot,
+  applyPlannerSuggestions as applyCorePlannerSuggestions,
+  buildLocalPlannerSuggestions,
 } from '../../packages/schedule-core/planner.js';
 import { showScheduleModal } from './schedule-modal.js';
 
 let onRenderCallback = null;
 let taskFilter = 'all';
-let pendingPlannerPreview = [];
+let pendingPlannerSuggestions = [];
+let plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
 
 const SCHEDULE_SECTIONS = [
   { key: 'today', label: '오늘 일정' },
@@ -82,9 +80,8 @@ function syncFilterButtons() {
 
 function renderPlanner() {
   renderPlannerShell();
-  renderPlannerSummary();
-  renderPlannerInbox();
-  renderPlannerPreview();
+  renderPlannerStatus();
+  renderPlannerSuggestions();
 }
 
 function renderPlannerShell() {
@@ -96,161 +93,58 @@ function renderPlannerShell() {
   plannerToggleBtn.setAttribute('aria-expanded', String(!collapsed));
 }
 
-function renderPlannerSummary() {
-  if (!plannerPlanListEl) return;
-  const snapshot = getPlannerSnapshot(state);
-  if (!snapshot.planItems.length) {
-    plannerPlanListEl.innerHTML = '<li class="planner-empty">오늘 바로 볼 업무가 없습니다.</li>';
-    return;
-  }
-
-  plannerPlanListEl.innerHTML = snapshot.planItems.map((item) => `
-    <li class="planner-item">
-      <div class="planner-item-main">
-        <div>
-          <span class="planner-item-title">${escapeHtml(item.text)}</span>
-          <span class="planner-item-note">${escapeHtml(item.reason)}</span>
-        </div>
-        <span class="planner-chip ${item.reason === '기한 지남' ? 'planner-chip--urgent' : ''}">${escapeHtml(item.difficulty)}</span>
-      </div>
-      <div class="planner-item-meta">
-        ${item.deadline ? `<span class="planner-chip planner-chip--date">~${formatShortDate(item.deadline)}</span>` : ''}
-        <span class="planner-chip">${getPriorityLabel(item.score)}</span>
-      </div>
-    </li>
-  `).join('');
+function renderPlannerStatus() {
+  if (!plannerAiAdviceEl) return;
+  plannerAiAdviceEl.hidden = !plannerStatusText;
+  plannerAiAdviceEl.textContent = plannerStatusText;
 }
 
-function renderPlannerInbox() {
+function renderPlannerSuggestions() {
   if (!plannerInboxListEl) return;
-  const items = [...(state.todoInbox || [])].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const items = getVisiblePlannerSuggestions();
+  if (plannerApplyBtn) plannerApplyBtn.disabled = items.length === 0;
+
   if (!items.length) {
-    plannerInboxListEl.innerHTML = '<li class="planner-empty">검토할 후보가 없습니다. 현재 노트 후보 추출을 눌러보세요.</li>';
+    plannerInboxListEl.innerHTML = '<li class="planner-empty">업무 제안을 누르면 노트 후보와 일정 재배치 제안이 여기에 표시됩니다.</li>';
     return;
   }
 
   plannerInboxListEl.innerHTML = items.map((item) => `
-    <li class="planner-item" data-inbox-id="${item.id}">
-      <label>
-        <span class="planner-item-note">업무명</span>
-        <input class="planner-inline-input" data-action="edit-inbox-text" value="${escapeHtml(item.text)}" />
-      </label>
-      <div class="planner-item-meta">
-        <input class="planner-inline-date" type="date" data-action="edit-inbox-deadline" value="${escapeHtml(item.deadline || '')}" />
-        <select class="planner-inline-select" data-action="edit-inbox-difficulty">
-          ${['상', '중', '하'].map((diff) => `<option value="${diff}" ${diff === (item.difficulty || '중') ? 'selected' : ''}>${diff}</option>`).join('')}
-        </select>
-      </div>
-      <div class="planner-item-actions">
-        <button class="planner-action-btn" data-action="confirm-inbox" type="button">확정</button>
-        <button class="planner-action-btn" data-action="defer-inbox" type="button">나중에</button>
-        <button class="planner-action-btn planner-action-btn--danger" data-action="delete-inbox" type="button">삭제</button>
-      </div>
-    </li>
-  `).join('');
-
-  bindPlannerInboxEvents();
-}
-
-function renderPlannerPreview() {
-  if (!plannerPreviewListEl || !plannerApplyBtn) return;
-  plannerApplyBtn.disabled = pendingPlannerPreview.length === 0;
-
-  if (!pendingPlannerPreview.length) {
-    const unscheduledCount = getPlannerSnapshot(state).unscheduledTodos.length;
-    plannerPreviewListEl.innerHTML = `<li class="planner-empty">미배정 업무 ${unscheduledCount}개. 미리보기를 만들면 여기에 추천 날짜가 표시됩니다.</li>`;
-    return;
-  }
-
-  plannerPreviewListEl.innerHTML = pendingPlannerPreview.map((item) => `
-    <li class="planner-item">
-      <div class="planner-item-main">
-        <div>
-          <span class="planner-item-title">${escapeHtml(item.text)}</span>
-          <span class="planner-item-note">${escapeHtml(item.reason)}</span>
-        </div>
-        <span class="planner-chip planner-chip--date">${formatShortDate(item.date)}</span>
-      </div>
-      <div class="planner-item-meta">
-        <span class="planner-chip">${escapeHtml(item.difficulty)}</span>
-        <span class="planner-chip">적용 대기</span>
+    <li class="planner-item planner-suggestion-item">
+      <div class="planner-suggestion-row">
+        <span class="planner-suggestion-kind">${escapeHtml(getSuggestionKindLabel(item))}</span>
+        <span class="planner-suggestion-name">${escapeHtml(item.text)}</span>
+        <span class="planner-suggestion-date">${escapeHtml(formatSuggestionDate(item))}</span>
+        <span class="planner-suggestion-difficulty">${escapeHtml(item.difficulty || '중')}</span>
+        <span class="planner-suggestion-arrow">-&gt;</span>
+        <span class="planner-suggestion-reason">${escapeHtml(item.reason || '업무 흐름을 보고 제안했습니다')}</span>
       </div>
     </li>
   `).join('');
 }
 
-function bindPlannerInboxEvents() {
-  plannerInboxListEl.querySelectorAll('[data-inbox-id]').forEach((card) => {
-    const inboxId = card.dataset.inboxId;
-    card.querySelector('[data-action="edit-inbox-text"]')?.addEventListener('change', (event) => {
-      updateInboxItem(inboxId, { text: event.target.value });
-    });
-    card.querySelector('[data-action="edit-inbox-deadline"]')?.addEventListener('change', (event) => {
-      updateInboxItem(inboxId, { deadline: event.target.value || null });
-    });
-    card.querySelector('[data-action="edit-inbox-difficulty"]')?.addEventListener('change', (event) => {
-      updateInboxItem(inboxId, { difficulty: event.target.value || '중' });
-    });
-    card.querySelector('[data-action="confirm-inbox"]')?.addEventListener('click', () => {
-      confirmInboxItem(inboxId);
-    });
-    card.querySelector('[data-action="defer-inbox"]')?.addEventListener('click', () => {
-      updateInboxItem(inboxId, { updatedAt: '1970-01-01T00:00:00.000Z' });
-      rerenderSchedule();
-    });
-    card.querySelector('[data-action="delete-inbox"]')?.addEventListener('click', () => {
-      deleteInboxItem(inboxId);
-    });
-  });
-}
-
-function updateInboxItem(inboxId, patch) {
-  const item = state.todoInbox.find((candidate) => candidate.id === inboxId);
-  if (!item) return;
-  if (Object.prototype.hasOwnProperty.call(patch, 'text')) {
-    const nextText = (patch.text || '').trim();
-    if (!nextText) {
-      rerenderSchedule();
-      return;
-    }
-    item.text = nextText;
-  }
-  if (Object.prototype.hasOwnProperty.call(patch, 'deadline')) {
-    item.deadline = patch.deadline || null;
-  }
-  if (Object.prototype.hasOwnProperty.call(patch, 'difficulty')) {
-    item.difficulty = patch.difficulty || '중';
-  }
-  item.updatedAt = patch.updatedAt || nowISO();
-  persistAndSync();
-}
-
-function confirmInboxItem(inboxId) {
-  const item = state.todoInbox.find((candidate) => candidate.id === inboxId);
-  if (!item) return;
-  if (state.todos.some((todo) => todo.text === item.text)) {
-    alert('이미 같은 이름의 업무가 있습니다.');
-    return;
-  }
-
-  const todoId = addCoreTask(state, {
+function getVisiblePlannerSuggestions() {
+  const inboxItems = (state.todoInbox || []).map((item) => ({
+    id: `inbox-${item.id}`,
+    type: 'task',
+    source: 'inbox',
+    inboxId: item.id,
     text: item.text,
     sourceNoteId: item.sourceNoteId || null,
     difficulty: item.difficulty || '중',
     deadline: item.deadline || null,
-  }, taskHelpers);
-  if (!todoId) return;
+    date: item.deadline || null,
+    reason: '노트에서 추출한 업무 후보입니다',
+  }));
 
-  state.todoInbox = state.todoInbox.filter((candidate) => candidate.id !== inboxId);
-  pendingPlannerPreview = [];
-  persistAndSync();
-  rerenderSchedule();
-}
-
-function deleteInboxItem(inboxId) {
-  state.todoInbox = state.todoInbox.filter((candidate) => candidate.id !== inboxId);
-  persistAndSync();
-  rerenderSchedule();
+  const merged = [...inboxItems, ...pendingPlannerSuggestions];
+  const seen = new Set();
+  return merged.filter((item) => {
+    const key = `${item.type}-${item.todoId || item.text}-${item.date || item.deadline || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function addScheduleTask(text, deadline, difficulty) {
@@ -269,19 +163,33 @@ export function renderSmartPlanner() {
   renderPlanner();
 }
 
-export function clearPlannerPreview() {
-  pendingPlannerPreview = [];
-  renderPlannerPreview();
+export function clearPlannerSuggestions() {
+  pendingPlannerSuggestions = [];
+  plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
+  renderPlanner();
 }
 
-export function buildPlannerSchedulePreview() {
-  pendingPlannerPreview = buildAutoSchedulePreview(state);
-  renderPlannerPreview();
+export function buildPlannerLocalSuggestions() {
+  return buildLocalPlannerSuggestions(state);
 }
 
-export function applyPlannerSchedulePreview() {
-  const applied = applyAutoSchedulePreview(state, pendingPlannerPreview, taskHelpers);
-  pendingPlannerPreview = [];
+export function setPlannerSuggestions(suggestions, statusText = '') {
+  pendingPlannerSuggestions = suggestions || [];
+  plannerStatusText = statusText || '제안 결과를 확인하고 적용하기를 눌러주세요.';
+  renderPlanner();
+}
+
+export function setPlannerStatus(statusText) {
+  plannerStatusText = statusText || '';
+  renderPlannerStatus();
+}
+
+export function applyPlannerSuggestionList() {
+  const applied = applyCorePlannerSuggestions(state, getVisiblePlannerSuggestions(), taskHelpers);
+  pendingPlannerSuggestions = [];
+  plannerStatusText = applied > 0
+    ? `제안 ${applied}개를 적용했습니다.`
+    : '적용할 제안이 없습니다.';
   if (applied > 0) persistAndSync();
   rerenderSchedule();
   return applied;
@@ -939,14 +847,10 @@ export function initScheduleNav(onRender) {
     });
   });
 
-  plannerPreviewBtn?.addEventListener('click', () => {
-    buildPlannerSchedulePreview();
-  });
-
   plannerApplyBtn?.addEventListener('click', () => {
-    const applied = applyPlannerSchedulePreview();
-    if (applied === 0) alert('적용할 미리보기가 없습니다.');
-    else alert(`추천 일정 ${applied}개를 적용했습니다.`);
+    const applied = applyPlannerSuggestionList();
+    if (applied === 0) alert('적용할 제안이 없습니다.');
+    else alert(`제안 ${applied}개를 적용했습니다.`);
   });
 
   plannerToggleBtn?.addEventListener('click', () => {
@@ -964,10 +868,14 @@ function formatShortDate(dateKey) {
   return `${parseInt(month, 10)}/${parseInt(day, 10)}`;
 }
 
-function getPriorityLabel(score) {
-  if (score >= 900) return '우선순위 높음';
-  if (score >= 500) return '오늘 집중';
-  return '이번 주 확인';
+function formatSuggestionDate(item) {
+  const target = item.date ? formatShortDate(item.date) : '날짜 없음';
+  const deadline = item.deadline ? formatShortDate(item.deadline) : '없음';
+  return `${target}(${deadline})`;
+}
+
+function getSuggestionKindLabel(item) {
+  return item.type === 'task' ? '추가' : '수정';
 }
 
 function escapeHtml(str) {
