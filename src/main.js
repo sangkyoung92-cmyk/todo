@@ -6,8 +6,6 @@ import {
   addScheduleTaskBtn,
   addAiScheduleTaskBtn,
   plannerExtractBtn,
-  plannerAiAdviceBtn,
-  plannerAiAdviceEl,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
@@ -17,12 +15,21 @@ import {
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
 import { getSelectedEditorText } from './todo/extract.js';
-import { extractTodosWithAI, getApiKey, getPlannerAdviceWithAI, saveApiKey } from './ai/extract.js';
+import { extractTodosWithAI, getApiKey, getPlannerSuggestionsWithAI, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
-import { renderSchedule, initScheduleNav, addScheduleTask, assignTodoToDate, renderSmartPlanner } from './ui/schedule.js';
+import {
+  renderSchedule,
+  initScheduleNav,
+  addScheduleTask,
+  assignTodoToDate,
+  renderSmartPlanner,
+  buildPlannerLocalSuggestions,
+  setPlannerSuggestions,
+  setPlannerStatus,
+} from './ui/schedule.js';
 import { showScheduleModal } from './ui/schedule-modal.js';
 import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 
@@ -259,7 +266,7 @@ async function extractTodosFromCurrentNote() {
     if (addedCount === 0) {
       alert('추출할 새로운 후보가 없습니다. (이미 업무 목록 또는 인박스에 있음)');
     } else {
-      alert(`업무 인박스에 후보 ${addedCount}개를 추가했습니다. 스케줄 탭에서 확정해주세요.`);
+      alert(`할 일 제안에 후보 ${addedCount}개를 추가했습니다. 스케줄 탭에서 적용해주세요.`);
       rerender();
     }
   } catch (err) {
@@ -278,42 +285,89 @@ async function extractTodosFromCurrentNote() {
   }
 }
 
-async function showPlannerAdvice() {
-  if (!plannerAiAdviceEl || !plannerAiAdviceBtn) return;
+async function suggestPlannerWork() {
+  if (!plannerExtractBtn) return;
 
-  if (state.smartPlannerCollapsed) {
-    state.smartPlannerCollapsed = false;
-    save();
-    markStateDirty();
-    scheduleSync();
-    renderSmartPlanner();
-  }
-
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  const localSuggestions = buildPlannerLocalSuggestions();
   const apiKey = getApiKey();
-  if (!apiKey) {
-    openSettingsDrawer();
-    alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
-    return;
-  }
+  const prevLabel = plannerExtractBtn.textContent;
 
-  plannerAiAdviceBtn.disabled = true;
-  const prevLabel = plannerAiAdviceBtn.textContent;
-  plannerAiAdviceBtn.textContent = 'AI 확인 중...';
-  plannerAiAdviceEl.hidden = false;
-  plannerAiAdviceEl.textContent = '업무 흐름을 보고 있습니다...';
+  plannerExtractBtn.disabled = true;
+  plannerExtractBtn.textContent = apiKey ? 'AI 제안 중...' : '제안 계산 중...';
+  setPlannerStatus(apiKey
+    ? 'AI가 현재 노트와 업무 과중도를 보고 있습니다...'
+    : '로컬 기준으로 업무 과중도를 계산하고 있습니다...');
 
   try {
-    const advice = await getPlannerAdviceWithAI(getPlannerSnapshot(state));
-    plannerAiAdviceEl.textContent = advice || '지금은 추가 조언이 없습니다.';
+    if (!apiKey) {
+      setPlannerSuggestions(
+        localSuggestions,
+        localSuggestions.length
+          ? `로컬 제안 ${localSuggestions.length}개를 찾았습니다.`
+          : '로컬 기준으로는 옮길 업무가 없습니다.',
+      );
+      return;
+    }
+
+    const aiSuggestions = (await getPlannerSuggestionsWithAI(
+      getPlannerSnapshot(state),
+      localSuggestions,
+      {
+        noteHtml: note?.content || '',
+        noteCreatedAt: note?.createdAt || '',
+      },
+    )).map((item) => (item.type === 'task'
+      ? { ...item, sourceNoteId: note?.id || null }
+      : item));
+    const suggestions = mergePlannerSuggestions(localSuggestions, aiSuggestions);
+    setPlannerSuggestions(
+      suggestions,
+      suggestions.length
+        ? `로컬 기준과 AI 제안 ${suggestions.length}개를 찾았습니다.`
+        : 'AI와 로컬 기준 모두 새 제안을 찾지 못했습니다.',
+    );
   } catch (err) {
     if (err.message === 'API_KEY_MISSING' || err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
     }
-    plannerAiAdviceEl.textContent = `AI 추천 실패: ${err.message}`;
+    setPlannerSuggestions(
+      localSuggestions,
+      localSuggestions.length
+        ? `AI 제안 실패: ${err.message}. 로컬 제안만 표시합니다.`
+        : `AI 제안 실패: ${err.message}`,
+    );
   } finally {
-    plannerAiAdviceBtn.disabled = false;
-    plannerAiAdviceBtn.textContent = prevLabel;
+    plannerExtractBtn.disabled = false;
+    plannerExtractBtn.textContent = prevLabel;
   }
+}
+
+function mergePlannerSuggestions(localSuggestions, aiSuggestions) {
+  const merged = [];
+  const seen = new Map();
+
+  [...(localSuggestions || []), ...(aiSuggestions || [])].forEach((item) => {
+    const key = `${item.type}-${item.todoId || item.text}-${item.date || item.deadline || ''}`;
+    const existingIndex = seen.get(key);
+    if (existingIndex === undefined) {
+      seen.set(key, merged.length);
+      merged.push(item);
+      return;
+    }
+
+    const existing = merged[existingIndex];
+    merged[existingIndex] = {
+      ...existing,
+      ...item,
+      action: item.action || existing.action,
+      entryId: item.entryId || existing.entryId || null,
+      source: existing.source === item.source ? existing.source : 'local+ai',
+      reason: item.reason || existing.reason,
+    };
+  });
+
+  return merged;
 }
 
 function scheduleAutoSave() {
@@ -615,8 +669,7 @@ addTodoBtn.addEventListener('click', async () => {
   rerender();
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
-plannerExtractBtn?.addEventListener('click', extractTodosFromCurrentNote);
-plannerAiAdviceBtn?.addEventListener('click', showPlannerAdvice);
+plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 
 // ── Settings Drawer ──────────────────────────────────
 const settingsBtn = document.getElementById('settings-btn');

@@ -144,9 +144,8 @@
             <h2>오늘의 업무 흐름</h2>
           </div>
           <div class="smart-planner-actions">
-            <button id="planner-ai-advice-btn" class="ghost-btn">AI 추천 보기</button>
-            <button id="planner-preview-btn" class="ghost-btn">자동 배치 미리보기</button>
-            <button id="planner-apply-btn" class="add-btn" disabled>미리보기 적용</button>
+            <button id="planner-extract-btn" class="ghost-btn">업무 제안</button>
+            <button id="planner-apply-btn" class="add-btn" disabled>적용하기</button>
             <button id="planner-toggle-btn" class="ghost-btn" aria-expanded="true">접기</button>
           </div>
         </div>
@@ -154,24 +153,10 @@
         <div class="smart-planner-grid">
           <section class="smart-planner-card">
             <div class="smart-planner-card-head">
-              <h3>오늘 계획</h3>
-              <span class="smart-planner-card-copy">기한과 배정일 기준</span>
-            </div>
-            <ul id="planner-plan-list" class="planner-list"></ul>
-          </section>
-          <section class="smart-planner-card">
-            <div class="smart-planner-card-head">
-              <h3>업무 인박스</h3>
-              <button id="planner-extract-btn" class="ghost-btn ghost-btn--small">현재 노트 후보 추출</button>
+              <h3>할 일 제안</h3>
+              <span class="smart-planner-card-copy">구분 / 업무이름 / 적용일자(기한) / 난이도 -> 제안 사유</span>
             </div>
             <ul id="planner-inbox-list" class="planner-list"></ul>
-          </section>
-          <section class="smart-planner-card">
-            <div class="smart-planner-card-head">
-              <h3>배치 미리보기</h3>
-              <span class="smart-planner-card-copy">적용 전에는 저장되지 않음</span>
-            </div>
-            <ul id="planner-preview-list" class="planner-list"></ul>
           </section>
         </div>
       </section>

@@ -72,7 +72,7 @@ export function addTask(state, payload, helpers = {}) {
 
   state.todos.push(todo);
 
-  if (todo.deadline) {
+  if (todo.deadline && !payload.skipDeadlineAssignment) {
     assignTaskToDate(state, todo.id, todo.deadline, helpers);
   }
 
