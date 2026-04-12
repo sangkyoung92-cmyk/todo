@@ -2621,6 +2621,7 @@ body {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 28px rgba(17, 39, 77, 0.08);
+  flex: 0 0 auto;
 }
 
 .smart-planner-head,
@@ -2637,6 +2638,19 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+}
+
+.smart-planner.is-collapsed {
+  padding: 12px 18px;
+}
+
+.smart-planner.is-collapsed .smart-planner-head {
+  margin-bottom: 0;
+}
+
+.smart-planner.is-collapsed .smart-planner-grid,
+.smart-planner.is-collapsed .planner-ai-advice {
+  display: none;
 }
 
 .smart-planner-kicker,
@@ -2667,6 +2681,9 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  max-height: 230px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .smart-planner-card {
@@ -2818,6 +2835,9 @@ body {
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
+  overflow-wrap: anywhere;
 }
 
 .schedule-sidebar {

@@ -29,6 +29,7 @@ export const state = {
   scheduleView: 'week',     // 'week' | 'month'
   scheduleWeekStart: null,  // 'YYYY-MM-DD'
   scheduleMonth: null,      // 'YYYY-MM'
+  smartPlannerCollapsed: false,
   notePaperMode: 'ruled',
   todoSectionCollapsed: {
     today: false,
@@ -71,6 +72,7 @@ export function save() {
     scheduleView: state.scheduleView,
     scheduleWeekStart: state.scheduleWeekStart,
     scheduleMonth: state.scheduleMonth,
+    smartPlannerCollapsed: state.smartPlannerCollapsed,
     notePaperMode: state.notePaperMode,
     todoSectionCollapsed: state.todoSectionCollapsed,
   };
@@ -94,6 +96,7 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.smartPlannerCollapsed = false;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
     return;
@@ -123,6 +126,7 @@ export function load() {
     state.scheduleView = parsed.scheduleView || 'week';
     state.scheduleWeekStart = parsed.scheduleWeekStart || getDefaultWeekStart();
     state.scheduleMonth = parsed.scheduleMonth || todayKey().slice(0, 7);
+    state.smartPlannerCollapsed = parsed.smartPlannerCollapsed || false;
     state.notePaperMode = parsed.notePaperMode || 'ruled';
     state.todoSectionCollapsed = {
       today: parsed.todoSectionCollapsed?.today ?? false,
@@ -144,6 +148,7 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
+    state.smartPlannerCollapsed = false;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
   }

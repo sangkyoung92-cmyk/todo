@@ -281,6 +281,14 @@ async function extractTodosFromCurrentNote() {
 async function showPlannerAdvice() {
   if (!plannerAiAdviceEl || !plannerAiAdviceBtn) return;
 
+  if (state.smartPlannerCollapsed) {
+    state.smartPlannerCollapsed = false;
+    save();
+    markStateDirty();
+    scheduleSync();
+    renderSmartPlanner();
+  }
+
   const apiKey = getApiKey();
   if (!apiKey) {
     openSettingsDrawer();

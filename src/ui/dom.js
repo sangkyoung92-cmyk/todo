@@ -34,5 +34,6 @@ export const plannerPreviewListEl = document.getElementById('planner-preview-lis
 export const plannerExtractBtn = document.getElementById('planner-extract-btn');
 export const plannerPreviewBtn = document.getElementById('planner-preview-btn');
 export const plannerApplyBtn = document.getElementById('planner-apply-btn');
+export const plannerToggleBtn = document.getElementById('planner-toggle-btn');
 export const plannerAiAdviceBtn = document.getElementById('planner-ai-advice-btn');
 export const plannerAiAdviceEl = document.getElementById('planner-ai-advice');

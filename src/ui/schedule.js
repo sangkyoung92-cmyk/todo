@@ -10,6 +10,7 @@ import {
   plannerPreviewListEl,
   plannerPreviewBtn,
   plannerApplyBtn,
+  plannerToggleBtn,
 } from './dom.js';
 import {
   getMonday,
@@ -80,9 +81,19 @@ function syncFilterButtons() {
 }
 
 function renderPlanner() {
+  renderPlannerShell();
   renderPlannerSummary();
   renderPlannerInbox();
   renderPlannerPreview();
+}
+
+function renderPlannerShell() {
+  const plannerEl = document.querySelector('.smart-planner');
+  if (!plannerEl || !plannerToggleBtn) return;
+  const collapsed = !!state.smartPlannerCollapsed;
+  plannerEl.classList.toggle('is-collapsed', collapsed);
+  plannerToggleBtn.textContent = collapsed ? '펼치기' : '접기';
+  plannerToggleBtn.setAttribute('aria-expanded', String(!collapsed));
 }
 
 function renderPlannerSummary() {
@@ -599,11 +610,13 @@ function bindTaskListEvents(targetEl, onRender, options = {}) {
 
   targetEl.querySelectorAll('.schedule-task-card[draggable]').forEach((card) => {
     card.addEventListener('dragstart', (event) => {
-      event.dataTransfer.setData('application/x-schedule-drag', JSON.stringify({
+      const payload = JSON.stringify({
         type: 'todo',
         todoId: card.dataset.todoId,
-      }));
-      event.dataTransfer.effectAllowed = 'copy';
+      });
+      event.dataTransfer.setData('application/x-schedule-drag', payload);
+      event.dataTransfer.setData('text/plain', `todo:${card.dataset.todoId}`);
+      event.dataTransfer.effectAllowed = 'copyMove';
       card.classList.add('dragging');
     });
     card.addEventListener('dragend', () => {
@@ -742,27 +755,34 @@ function bindCalendarEvents() {
       }
     }
     const todoId = dataTransfer.getData('text/plain');
-    return todoId ? { type: 'todo', todoId } : null;
+    if (!todoId) return null;
+    if (todoId.startsWith('entry:')) return { type: 'entry', entryId: todoId.slice(6) };
+    if (todoId.startsWith('todo:')) return { type: 'todo', todoId: todoId.slice(5) };
+    return { type: 'todo', todoId };
   }
 
-  scheduleCalendarBodyEl.querySelectorAll('[data-date]').forEach((zone) => {
+  scheduleCalendarBodyEl.querySelectorAll('.week-day-col, .week-day-drop-zone, .month-day-cell').forEach((zone) => {
+    const getDateKey = () => zone.dataset.date || zone.closest('[data-date]')?.dataset.date;
+    const getDropCell = () => zone.closest('.week-day-col, .month-day-cell') || zone;
+
     zone.addEventListener('dragover', (event) => {
       event.preventDefault();
-      event.dataTransfer.dropEffect = 'copy';
-      zone.closest('[data-date]')?.classList.add('drag-over');
+      event.dataTransfer.dropEffect = event.ctrlKey || event.metaKey ? 'copy' : 'move';
+      getDropCell()?.classList.add('drag-over');
     });
 
     zone.addEventListener('dragleave', (event) => {
       if (!zone.contains(event.relatedTarget)) {
-        zone.closest('[data-date]')?.classList.remove('drag-over');
+        getDropCell()?.classList.remove('drag-over');
       }
     });
 
     zone.addEventListener('drop', (event) => {
       event.preventDefault();
-      zone.closest('[data-date]')?.classList.remove('drag-over');
+      event.stopPropagation();
+      getDropCell()?.classList.remove('drag-over');
       const dragData = getDragData(event.dataTransfer);
-      const dateKey = zone.dataset.date || zone.closest('[data-date]')?.dataset.date;
+      const dateKey = getDateKey();
       if (!dragData || !dateKey) return;
 
       if (dragData.type === 'todo' && dragData.todoId) {
@@ -807,10 +827,12 @@ function bindCalendarEvents() {
   scheduleCalendarBodyEl.querySelectorAll('.cal-chip[draggable], .month-chip[draggable]').forEach((chip) => {
     chip.addEventListener('dragstart', (event) => {
       event.stopPropagation();
-      event.dataTransfer.setData('application/x-schedule-drag', JSON.stringify({
+      const payload = JSON.stringify({
         type: 'entry',
         entryId: chip.dataset.entryId,
-      }));
+      });
+      event.dataTransfer.setData('application/x-schedule-drag', payload);
+      event.dataTransfer.setData('text/plain', `entry:${chip.dataset.entryId}`);
       event.dataTransfer.effectAllowed = 'copyMove';
       chip.classList.add('dragging');
     });
@@ -925,6 +947,14 @@ export function initScheduleNav(onRender) {
     const applied = applyPlannerSchedulePreview();
     if (applied === 0) alert('적용할 미리보기가 없습니다.');
     else alert(`추천 일정 ${applied}개를 적용했습니다.`);
+  });
+
+  plannerToggleBtn?.addEventListener('click', () => {
+    state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
+    save();
+    markStateDirty();
+    scheduleSync();
+    renderPlannerShell();
   });
 }
 
