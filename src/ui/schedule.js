@@ -11,7 +11,7 @@ import {
   plannerAiAdviceEl,
 } from './dom.js';
 import {
-  getMonday,
+  getSunday,
   getWeekDates,
   getMonthGrid,
   toDateKey,
@@ -540,7 +540,7 @@ export function renderWeekView() {
   const weekDates = getWeekDates(monday);
   scheduleRangeLabelEl.textContent = getWeekRangeLabel(weekDates);
 
-  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
   let html = '<div class="week-grid">';
 
   weekDates.forEach((date, index) => {
@@ -620,8 +620,6 @@ export function renderMonthView() {
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
       const maxVisibleChips = 3;
       const hasOverflow = entries.length > maxVisibleChips;
-      const visibleEntries = entries.slice(0, maxVisibleChips);
-
       let chipsHtml = '';
       visibleEntries.forEach((entry) => {
         const todo = state.todos.find((item) => item.id === entry.todoId);
@@ -801,7 +799,12 @@ export function renderSchedule(onRender) {
   onRenderCallback = onRender;
 
   if (!state.scheduleWeekStart) {
-    state.scheduleWeekStart = toDateKey(getMonday(new Date()));
+    state.scheduleWeekStart = toDateKey(getSunday(new Date()));
+  } else {
+    const weekStartDate = fromDateKey(state.scheduleWeekStart);
+    if (weekStartDate.getDay() !== 0) {
+      state.scheduleWeekStart = toDateKey(getSunday(weekStartDate));
+    }
   }
   if (!state.scheduleMonth) {
     state.scheduleMonth = todayKey().slice(0, 7);
@@ -838,7 +841,7 @@ export function initScheduleNav(onRender) {
     btn.addEventListener('click', () => {
       state.scheduleView = btn.dataset.view;
       if (state.scheduleView === 'week') {
-        state.scheduleWeekStart = toDateKey(getMonday(new Date()));
+        state.scheduleWeekStart = toDateKey(getSunday(new Date()));
       }
       save();
       renderSchedule(onRender);

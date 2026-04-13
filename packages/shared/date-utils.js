@@ -11,6 +11,13 @@ export function getMonday(date) {
   return d;
 }
 
+export function getSunday(date) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export function getWeekDates(weekStart) {
   const start = new Date(weekStart);
   start.setHours(0, 0, 0, 0);

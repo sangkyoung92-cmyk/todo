@@ -3192,8 +3192,13 @@ body {
 .month-day-cell.other-month { background: rgba(245, 248, 252, 0.78); opacity: 0.72; }
 .month-day-num { margin-bottom: 8px; }
 .month-chips { gap: 6px; align-items: stretch; flex: 1; min-height: 0; }
+.month-day-cell-overflow .month-chips {
+  overflow-y: auto;
+  padding-right: 2px;
+}
 .month-chip-more {
-  margin-top: auto;
+  position: sticky;
+  bottom: 0;
   align-self: flex-start;
   padding: 2px 8px;
   border-radius: 999px;

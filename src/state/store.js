@@ -1,4 +1,4 @@
-import { todayKey, toDateKey, getMonday } from '../utils/date-utils.js';
+import { todayKey, toDateKey, getSunday } from '../utils/date-utils.js';
 
 export const STORAGE_KEY = 'onenote_mvp_v2';
 
@@ -8,8 +8,8 @@ export const SECTION_COLORS = [
 ];
 
 function getDefaultWeekStart() {
-  const monday = getMonday(new Date());
-  return toDateKey(monday);
+  const sunday = getSunday(new Date());
+  return toDateKey(sunday);
 }
 
 export const state = {
@@ -153,4 +153,3 @@ export function load() {
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
   }
 }
-
