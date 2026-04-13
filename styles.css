@@ -3217,6 +3217,10 @@ body {
   font-weight: 700;
 }
 
+.month-chip-more.is-hidden {
+  display: none;
+}
+
 .schedule-empty {
   margin: 12px 4px 0;
   padding: 28px 18px;
