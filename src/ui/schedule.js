@@ -617,10 +617,11 @@ export function renderMonthView() {
       const weekdayClass = dayIndex === 0 ? 'sunday' : dayIndex === 6 ? 'saturday' : '';
       const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
-      const maxChips = 3;
+      const maxVisibleChips = 3;
+      const hasOverflow = entries.length > maxVisibleChips;
 
       let chipsHtml = '';
-      entries.slice(0, maxChips).forEach((entry) => {
+      entries.forEach((entry) => {
         const todo = state.todos.find((item) => item.id === entry.todoId);
         if (!todo) return;
         chipsHtml += `
@@ -632,12 +633,12 @@ export function renderMonthView() {
         `;
       });
 
-      if (entries.length > maxChips) {
-        chipsHtml += `<div class="month-chip-more">+${entries.length - maxChips}개</div>`;
+      if (hasOverflow) {
+        chipsHtml += `<div class="month-chip-more">+${entries.length - maxVisibleChips}개</div>`;
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass} ${hasOverflow ? 'month-day-cell-overflow' : ''}" data-date="${dateKey}">
           <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>

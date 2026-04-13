@@ -3167,10 +3167,10 @@ body {
 
 .cal-chip,
 .month-chip {
-  min-height: 34px;
+  min-height: 30px;
   width: 100%;
-  padding: 7px 10px;
-  gap: 6px;
+  padding: 5px 10px;
+  gap: 5px;
   border-radius: 12px;
   border: 1px solid rgba(203, 223, 255, 0.95);
   background: #f4f8ff;
@@ -3192,10 +3192,27 @@ body {
 .month-day-cell.other-month { background: rgba(245, 248, 252, 0.78); opacity: 0.72; }
 .month-day-num { margin-bottom: 8px; }
 .month-chips { gap: 6px; align-items: stretch; }
+.month-day-cell-overflow .month-chips {
+  max-height: 112px;
+  overflow-y: hidden;
+  padding-right: 2px;
+}
+.month-day-cell-overflow .month-chips:hover {
+  overflow-y: auto;
+}
+.month-day-cell-overflow .month-chips::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.month-day-cell-overflow .month-chips {
+  scrollbar-width: none;
+}
 .month-chip-more {
+  position: sticky;
+  bottom: 0;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--surface-muted);
+  background: rgba(235, 241, 250, 0.95);
   color: var(--text-soft);
   font-weight: 700;
 }
