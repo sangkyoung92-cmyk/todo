@@ -540,7 +540,7 @@ export function renderWeekView() {
   const weekDates = getWeekDates(monday);
   scheduleRangeLabelEl.textContent = getWeekRangeLabel(weekDates);
 
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
   let html = '<div class="week-grid">';
 
   weekDates.forEach((date, index) => {
@@ -548,7 +548,8 @@ export function renderWeekView() {
     const todayClass = isToday(dateKey) ? 'today' : '';
     const weekendClass = isWeekend(date) ? 'weekend' : '';
     const holidayClass = isHoliday(date) ? 'holiday' : '';
-    const weekdayClass = index === 0 ? 'sunday' : index === 6 ? 'saturday' : '';
+    const dayIndex = date.getDay();
+    const weekdayClass = dayIndex === 0 ? 'sunday' : dayIndex === 6 ? 'saturday' : '';
     const holidayName = getHolidayName(date);
     const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
 
@@ -585,6 +586,7 @@ export function renderWeekView() {
   html += '</div>';
   scheduleCalendarBodyEl.innerHTML = html;
   bindCalendarEvents();
+  bindMonthOverflowIndicators();
 }
 
 export function renderMonthView() {
@@ -651,6 +653,7 @@ export function renderMonthView() {
   html += '</div>';
   scheduleCalendarBodyEl.innerHTML = html;
   bindCalendarEvents();
+  bindMonthOverflowIndicators();
 }
 
 function bindCalendarEvents() {
@@ -764,6 +767,22 @@ function bindCalendarEvents() {
       removeFromDate(el.dataset.entryId);
       rerenderSchedule();
     });
+  });
+}
+
+function bindMonthOverflowIndicators() {
+  scheduleCalendarBodyEl.querySelectorAll('.month-day-cell-overflow .month-chips').forEach((container) => {
+    const moreEl = container.querySelector('.month-chip-more');
+    if (!moreEl) return;
+
+    const updateMoreBadgeVisibility = () => {
+      const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+      moreEl.classList.toggle('is-hidden', atBottom);
+    };
+
+    updateMoreBadgeVisibility();
+    container.addEventListener('scroll', updateMoreBadgeVisibility);
+    container.addEventListener('mouseenter', updateMoreBadgeVisibility);
   });
 }
 
