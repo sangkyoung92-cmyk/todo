@@ -1,11 +1,11 @@
-import { getMonday, toDateKey, todayKey } from './date-utils.js';
+import { getSunday, toDateKey, todayKey } from './date-utils.js';
 
 export function createEmptyScheduleState() {
   return {
     todos: [],
     scheduleEntries: [],
     scheduleView: 'week',
-    scheduleWeekStart: toDateKey(getMonday(new Date())),
+    scheduleWeekStart: toDateKey(getSunday(new Date())),
     scheduleMonth: todayKey().slice(0, 7),
   };
 }

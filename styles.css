@@ -3132,14 +3132,14 @@ body {
   box-shadow: 0 4px 12px rgba(20, 32, 51, 0.08);
 }
 .schedule-calendar-body { padding: 0; }
-.week-grid, .month-grid { gap: 10px; }
-.month-day-names, .month-week-row { gap: 10px; }
+.week-grid, .month-grid { gap: 0; }
+.month-day-names, .month-week-row { gap: 0; }
 
 .week-day-col,
 .month-day-cell {
-  border-radius: 18px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 28px rgba(17, 39, 77, 0.06);
+  box-shadow: none;
 }
 
 .week-day-col { min-height: 360px; }
@@ -3188,37 +3188,23 @@ body {
 
 .cal-chip-check, .month-chip-check { accent-color: var(--accent); }
 .cal-chip-text, .month-chip-text { max-width: none; }
-.month-day-cell { min-height: 128px; padding: 10px; }
+.month-day-cell { min-height: 148px; height: 148px; padding: 10px; }
 .month-day-cell.other-month { background: rgba(245, 248, 252, 0.78); opacity: 0.72; }
 .month-day-num { margin-bottom: 8px; }
-.month-chips { gap: 6px; align-items: stretch; }
+.month-chips { gap: 6px; align-items: stretch; flex: 1; min-height: 0; }
 .month-day-cell-overflow .month-chips {
-  max-height: 112px;
-  overflow-y: hidden;
-  padding-right: 2px;
-}
-.month-day-cell-overflow .month-chips:hover {
   overflow-y: auto;
-}
-.month-day-cell-overflow .month-chips::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-.month-day-cell-overflow .month-chips {
-  scrollbar-width: none;
+  padding-right: 2px;
 }
 .month-chip-more {
   position: sticky;
   bottom: 0;
+  align-self: flex-start;
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(235, 241, 250, 0.95);
   color: var(--text-soft);
   font-weight: 700;
-}
-
-.month-chip-more.is-hidden {
-  display: none;
 }
 
 .schedule-empty {
