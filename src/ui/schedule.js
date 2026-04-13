@@ -623,7 +623,7 @@ export function renderMonthView() {
       const maxVisibleChips = 3;
       const hasOverflow = entries.length > maxVisibleChips;
       let chipsHtml = '';
-      entries.forEach((entry) => {
+      visibleEntries.forEach((entry) => {
         const todo = state.todos.find((item) => item.id === entry.todoId);
         if (!todo) return;
         chipsHtml += `
@@ -640,7 +640,7 @@ export function renderMonthView() {
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass} ${hasOverflow ? 'month-day-cell-overflow' : ''}" data-date="${dateKey}">
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
           <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>
