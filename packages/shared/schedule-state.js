@@ -1,4 +1,6 @@
 import { getSunday, toDateKey, todayKey } from './date-utils.js';
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 
 export function createEmptyScheduleState() {
   return {
@@ -17,7 +19,11 @@ export function mergeScheduleState(docData = {}) {
     todos: docData.todos || empty.todos,
     scheduleEntries: docData.scheduleEntries || empty.scheduleEntries,
     scheduleView: docData.scheduleView || empty.scheduleView,
-    scheduleWeekStart: docData.scheduleWeekStart || empty.scheduleWeekStart,
-    scheduleMonth: docData.scheduleMonth || empty.scheduleMonth,
+    scheduleWeekStart: DATE_KEY_PATTERN.test(docData.scheduleWeekStart || '')
+      ? docData.scheduleWeekStart
+      : empty.scheduleWeekStart,
+    scheduleMonth: MONTH_KEY_PATTERN.test(docData.scheduleMonth || '')
+      ? docData.scheduleMonth
+      : empty.scheduleMonth,
   };
 }

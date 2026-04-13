@@ -6,6 +6,8 @@ export const SECTION_COLORS = [
   '#5B8DEF', '#37A987', '#F29F67', '#E87EA1',
   '#8A7CF6', '#4FA3B8', '#9D7FEA', '#F3B562',
 ];
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 
 function getDefaultWeekStart() {
   const sunday = getSunday(new Date());
@@ -124,8 +126,12 @@ export function load() {
     state.scheduleEntries = parsed.scheduleEntries || [];
     state.appMode = parsed.appMode || 'notes';
     state.scheduleView = parsed.scheduleView || 'week';
-    state.scheduleWeekStart = parsed.scheduleWeekStart || getDefaultWeekStart();
-    state.scheduleMonth = parsed.scheduleMonth || todayKey().slice(0, 7);
+    state.scheduleWeekStart = DATE_KEY_PATTERN.test(parsed.scheduleWeekStart || '')
+      ? parsed.scheduleWeekStart
+      : getDefaultWeekStart();
+    state.scheduleMonth = MONTH_KEY_PATTERN.test(parsed.scheduleMonth || '')
+      ? parsed.scheduleMonth
+      : todayKey().slice(0, 7);
     state.smartPlannerCollapsed = parsed.smartPlannerCollapsed || false;
     state.notePaperMode = parsed.notePaperMode || 'ruled';
     state.todoSectionCollapsed = {

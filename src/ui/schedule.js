@@ -61,6 +61,8 @@ const SCHEDULE_SECTIONS = [
 ];
 
 const taskHelpers = { uid, nowISO };
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 
 function persistAndSync() {
   save();
@@ -797,17 +799,19 @@ function nextMonth() {
 
 export function renderSchedule(onRender) {
   onRenderCallback = onRender;
+  const fallbackWeekStart = toDateKey(getSunday(new Date()));
+  const fallbackMonth = todayKey().slice(0, 7);
 
-  if (!state.scheduleWeekStart) {
-    state.scheduleWeekStart = toDateKey(getSunday(new Date()));
+  if (typeof state.scheduleWeekStart !== 'string' || !DATE_KEY_PATTERN.test(state.scheduleWeekStart)) {
+    state.scheduleWeekStart = fallbackWeekStart;
   } else {
     const weekStartDate = fromDateKey(state.scheduleWeekStart);
     if (weekStartDate.getDay() !== 0) {
       state.scheduleWeekStart = toDateKey(getSunday(weekStartDate));
     }
   }
-  if (!state.scheduleMonth) {
-    state.scheduleMonth = todayKey().slice(0, 7);
+  if (typeof state.scheduleMonth !== 'string' || !MONTH_KEY_PATTERN.test(state.scheduleMonth)) {
+    state.scheduleMonth = fallbackMonth;
   }
 
   renderTaskList();
