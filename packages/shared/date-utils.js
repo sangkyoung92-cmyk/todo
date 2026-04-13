@@ -24,7 +24,9 @@ export function getWeekDates(weekStart) {
 export function getMonthGrid(year, month) {
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
-  const startSunday = getMonday(firstDay);
+  const startSunday = new Date(firstDay);
+  startSunday.setDate(firstDay.getDate() - firstDay.getDay());
+  startSunday.setHours(0, 0, 0, 0);
   const weeks = [];
   const current = new Date(startSunday);
 

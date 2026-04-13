@@ -586,7 +586,6 @@ export function renderWeekView() {
   html += '</div>';
   scheduleCalendarBodyEl.innerHTML = html;
   bindCalendarEvents();
-  bindMonthOverflowIndicators();
 }
 
 export function renderMonthView() {
@@ -621,9 +620,10 @@ export function renderMonthView() {
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
       const maxVisibleChips = 3;
       const hasOverflow = entries.length > maxVisibleChips;
+      const visibleEntries = entries.slice(0, maxVisibleChips);
 
       let chipsHtml = '';
-      entries.forEach((entry) => {
+      visibleEntries.forEach((entry) => {
         const todo = state.todos.find((item) => item.id === entry.todoId);
         if (!todo) return;
         chipsHtml += `
@@ -640,7 +640,7 @@ export function renderMonthView() {
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass} ${hasOverflow ? 'month-day-cell-overflow' : ''}" data-date="${dateKey}">
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
           <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>
@@ -653,7 +653,6 @@ export function renderMonthView() {
   html += '</div>';
   scheduleCalendarBodyEl.innerHTML = html;
   bindCalendarEvents();
-  bindMonthOverflowIndicators();
 }
 
 function bindCalendarEvents() {
@@ -770,22 +769,6 @@ function bindCalendarEvents() {
   });
 }
 
-function bindMonthOverflowIndicators() {
-  scheduleCalendarBodyEl.querySelectorAll('.month-day-cell-overflow .month-chips').forEach((container) => {
-    const moreEl = container.querySelector('.month-chip-more');
-    if (!moreEl) return;
-
-    const updateMoreBadgeVisibility = () => {
-      const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
-      moreEl.classList.toggle('is-hidden', atBottom);
-    };
-
-    updateMoreBadgeVisibility();
-    container.addEventListener('scroll', updateMoreBadgeVisibility);
-    container.addEventListener('mouseenter', updateMoreBadgeVisibility);
-  });
-}
-
 function prevWeek() {
   const date = fromDateKey(state.scheduleWeekStart);
   date.setDate(date.getDate() - 7);
@@ -854,6 +837,9 @@ export function initScheduleNav(onRender) {
   document.querySelectorAll('.schedule-view-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.scheduleView = btn.dataset.view;
+      if (state.scheduleView === 'week') {
+        state.scheduleWeekStart = toDateKey(getMonday(new Date()));
+      }
       save();
       renderSchedule(onRender);
     });
