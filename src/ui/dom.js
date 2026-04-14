@@ -32,4 +32,5 @@ export const plannerInboxListEl = document.getElementById('planner-inbox-list');
 export const plannerExtractBtn = document.getElementById('planner-extract-btn');
 export const plannerApplyBtn = document.getElementById('planner-apply-btn');
 export const plannerToggleBtn = document.getElementById('planner-toggle-btn');
+export const plannerTopbarToggleBtn = document.getElementById('planner-topbar-toggle-btn');
 export const plannerAiAdviceEl = document.getElementById('planner-ai-advice');

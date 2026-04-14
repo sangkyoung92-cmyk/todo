@@ -8,6 +8,7 @@ import {
   plannerInboxListEl,
   plannerApplyBtn,
   plannerToggleBtn,
+  plannerTopbarToggleBtn,
   plannerAiAdviceEl,
 } from './dom.js';
 import {
@@ -89,11 +90,18 @@ function renderPlanner() {
 
 function renderPlannerShell() {
   const plannerEl = document.querySelector('.smart-planner');
-  if (!plannerEl || !plannerToggleBtn) return;
+  if (!plannerEl) return;
   const collapsed = !!state.smartPlannerCollapsed;
   plannerEl.classList.toggle('is-collapsed', collapsed);
-  plannerToggleBtn.textContent = collapsed ? '펼치기' : '접기';
-  plannerToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  if (plannerToggleBtn) {
+    plannerToggleBtn.textContent = collapsed ? '펼치기' : '접기';
+    plannerToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  }
+  if (plannerTopbarToggleBtn) {
+    plannerTopbarToggleBtn.classList.toggle('active', !collapsed);
+    plannerTopbarToggleBtn.textContent = collapsed ? '오늘 흐름' : '흐름 닫기';
+    plannerTopbarToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  }
 }
 
 function renderPlannerStatus() {

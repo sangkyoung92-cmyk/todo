@@ -2641,15 +2641,6 @@ body {
 }
 
 .smart-planner.is-collapsed {
-  padding: 12px 18px;
-}
-
-.smart-planner.is-collapsed .smart-planner-head {
-  margin-bottom: 0;
-}
-
-.smart-planner.is-collapsed .smart-planner-grid,
-.smart-planner.is-collapsed .planner-ai-advice {
   display: none;
 }
 
@@ -2778,6 +2769,66 @@ body {
   padding: 16px;
   color: var(--text-soft);
   font-size: 13px;
+}
+
+.topbar-left {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.topbar .app-mode-tabs {
+  flex: 0 0 auto;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.topbar .app-mode-tab {
+  margin: 0;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.topbar .app-mode-tab:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.topbar .app-mode-tab.active {
+  color: var(--accent);
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 32, 51, 0.08);
+}
+
+.topbar-action-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.topbar-action-btn:hover,
+.topbar-action-btn.active {
+  background: var(--accent-soft);
+  border-color: rgba(40, 124, 255, 0.3);
+  color: var(--accent);
+}
+
+.planner-topbar-toggle[hidden] {
+  display: none;
 }
 
 .planner-item-main {
@@ -3255,9 +3306,9 @@ body {
 @media (max-width: 1200px) {
   .layout { grid-template-columns: 240px minmax(0, 1fr); }
   .todo-panel { display: none; }
-  .schedule-workspace { flex-direction: column; }
+  .schedule-workspace { gap: 12px; }
   .smart-planner-grid { grid-template-columns: 1fr; }
-  .schedule-sidebar { width: 100%; max-width: none; min-width: 0; }
+  .schedule-sidebar { width: 300px; max-width: 32vw; min-width: 260px; }
 }
 
 @media (max-width: 768px) {
@@ -3273,11 +3324,19 @@ body {
     gap: 12px;
   }
   .topbar-right { width: 100%; flex-wrap: wrap; }
+  .topbar .app-mode-tabs {
+    padding: 3px;
+  }
+  .topbar .app-mode-tab {
+    padding: 6px 12px;
+  }
   .search-wrap, #search-input { width: 100%; min-width: 0; }
   #search-input:focus { width: 100%; }
   .toolbar { overflow-x: auto; }
   .layout { grid-template-columns: 1fr; gap: 14px; }
   .note-header-area, .note-content { padding-left: 24px; padding-right: 24px; }
+  .schedule-workspace { flex-direction: column; }
+  .schedule-sidebar { width: 100%; max-width: none; min-width: 0; }
   .schedule-calendar-header { flex-direction: column; align-items: stretch; gap: 14px; }
   .smart-planner-head { align-items: flex-start; flex-direction: column; }
   .smart-planner-actions { justify-content: flex-start; }

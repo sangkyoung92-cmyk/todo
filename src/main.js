@@ -6,6 +6,7 @@ import {
   addScheduleTaskBtn,
   addAiScheduleTaskBtn,
   plannerExtractBtn,
+  plannerTopbarToggleBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
@@ -52,6 +53,7 @@ function syncEditorChrome() {
 // ── 앱 모드 전환 (노트 / 스케줄) ─────────────────
 function applyAppMode(mode) {
   state.appMode = mode;
+  if (mode === 'schedule') state.smartPlannerCollapsed = true;
   save();
 
   const isSchedule = mode === 'schedule';
@@ -61,6 +63,7 @@ function applyAppMode(mode) {
   if (scheduleViewEl) scheduleViewEl.style.display = isSchedule ? 'flex' : 'none';
   if (sectionTabsBarEl) sectionTabsBarEl.style.display = isSchedule ? 'none' : '';
   if (toolbarEl) toolbarEl.style.display = isSchedule ? 'none' : '';
+  if (plannerTopbarToggleBtn) plannerTopbarToggleBtn.hidden = !isSchedule;
 
   // 탭 버튼 active 상태
   appModeTabs.forEach((tab) => {
@@ -670,6 +673,13 @@ addTodoBtn.addEventListener('click', async () => {
 });
 extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
+plannerTopbarToggleBtn?.addEventListener('click', () => {
+  state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
+  save();
+  markStateDirty();
+  scheduleSync();
+  rerender();
+});
 
 // ── Settings Drawer ──────────────────────────────────
 const settingsBtn = document.getElementById('settings-btn');
