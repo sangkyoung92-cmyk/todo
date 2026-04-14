@@ -51,6 +51,7 @@ import { showScheduleModal } from './schedule-modal.js';
 let onRenderCallback = null;
 let taskFilter = 'all';
 let pendingPlannerSuggestions = [];
+let monthOverflowResizeBound = false;
 let plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
 
 const SCHEDULE_SECTIONS = [
@@ -620,17 +621,14 @@ export function renderMonthView() {
       const weekdayClass = dayIndex === 0 ? 'sunday' : dayIndex === 6 ? 'saturday' : '';
       const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
-      const maxVisibleChips = 3;
       const renderableEntries = entries
         .map((entry) => ({
           entry,
           todo: state.todos.find((item) => item.id === entry.todoId),
         }))
         .filter(({ todo }) => todo);
-      const visibleEntries = renderableEntries.slice(0, maxVisibleChips);
-      const hasOverflow = renderableEntries.length > maxVisibleChips;
       let chipsHtml = '';
-      visibleEntries.forEach(({ entry, todo }) => {
+      renderableEntries.forEach(({ entry, todo }) => {
         chipsHtml += `
           <div class="month-chip ${entry.done ? 'chip-done' : ''}" data-entry-id="${entry.id}" data-todo-id="${todo.id}" draggable="true">
             <input type="checkbox" class="month-chip-check" data-action="toggle-entry" data-entry-id="${entry.id}" ${entry.done ? 'checked' : ''} />
@@ -640,12 +638,12 @@ export function renderMonthView() {
         `;
       });
 
-      if (hasOverflow) {
-        chipsHtml += `<div class="month-chip-more">+${renderableEntries.length - visibleEntries.length}개</div>`;
+      if (renderableEntries.length > 0) {
+        chipsHtml += '<div class="month-chip-more" hidden></div>';
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass} ${hasOverflow ? 'month-day-cell-overflow' : ''}" data-date="${dateKey}">
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
           <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>
@@ -658,6 +656,7 @@ export function renderMonthView() {
   html += '</div>';
   scheduleCalendarBodyEl.innerHTML = html;
   bindCalendarEvents();
+  scheduleMonthOverflowRefresh();
 }
 
 function bindCalendarEvents() {
@@ -773,6 +772,51 @@ function bindCalendarEvents() {
     });
   });
 
+  scheduleCalendarBodyEl.querySelectorAll('.month-chips').forEach((chips) => {
+    chips.addEventListener('scroll', scheduleMonthOverflowRefresh);
+  });
+
+  if (!monthOverflowResizeBound) {
+    monthOverflowResizeBound = true;
+    window.addEventListener('resize', scheduleMonthOverflowRefresh);
+  }
+}
+
+function scheduleMonthOverflowRefresh() {
+  window.requestAnimationFrame(refreshMonthOverflowIndicators);
+}
+
+function refreshMonthOverflowIndicators() {
+  if (!scheduleCalendarBodyEl?.querySelector('.month-grid')) return;
+
+  scheduleCalendarBodyEl.querySelectorAll('.month-day-cell').forEach((cell) => {
+    const chipsEl = cell.querySelector('.month-chips');
+    const moreEl = cell.querySelector('.month-chip-more');
+    if (!chipsEl || !moreEl) return;
+
+    cell.classList.remove('month-day-cell-overflow', 'is-scrolled');
+    moreEl.hidden = true;
+
+    if (chipsEl.scrollHeight <= chipsEl.clientHeight + 1) return;
+
+    const isScrolled = chipsEl.scrollTop > 0;
+    cell.classList.add('month-day-cell-overflow');
+    moreEl.hidden = false;
+
+    const visibleBottom = chipsEl.getBoundingClientRect().bottom - moreEl.getBoundingClientRect().height;
+    const hiddenCount = [...chipsEl.querySelectorAll('.month-chip')]
+      .filter((chip) => chip.getBoundingClientRect().bottom > visibleBottom + 1)
+      .length;
+
+    if (hiddenCount <= 0) {
+      moreEl.hidden = true;
+      cell.classList.remove('month-day-cell-overflow');
+      return;
+    }
+
+    moreEl.textContent = `+${hiddenCount}개`;
+    cell.classList.toggle('is-scrolled', isScrolled);
+  });
 }
 
 function prevWeek() {
