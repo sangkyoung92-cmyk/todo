@@ -621,10 +621,9 @@ export function renderMonthView() {
       const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
       const maxVisibleChips = 3;
-      const visibleEntries = entries.slice(0, maxVisibleChips);
       const hasOverflow = entries.length > maxVisibleChips;
       let chipsHtml = '';
-      visibleEntries.forEach((entry) => {
+      entries.forEach((entry) => {
         const todo = state.todos.find((item) => item.id === entry.todoId);
         if (!todo) return;
         chipsHtml += `
@@ -641,7 +640,7 @@ export function renderMonthView() {
       }
 
       html += `
-        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
+        <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass} ${hasOverflow ? 'month-day-cell-overflow' : ''}" data-date="${dateKey}">
           <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
           <div class="month-chips">${chipsHtml}</div>
         </div>
@@ -766,6 +765,12 @@ function bindCalendarEvents() {
       event.stopPropagation();
       removeFromDate(el.dataset.entryId);
       rerenderSchedule();
+    });
+  });
+
+  scheduleCalendarBodyEl.querySelectorAll('.month-day-cell-overflow .month-chips').forEach((chips) => {
+    chips.addEventListener('scroll', () => {
+      chips.closest('.month-day-cell')?.classList.toggle('is-scrolled', chips.scrollTop > 0);
     });
   });
 }
