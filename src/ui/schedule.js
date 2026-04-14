@@ -621,6 +621,7 @@ export function renderMonthView() {
       const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
       const maxVisibleChips = 3;
+      const visibleEntries = entries.slice(0, maxVisibleChips);
       const hasOverflow = entries.length > maxVisibleChips;
       let chipsHtml = '';
       visibleEntries.forEach((entry) => {
