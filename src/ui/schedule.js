@@ -621,11 +621,16 @@ export function renderMonthView() {
       const holidayName = getHolidayName(date);
       const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
       const maxVisibleChips = 3;
-      const hasOverflow = entries.length > maxVisibleChips;
+      const renderableEntries = entries
+        .map((entry) => ({
+          entry,
+          todo: state.todos.find((item) => item.id === entry.todoId),
+        }))
+        .filter(({ todo }) => todo);
+      const visibleEntries = renderableEntries.slice(0, maxVisibleChips);
+      const hasOverflow = renderableEntries.length > maxVisibleChips;
       let chipsHtml = '';
-      entries.forEach((entry) => {
-        const todo = state.todos.find((item) => item.id === entry.todoId);
-        if (!todo) return;
+      visibleEntries.forEach(({ entry, todo }) => {
         chipsHtml += `
           <div class="month-chip ${entry.done ? 'chip-done' : ''}" data-entry-id="${entry.id}" data-todo-id="${todo.id}" draggable="true">
             <input type="checkbox" class="month-chip-check" data-action="toggle-entry" data-entry-id="${entry.id}" ${entry.done ? 'checked' : ''} />
@@ -636,7 +641,7 @@ export function renderMonthView() {
       });
 
       if (hasOverflow) {
-        chipsHtml += `<div class="month-chip-more">+${entries.length - maxVisibleChips}개</div>`;
+        chipsHtml += `<div class="month-chip-more">+${renderableEntries.length - visibleEntries.length}개</div>`;
       }
 
       html += `
@@ -768,11 +773,6 @@ function bindCalendarEvents() {
     });
   });
 
-  scheduleCalendarBodyEl.querySelectorAll('.month-day-cell-overflow .month-chips').forEach((chips) => {
-    chips.addEventListener('scroll', () => {
-      chips.closest('.month-day-cell')?.classList.toggle('is-scrolled', chips.scrollTop > 0);
-    });
-  });
 }
 
 function prevWeek() {

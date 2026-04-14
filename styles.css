@@ -3201,28 +3201,27 @@ body {
 
 .cal-chip-check, .month-chip-check { accent-color: var(--accent); }
 .cal-chip-text, .month-chip-text { max-width: none; }
+.month-chip {
+  box-sizing: border-box;
+  flex: 0 0 30px;
+  height: 30px;
+}
 .month-day-cell { min-height: 0; height: auto; padding: 10px; }
 .month-day-cell.other-month { background: rgba(245, 248, 252, 0.78); opacity: 0.72; }
 .month-day-num { margin-bottom: 8px; }
-.month-chips { gap: 6px; align-items: stretch; flex: 1; min-height: 0; }
+.month-chips { gap: 6px; align-items: stretch; flex: 1; min-height: 0; overflow: hidden; }
 .month-day-cell-overflow .month-chips {
-  overflow-y: auto;
   padding-right: 2px;
 }
 .month-chip-more {
-  position: sticky;
-  bottom: 0;
   align-self: stretch;
+  flex: 0 0 auto;
   padding: 6px 8px;
   border-radius: 6px;
   background: rgba(235, 241, 250, 0.95);
   color: var(--text-soft);
   font-weight: 700;
   text-align: center;
-  box-shadow: 0 -6px 12px rgba(255, 255, 255, 0.88);
-}
-.month-day-cell-overflow.is-scrolled .month-chip-more {
-  display: none;
 }
 
 .schedule-empty {
