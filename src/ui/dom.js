@@ -13,6 +13,9 @@ export const syncStatusEl = document.getElementById('sync-status');
 export const authAreaEl = document.getElementById('auth-area');
 export const todoListEl = document.getElementById('todo-list');
 export const addTodoBtn = document.getElementById('add-todo-btn');
+export const toggleTodoPanelBtn = document.getElementById('toggle-todo-panel-btn');
+export const todoPanelEl = document.getElementById('todo-panel');
+export const notesLayoutEl = document.getElementById('notes-layout');
 export const extractTodoBtn = document.getElementById('extract-todo-btn');
 
 // 스케줄 탭 관련 DOM

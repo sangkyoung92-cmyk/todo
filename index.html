@@ -72,6 +72,12 @@
         <button class="tbtn tbtn-text" data-cmd="formatBlock" data-val="p" title="본문">본문</button>
       </div>
       <div class="toolbar-sep"></div>
+      <div class="toolbar-group font-size-group" aria-label="글자 크기">
+        <button class="tbtn tbtn-text" data-action="font-size-down" title="글자 작게">A-</button>
+        <span id="font-size-label" class="font-size-label" aria-live="polite">15</span>
+        <button class="tbtn tbtn-text" data-action="font-size-up" title="글자 크게">A+</button>
+      </div>
+      <div class="toolbar-sep"></div>
       <div class="toolbar-group">
         <button class="tbtn" data-cmd="insertUnorderedList" title="글머리 기호 목록">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a1 1 0 100 2 1 1 0 000-2zM9 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zm0 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zM5 9a1 1 0 100 2 1 1 0 000-2zm4 5a1 1 0 011-1h7a1 1 0 110 2h-7a1 1 0 01-1-1zm-4 0a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
@@ -200,7 +206,7 @@
 
     <!-- Notes view (기존 레이아웃) -->
     <div id="notes-view">
-    <main class="layout">
+    <main id="notes-layout" class="layout">
       <!-- Pages panel -->
       <section class="panel pages-panel">
         <div class="panel-head">
@@ -237,13 +243,16 @@
       </section>
 
       <!-- Todo panel -->
-      <section class="panel todo-panel">
+      <section id="todo-panel" class="panel todo-panel">
         <div class="panel-head todo-panel-head">
           <h2>업무 목록</h2>
-          <button id="add-todo-btn" class="add-btn">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-            업무
-          </button>
+          <div class="todo-panel-actions">
+            <button id="toggle-todo-panel-btn" class="ghost-btn todo-panel-toggle" type="button" aria-expanded="true">접기</button>
+            <button id="add-todo-btn" class="add-btn">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+              업무
+            </button>
+          </div>
         </div>
         <div class="schedule-filter-bar note-todo-filter-bar">
           <button class="schedule-filter-btn active" data-filter="all">전체</button>

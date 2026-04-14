@@ -2,6 +2,7 @@ import { load, nowISO, save, state, uid, getNextSectionColor } from './state/sto
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
+  toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
   addAiScheduleTaskBtn,
@@ -71,6 +72,15 @@ function applyAppMode(mode) {
   });
 
   rerender();
+}
+
+function setTodoPanelCollapsed(isCollapsed) {
+  todoPanelEl?.classList.toggle('collapsed', isCollapsed);
+  notesLayoutEl?.classList.toggle('todo-panel-collapsed', isCollapsed);
+  if (toggleTodoPanelBtn) {
+    toggleTodoPanelBtn.textContent = isCollapsed ? '펼치기' : '접기';
+    toggleTodoPanelBtn.setAttribute('aria-expanded', String(!isCollapsed));
+  }
 }
 
 // 앱 모드 탭 클릭 이벤트
@@ -212,6 +222,7 @@ function addTodoFromSelection() {
     return;
   }
   const { deadline, cleanedText } = extractDeadlineFromText(text);
+  setTodoPanelCollapsed(false);
   addTodo(cleanedText, state.selectedNoteId || null, '중', deadline);
   rerender();
 }
@@ -399,6 +410,10 @@ function scheduleAutoSave() {
 }
 
 // ── Toolbar ──────────────────────────────────────────
+const FONT_SIZE_STEPS = [12, 14, 15, 16, 18, 20, 24, 28, 34];
+const DEFAULT_FONT_SIZE = 15;
+const fontSizeLabel = document.getElementById('font-size-label');
+
 toolbarEl.addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tbtn');
   if (!btn) return;
@@ -411,6 +426,11 @@ toolbarEl.addEventListener('mousedown', (e) => {
   // 할 일 추가 버튼
   if (btn.dataset.action === 'add-todo') {
     addTodoFromSelection();
+    return;
+  }
+
+  if (btn.dataset.action === 'font-size-down' || btn.dataset.action === 'font-size-up') {
+    applyFontSize(btn.dataset.action === 'font-size-up' ? 1 : -1);
     return;
   }
 
@@ -442,12 +462,84 @@ function updateToolbarState() {
       btn.classList.toggle('active', document.queryCommandState(cmd));
     }
   });
+  updateFontSizeLabel();
   syncEditorChrome();
+}
+
+function getSelectionElement() {
+  const sel = window.getSelection();
+  if (!sel || !sel.anchorNode || !contentEl.contains(sel.anchorNode)) return null;
+  return sel.anchorNode.nodeType === Node.ELEMENT_NODE
+    ? sel.anchorNode
+    : sel.anchorNode.parentElement;
+}
+
+function getSelectionFontSize() {
+  const el = getSelectionElement();
+  if (!el) return DEFAULT_FONT_SIZE;
+  return parseFloat(window.getComputedStyle(el).fontSize) || DEFAULT_FONT_SIZE;
+}
+
+function nearestFontSizeIndex(size) {
+  return FONT_SIZE_STEPS.reduce((bestIndex, step, index) => (
+    Math.abs(step - size) < Math.abs(FONT_SIZE_STEPS[bestIndex] - size) ? index : bestIndex
+  ), 0);
+}
+
+function updateFontSizeLabel(size = getSelectionFontSize()) {
+  if (!fontSizeLabel) return;
+  fontSizeLabel.textContent = String(Math.round(size));
+}
+
+function replaceFontSizeTags(size) {
+  contentEl.querySelectorAll('font[size="7"]').forEach((fontEl) => {
+    const span = document.createElement('span');
+    span.style.fontSize = `${size}px`;
+    while (fontEl.firstChild) span.appendChild(fontEl.firstChild);
+    fontEl.replaceWith(span);
+  });
+}
+
+function applyFontSize(direction) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || !contentEl.contains(sel.anchorNode)) {
+    contentEl.focus();
+    return;
+  }
+
+  const currentSize = getSelectionFontSize();
+  const currentIndex = nearestFontSizeIndex(currentSize);
+  const nextIndex = Math.max(0, Math.min(FONT_SIZE_STEPS.length - 1, currentIndex + direction));
+  const nextSize = FONT_SIZE_STEPS[nextIndex];
+
+  contentEl.focus();
+
+  if (sel.isCollapsed) {
+    const target = getSelectionElement();
+    const block = target?.closest('p, div, li, h1, h2, span');
+    if (block && block !== contentEl) {
+      block.style.fontSize = `${nextSize}px`;
+    } else {
+      document.execCommand('fontSize', false, '7');
+      replaceFontSizeTags(nextSize);
+    }
+  } else {
+    document.execCommand('fontSize', false, '7');
+    replaceFontSizeTags(nextSize);
+  }
+
+  updateFontSizeLabel(nextSize);
+  scheduleAutoSave();
+  updateToolbarState();
 }
 
 contentEl.addEventListener('keyup', updateToolbarState);
 contentEl.addEventListener('mouseup', updateToolbarState);
 contentEl.addEventListener('selectionchange', updateToolbarState);
+document.addEventListener('selectionchange', () => {
+  const el = getSelectionElement();
+  if (el) updateToolbarState();
+});
 
 // ── Text Color Picker ────────────────────────────────
 const colorBtn = document.getElementById('color-btn');
@@ -665,9 +757,14 @@ searchInput.addEventListener('keydown', (e) => {
 // ── Event listeners ──────────────────────────────────
 addTabBtn.addEventListener('click', addTab);
 addNoteBtn.addEventListener('click', addNote);
+toggleTodoPanelBtn?.addEventListener('click', () => {
+  const isCollapsed = todoPanelEl?.classList.contains('collapsed') || false;
+  setTodoPanelCollapsed(!isCollapsed);
+});
 addTodoBtn.addEventListener('click', async () => {
   const result = await showAddTodoModal();
   if (!result) return;
+  setTodoPanelCollapsed(false);
   addTodo(result.text, state.selectedNoteId || null, result.difficulty, result.deadline);
   rerender();
 });

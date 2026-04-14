@@ -681,6 +681,19 @@ body {
   writing-mode: horizontal-tb;
 }
 
+.font-size-group {
+  gap: 6px;
+}
+
+.font-size-label {
+  min-width: 28px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #605e5c;
+  text-align: center;
+}
+
 /* ── Color Picker ────────────────────────────────────── */
 .color-picker-wrap {
   position: relative;
@@ -751,6 +764,10 @@ body {
   overflow: hidden;
 }
 
+.layout.todo-panel-collapsed {
+  grid-template-columns: 260px 1fr 72px;
+}
+
 /* ── Panels ──────────────────────────────────────────── */
 .panel {
   display: flex;
@@ -771,6 +788,38 @@ body {
 .todo-panel {
   background: #fff;
   border-left: 1px solid #edebe9;
+}
+
+.todo-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-panel-toggle {
+  flex-shrink: 0;
+}
+
+.todo-panel.collapsed .todo-panel-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-panel.collapsed .todo-panel-head h2 {
+  max-width: none;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.todo-panel.collapsed .todo-panel-actions {
+  flex-direction: column;
+}
+
+.todo-panel.collapsed #add-todo-btn,
+.todo-panel.collapsed .note-todo-filter-bar,
+.todo-panel.collapsed #todo-list {
+  display: none;
 }
 
 .panel-head {
@@ -2519,6 +2568,10 @@ body {
   grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) minmax(280px, 340px);
 }
 
+.layout.todo-panel-collapsed {
+  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) 72px;
+}
+
 .pages-panel,
 .editor-panel,
 .todo-panel,
@@ -2585,19 +2638,27 @@ body {
   padding: 28px 48px 48px;
   max-width: 920px;
   font-size: 15px;
-  line-height: 1.85;
+  --note-line-height: 1.85em;
+  line-height: var(--note-line-height);
   color: var(--text);
 }
 .note-content.ruled-paper {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(1.85em - 1px),
-    rgba(91, 141, 239, 0.14) calc(1.85em - 1px),
-    rgba(91, 141, 239, 0.14) 1.85em
+    transparent calc(var(--note-line-height) - 1px),
+    rgba(91, 141, 239, 0.1) calc(var(--note-line-height) - 1px),
+    rgba(91, 141, 239, 0.1) var(--note-line-height)
   );
-  background-size: 100% 1.85em;
-  background-position: 0 0.35em;
+  background-origin: content-box;
+  background-clip: padding-box;
+  background-size: 100% var(--note-line-height);
+  background-position: 0 0;
+}
+.note-content.ruled-paper p,
+.note-content.ruled-paper div {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 .note-content blockquote { border-left: 3px solid rgba(40, 124, 255, 0.35); color: var(--text-soft); }
 
