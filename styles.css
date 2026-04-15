@@ -2317,9 +2317,12 @@ body {
 }
 
 .schedule-today-btn {
+  width: auto;
+  min-width: fit-content;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 700;
-  padding: 0 10px;
+  padding: 0 12px;
   color: var(--brand);
 }
 
@@ -2474,7 +2477,7 @@ body {
 }
 
 .notebook-name {
-  font-size: 18px;
+  font-size: clamp(14px, 1.2vw, 18px);
   font-weight: 700;
   color: var(--text);
 }
@@ -3307,8 +3310,8 @@ body {
   color: var(--text-soft);
 }
 .schedule-range-label {
-  min-width: 260px;
-  font-size: 22px;
+  min-width: clamp(180px, 16vw, 260px);
+  font-size: clamp(16px, 1.6vw, 22px);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--text);
