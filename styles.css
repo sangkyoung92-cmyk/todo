@@ -3309,9 +3309,15 @@ body {
   background: rgba(239, 244, 252, 0.78);
   color: var(--text-soft);
 }
+.schedule-today-btn {
+  width: auto;
+  min-width: fit-content;
+  white-space: nowrap;
+  padding: 0 14px;
+}
 .schedule-range-label {
-  min-width: clamp(180px, 16vw, 260px);
-  font-size: clamp(16px, 1.6vw, 22px);
+  min-width: clamp(160px, 14vw, 260px);
+  font-size: clamp(15px, 1.2vw, 22px);
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--text);
