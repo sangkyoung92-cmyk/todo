@@ -7,9 +7,12 @@ import {
   scheduleNextBtn,
   plannerInboxListEl,
   plannerApplyBtn,
+  plannerClearBtn,
   plannerToggleBtn,
   plannerTopbarToggleBtn,
   plannerAiAdviceEl,
+  scheduleGotoTodayBtn,
+  scheduleGotoDateInput,
 } from './dom.js';
 import {
   getSunday,
@@ -50,7 +53,7 @@ import {
 import { showScheduleModal } from './schedule-modal.js';
 
 let onRenderCallback = null;
-let taskFilter = 'all';
+let taskFilter = 'active';
 let pendingPlannerSuggestions = [];
 let monthOverflowResizeBound = false;
 let plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
@@ -99,7 +102,7 @@ function renderPlannerShell() {
   }
   if (plannerTopbarToggleBtn) {
     plannerTopbarToggleBtn.classList.toggle('active', !collapsed);
-    plannerTopbarToggleBtn.textContent = collapsed ? '오늘 흐름' : '흐름 닫기';
+    plannerTopbarToggleBtn.textContent = collapsed ? '업무 제안' : '업무 제안 닫기';
     plannerTopbarToggleBtn.setAttribute('aria-expanded', String(!collapsed));
   }
 }
@@ -129,6 +132,7 @@ function renderPlannerSuggestions() {
         <span class="planner-suggestion-difficulty">${escapeHtml(item.difficulty || '중')}</span>
         <span class="planner-suggestion-arrow">-&gt;</span>
         <span class="planner-suggestion-reason">${escapeHtml(item.reason || '업무 흐름을 보고 제안했습니다')}</span>
+        <button class="planner-suggestion-delete" data-action="delete-suggestion" data-suggestion-id="${escapeHtml(item.id)}" data-inbox-id="${escapeHtml(item.inboxId || '')}" title="이 제안 삭제" type="button">✕</button>
       </div>
     </li>
   `).join('');
@@ -176,7 +180,19 @@ export function renderSmartPlanner() {
 
 export function clearPlannerSuggestions() {
   pendingPlannerSuggestions = [];
+  state.todoInbox = [];
   plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
+  save();
+  renderPlanner();
+}
+
+export function deletePlannerSuggestion(suggestionId, inboxId) {
+  if (inboxId) {
+    state.todoInbox = (state.todoInbox || []).filter((item) => item.id !== inboxId);
+    save();
+  } else {
+    pendingPlannerSuggestions = pendingPlannerSuggestions.filter((item) => item.id !== suggestionId);
+  }
   renderPlanner();
 }
 
@@ -583,9 +599,10 @@ export function renderWeekView() {
 
     html += `
       <div class="week-day-col ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
-        <div class="week-day-header ${weekdayClass}" title="${holidayName || ''}">
+        <div class="week-day-header ${weekdayClass}">
           <div class="week-day-name">${dayNames[index]}</div>
           <div class="week-day-num">${date.getDate()}</div>
+          ${holidayName ? `<div class="week-day-holiday-name">${escapeHtml(holidayName)}</div>` : ''}
         </div>
         <div class="week-day-drop-zone" data-date="${dateKey}">
           ${chipsHtml}
@@ -652,7 +669,10 @@ export function renderMonthView() {
 
       html += `
         <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
-          <div class="month-day-num ${weekdayClass}" title="${holidayName || ''}">${date.getDate()}</div>
+          <div class="month-day-num-wrap">
+            <div class="month-day-num ${weekdayClass}">${date.getDate()}</div>
+            ${holidayName ? `<span class="month-holiday-name">${escapeHtml(holidayName)}</span>` : ''}
+          </div>
           <div class="month-chips">${chipsHtml}</div>
         </div>
       `;
@@ -667,119 +687,24 @@ export function renderMonthView() {
   scheduleMonthOverflowRefresh();
 }
 
-function bindCalendarEvents() {
-  function getDragData(dataTransfer) {
-    const raw = dataTransfer.getData('application/x-schedule-drag');
-    if (raw) {
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return null;
-      }
+function getDragData(dataTransfer) {
+  const raw = dataTransfer.getData('application/x-schedule-drag');
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
     }
-    const todoId = dataTransfer.getData('text/plain');
-    if (!todoId) return null;
-    if (todoId.startsWith('entry:')) return { type: 'entry', entryId: todoId.slice(6) };
-    if (todoId.startsWith('todo:')) return { type: 'todo', todoId: todoId.slice(5) };
-    return { type: 'todo', todoId };
   }
+  const plain = dataTransfer.getData('text/plain');
+  if (!plain) return null;
+  if (plain.startsWith('entry:')) return { type: 'entry', entryId: plain.slice(6) };
+  if (plain.startsWith('todo:')) return { type: 'todo', todoId: plain.slice(5) };
+  return { type: 'todo', todoId: plain };
+}
 
-  scheduleCalendarBodyEl.querySelectorAll('.week-day-col, .week-day-drop-zone, .month-day-cell').forEach((zone) => {
-    const getDateKey = () => zone.dataset.date || zone.closest('[data-date]')?.dataset.date;
-    const getDropCell = () => zone.closest('.week-day-col, .month-day-cell') || zone;
-
-    zone.addEventListener('dragover', (event) => {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = event.ctrlKey || event.metaKey ? 'copy' : 'move';
-      getDropCell()?.classList.add('drag-over');
-    });
-
-    zone.addEventListener('dragleave', (event) => {
-      if (!zone.contains(event.relatedTarget)) {
-        getDropCell()?.classList.remove('drag-over');
-      }
-    });
-
-    zone.addEventListener('drop', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      getDropCell()?.classList.remove('drag-over');
-      const dragData = getDragData(event.dataTransfer);
-      const dateKey = getDateKey();
-      if (!dragData || !dateKey) return;
-
-      if (dragData.type === 'todo' && dragData.todoId) {
-        assignTodoToDate(dragData.todoId, dateKey);
-      }
-      if (dragData.type === 'entry' && dragData.entryId) {
-        if (event.ctrlKey || event.metaKey) copyEntryToDate(dragData.entryId, dateKey);
-        else moveEntryToDate(dragData.entryId, dateKey);
-      }
-
-      rerenderSchedule();
-    });
-  });
-
-  scheduleCalendarBodyEl.querySelectorAll('.week-day-col, .month-day-cell').forEach((cell) => {
-    cell.addEventListener('dblclick', async (event) => {
-      if (event.target.closest('.cal-chip, .month-chip, [data-action]')) return;
-      const dateKey = cell.dataset.date;
-      if (!dateKey) return;
-
-      const result = await showScheduleModal({ deadline: dateKey, difficulty: '중' });
-      if (!result) return;
-
-      addScheduleTask(
-        result.text,
-        result.deadline || dateKey,
-        result.difficulty || '중',
-      );
-      rerenderSchedule();
-    });
-  });
-
-  scheduleCalendarBodyEl.querySelectorAll('.cal-chip, .month-chip').forEach((chip) => {
-    chip.addEventListener('dblclick', async (event) => {
-      if (event.target.closest('[data-action="toggle-entry"], [data-action="remove-entry"]')) return;
-      event.stopPropagation();
-      await editTask(chip.dataset.todoId);
-      rerenderSchedule();
-    });
-  });
-
-  scheduleCalendarBodyEl.querySelectorAll('.cal-chip[draggable], .month-chip[draggable]').forEach((chip) => {
-    chip.addEventListener('dragstart', (event) => {
-      event.stopPropagation();
-      const payload = JSON.stringify({
-        type: 'entry',
-        entryId: chip.dataset.entryId,
-      });
-      event.dataTransfer.setData('application/x-schedule-drag', payload);
-      event.dataTransfer.setData('text/plain', `entry:${chip.dataset.entryId}`);
-      event.dataTransfer.effectAllowed = 'copyMove';
-      chip.classList.add('dragging');
-    });
-
-    chip.addEventListener('dragend', () => {
-      chip.classList.remove('dragging');
-    });
-  });
-
-  scheduleCalendarBodyEl.querySelectorAll('[data-action="toggle-entry"]').forEach((el) => {
-    el.addEventListener('change', () => {
-      toggleEntryDone(el.dataset.entryId);
-      rerenderSchedule();
-    });
-  });
-
-  scheduleCalendarBodyEl.querySelectorAll('[data-action="remove-entry"]').forEach((el) => {
-    el.addEventListener('click', (event) => {
-      event.stopPropagation();
-      removeFromDate(el.dataset.entryId);
-      rerenderSchedule();
-    });
-  });
-
+function bindCalendarEvents() {
+  // 월간 뷰 칩 스크롤 → 오버플로 배지 갱신 (scroll은 위임 불가)
   scheduleCalendarBodyEl.querySelectorAll('.month-chips').forEach((chips) => {
     chips.addEventListener('scroll', scheduleMonthOverflowRefresh);
   });
@@ -788,6 +713,101 @@ function bindCalendarEvents() {
     monthOverflowResizeBound = true;
     window.addEventListener('resize', scheduleMonthOverflowRefresh);
   }
+}
+
+function initCalendarEventDelegation() {
+  if (!scheduleCalendarBodyEl) return;
+
+  // ── 칩(달력 내 일정) 드래그 소스 ─────────────────────
+  scheduleCalendarBodyEl.addEventListener('dragstart', (event) => {
+    const chip = event.target.closest('.cal-chip[draggable], .month-chip[draggable]');
+    if (!chip) return;
+    event.stopPropagation();
+    const payload = JSON.stringify({ type: 'entry', entryId: chip.dataset.entryId });
+    event.dataTransfer.setData('application/x-schedule-drag', payload);
+    event.dataTransfer.setData('text/plain', `entry:${chip.dataset.entryId}`);
+    event.dataTransfer.effectAllowed = 'copyMove';
+    chip.classList.add('dragging');
+  });
+
+  scheduleCalendarBodyEl.addEventListener('dragend', (event) => {
+    const chip = event.target.closest('.cal-chip, .month-chip');
+    if (chip) chip.classList.remove('dragging');
+  });
+
+  // ── 드롭 존 ─────────────────────────────────────────
+  scheduleCalendarBodyEl.addEventListener('dragover', (event) => {
+    const zone = event.target.closest('.week-day-col, .week-day-drop-zone, .month-day-cell');
+    if (!zone) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = event.ctrlKey || event.metaKey ? 'copy' : 'move';
+    const dropCell = zone.closest('.week-day-col, .month-day-cell') || zone;
+    dropCell.classList.add('drag-over');
+  });
+
+  scheduleCalendarBodyEl.addEventListener('dragleave', (event) => {
+    const dropCell = event.target.closest('.week-day-col, .month-day-cell');
+    if (!dropCell) return;
+    if (!dropCell.contains(event.relatedTarget)) {
+      dropCell.classList.remove('drag-over');
+    }
+  });
+
+  scheduleCalendarBodyEl.addEventListener('drop', (event) => {
+    const zone = event.target.closest('.week-day-col, .week-day-drop-zone, .month-day-cell');
+    if (!zone) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const dropCell = zone.closest('.week-day-col, .month-day-cell') || zone;
+    dropCell.classList.remove('drag-over');
+    const dragData = getDragData(event.dataTransfer);
+    const dateKey = zone.dataset.date || zone.closest('[data-date]')?.dataset.date;
+    if (!dragData || !dateKey) return;
+
+    if (dragData.type === 'todo' && dragData.todoId) {
+      assignTodoToDate(dragData.todoId, dateKey);
+    }
+    if (dragData.type === 'entry' && dragData.entryId) {
+      if (event.ctrlKey || event.metaKey) copyEntryToDate(dragData.entryId, dateKey);
+      else moveEntryToDate(dragData.entryId, dateKey);
+    }
+    rerenderSchedule();
+  });
+
+  // ── 체크박스 / 삭제 버튼 ────────────────────────────
+  scheduleCalendarBodyEl.addEventListener('change', (event) => {
+    if (event.target.dataset.action !== 'toggle-entry') return;
+    toggleEntryDone(event.target.dataset.entryId);
+    rerenderSchedule();
+  });
+
+  scheduleCalendarBodyEl.addEventListener('click', (event) => {
+    const removeBtn = event.target.closest('[data-action="remove-entry"]');
+    if (!removeBtn) return;
+    event.stopPropagation();
+    removeFromDate(removeBtn.dataset.entryId);
+    rerenderSchedule();
+  });
+
+  // ── 더블클릭: 일정 편집 / 새 업무 추가 ──────────────
+  scheduleCalendarBodyEl.addEventListener('dblclick', async (event) => {
+    const chip = event.target.closest('.cal-chip, .month-chip');
+    if (chip) {
+      if (event.target.closest('[data-action="toggle-entry"], [data-action="remove-entry"]')) return;
+      event.stopPropagation();
+      await editTask(chip.dataset.todoId);
+      rerenderSchedule();
+      return;
+    }
+    const cell = event.target.closest('.week-day-col, .month-day-cell');
+    if (!cell || event.target.closest('.cal-chip, .month-chip, [data-action]')) return;
+    const dateKey = cell.dataset.date;
+    if (!dateKey) return;
+    const result = await showScheduleModal({ deadline: dateKey, difficulty: '중' });
+    if (!result) return;
+    addScheduleTask(result.text, result.deadline || dateKey, result.difficulty || '중');
+    rerenderSchedule();
+  });
 }
 
 function scheduleMonthOverflowRefresh() {
@@ -887,6 +907,9 @@ export function renderSchedule(onRender) {
 }
 
 export function initScheduleNav(onRender) {
+  // 달력 이벤트 위임 초기화 (한 번만 등록)
+  initCalendarEventDelegation();
+
   schedulePrevBtn?.addEventListener('click', () => {
     if (state.scheduleView === 'week') prevWeek();
     else prevMonth();
@@ -896,6 +919,29 @@ export function initScheduleNav(onRender) {
   scheduleNextBtn?.addEventListener('click', () => {
     if (state.scheduleView === 'week') nextWeek();
     else nextMonth();
+    renderSchedule(onRender);
+  });
+
+  scheduleGotoTodayBtn?.addEventListener('click', () => {
+    if (state.scheduleView === 'week') {
+      state.scheduleWeekStart = toDateKey(getSunday(new Date()));
+    } else {
+      state.scheduleMonth = todayKey().slice(0, 7);
+    }
+    save();
+    renderSchedule(onRender);
+  });
+
+  scheduleGotoDateInput?.addEventListener('change', () => {
+    const dateStr = scheduleGotoDateInput.value;
+    if (!DATE_KEY_PATTERN.test(dateStr)) return;
+    const targetDate = fromDateKey(dateStr);
+    if (state.scheduleView === 'week') {
+      state.scheduleWeekStart = toDateKey(getSunday(targetDate));
+    } else {
+      state.scheduleMonth = dateStr.slice(0, 7);
+    }
+    save();
     renderSchedule(onRender);
   });
 
@@ -922,6 +968,16 @@ export function initScheduleNav(onRender) {
     const applied = applyPlannerSuggestionList();
     if (applied === 0) alert('적용할 제안이 없습니다.');
     else alert(`제안 ${applied}개를 적용했습니다.`);
+  });
+
+  plannerClearBtn?.addEventListener('click', () => {
+    clearPlannerSuggestions();
+  });
+
+  plannerInboxListEl?.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-action="delete-suggestion"]');
+    if (!btn) return;
+    deletePlannerSuggestion(btn.dataset.suggestionId, btn.dataset.inboxId);
   });
 
   plannerToggleBtn?.addEventListener('click', () => {

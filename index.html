@@ -35,7 +35,7 @@
         <span id="save-status" class="save-status">저장됨</span>
         <span id="sync-status" class="sync-status"></span>
         <button id="planner-topbar-toggle-btn" class="topbar-action-btn planner-topbar-toggle" type="button" hidden aria-expanded="false">
-          오늘 흐름
+          업무 제안
         </button>
         <button id="settings-btn" class="topbar-icon-btn" title="설정">
           <svg viewBox="0 0 20 20" fill="currentColor">
@@ -152,6 +152,7 @@
           </div>
           <div class="smart-planner-actions">
             <button id="planner-extract-btn" class="ghost-btn">업무 제안</button>
+            <button id="planner-clear-btn" class="ghost-btn">전체 초기화</button>
             <button id="planner-apply-btn" class="add-btn" disabled>적용하기</button>
             <button id="planner-toggle-btn" class="ghost-btn" aria-expanded="true">접기</button>
           </div>
@@ -180,8 +181,8 @@
             </div>
           </div>
           <div class="schedule-filter-bar">
-            <button class="schedule-filter-btn active" data-filter="all">전체</button>
-            <button class="schedule-filter-btn" data-filter="active">진행중</button>
+            <button class="schedule-filter-btn" data-filter="all">전체</button>
+            <button class="schedule-filter-btn active" data-filter="active">진행중</button>
             <button class="schedule-filter-btn" data-filter="done">완료</button>
           </div>
           <ul id="schedule-task-list" class="schedule-task-list"></ul>
@@ -193,6 +194,8 @@
               <button id="schedule-prev-btn" class="schedule-nav-btn">&#8249;</button>
               <span id="schedule-range-label" class="schedule-range-label"></span>
               <button id="schedule-next-btn" class="schedule-nav-btn">&#8250;</button>
+              <button id="schedule-goto-today-btn" class="schedule-nav-btn schedule-today-btn" title="오늘로 이동">오늘</button>
+              <input id="schedule-goto-date-input" class="schedule-goto-date" type="date" title="날짜로 이동" />
             </div>
             <div class="schedule-view-toggle">
               <button class="schedule-view-btn active" data-view="week">주간</button>
@@ -255,8 +258,8 @@
           </div>
         </div>
         <div class="schedule-filter-bar note-todo-filter-bar">
-          <button class="schedule-filter-btn active" data-filter="all">전체</button>
-          <button class="schedule-filter-btn" data-filter="active">진행중</button>
+          <button class="schedule-filter-btn" data-filter="all">전체</button>
+          <button class="schedule-filter-btn active" data-filter="active">진행중</button>
           <button class="schedule-filter-btn" data-filter="done">완료</button>
         </div>
         <ul id="todo-list" class="list schedule-task-list"></ul>
