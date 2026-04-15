@@ -1600,9 +1600,9 @@ body {
 
 /* 왼쪽 사이드바 (업무 목록) */
 .schedule-sidebar {
-  width: 280px;
-  min-width: 240px;
-  max-width: 340px;
+  width: clamp(200px, 18vw, 280px);
+  min-width: 200px;
+  max-width: 280px;
   background: #fff;
   border-right: 1px solid #e1e1e1;
   display: flex;
@@ -2464,8 +2464,8 @@ body {
 }
 
 .topbar {
-  height: 64px;
-  padding: 0 24px;
+  height: clamp(50px, 7vh, 64px);
+  padding: 0 clamp(12px, 1.5vw, 24px);
   background: rgba(255, 255, 255, 0.82);
   border-bottom: 1px solid rgba(219, 229, 242, 0.95);
   box-shadow: 0 12px 30px rgba(18, 35, 66, 0.05);
@@ -2479,7 +2479,7 @@ body {
   color: var(--text);
 }
 
-.search-wrap { min-width: 240px; }
+.search-wrap { min-width: clamp(120px, 13vw, 240px); }
 .search-icon { left: 14px; width: 15px; height: 15px; color: var(--text-soft); }
 
 #search-input,
@@ -2490,7 +2490,7 @@ body {
 }
 
 #search-input {
-  width: 260px;
+  width: clamp(130px, 14vw, 260px);
   padding: 0 16px 0 40px;
   background: rgba(239, 244, 252, 0.95);
   border: 1px solid var(--line);
@@ -2725,8 +2725,8 @@ body {
 .note-content blockquote { border-left: 3px solid rgba(40, 124, 255, 0.35); color: var(--text-soft); }
 
 .schedule-view {
-  padding: 0 24px 24px;
-  gap: 18px;
+  padding: 0 clamp(12px, 1.5vw, 24px) clamp(12px, 1.5vw, 24px);
+  gap: clamp(8px, 1vw, 18px);
   background: transparent;
   flex-direction: column;
 }
@@ -2735,7 +2735,7 @@ body {
   display: flex;
   flex: 1;
   min-height: 0;
-  gap: 18px;
+  gap: clamp(8px, 1vw, 18px);
 }
 
 .smart-planner {
@@ -3449,53 +3449,10 @@ body {
   color: var(--text-soft);
 }
 
-@media (max-width: 1440px) {
-  /* 상단바 압축 */
-  .topbar {
-    height: 52px;
-    padding: 0 16px;
-  }
-  .notebook-name { font-size: 15px; }
-
-  /* 검색창 축소 */
-  .search-wrap { min-width: 0; }
-  #search-input { width: 160px; height: 36px; }
-  #search-input:focus { width: 200px; }
-
-  /* 저장/동기화 상태 배지 축소 */
-  .save-status,
-  .sync-status { padding: 0 8px; height: 28px; font-size: 11px; }
-
-  /* 스케줄 사이드바 축소 */
-  .schedule-sidebar { width: 240px; min-width: 200px; }
-
-  /* 스케줄 뷰 여백/간격 축소 */
-  .schedule-view { padding: 0 16px 16px; gap: 10px; }
-  .schedule-workspace { gap: 12px; }
-  .schedule-calendar-header { padding: 8px 16px; }
-
-  /* 달력 네비 레이블 축소 */
-  .schedule-range-label { font-size: 18px; min-width: 200px; }
-
-  /* 주간/월간 전환 버튼 축소 */
-  .schedule-view-btn { min-width: 66px; min-height: 32px; }
-
-  /* 스마트 플래너 내부 패딩 축소 */
-  .smart-planner { padding: 12px 16px; }
-  .smart-planner-head h2 { font-size: 16px; }
-  .smart-planner-head { margin-bottom: 10px; }
-
-  /* 주간 뷰 헤더 축소 */
-  .week-day-header { padding: 10px 10px 8px; }
-  .week-day-num { font-size: 16px; }
-}
-
 @media (max-width: 1200px) {
   .layout { grid-template-columns: 240px minmax(0, 1fr); }
   .todo-panel { display: none; }
-  .schedule-workspace { gap: 12px; }
   .smart-planner-grid { grid-template-columns: 1fr; }
-  .schedule-sidebar { width: 200px; max-width: 22vw; min-width: 180px; }
 }
 
 @media (max-width: 768px) {
