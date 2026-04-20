@@ -11,15 +11,17 @@ let editingTabId = null;
 
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
+  const activeTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
+  if (tabListEl.parentElement && activeTab?.color) {
+    tabListEl.parentElement.style.setProperty('--active-section-color', activeTab.color);
+  }
 
   state.tabs.forEach((tab) => {
     const isEditing = editingTabId === tab.id;
     const li = document.createElement('li');
     li.className = `section-tab ${tab.id === state.selectedTabId ? 'active' : ''}`;
-    // Set colored background for inactive tabs; active tab is white via CSS
-    if (tab.id !== state.selectedTabId) {
-      li.style.background = tab.color;
-    }
+    li.style.setProperty('--section-color', tab.color);
+    li.style.background = tab.color;
 
     li.innerHTML = `
       <span class="section-tab-label">

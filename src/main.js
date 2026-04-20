@@ -5,7 +5,6 @@ import {
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
-  addAiScheduleTaskBtn,
   plannerExtractBtn,
   plannerTopbarToggleBtn,
 } from './ui/dom.js';
@@ -16,7 +15,7 @@ import {
   loadFromCloud, setSyncStatusCallback,
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
-import { getSelectedEditorText } from './todo/extract.js';
+import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, getPlannerSuggestionsWithAI, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
@@ -26,7 +25,6 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-  assignTodoToDate,
   renderSmartPlanner,
   buildPlannerLocalSuggestions,
   setPlannerSuggestions,
@@ -96,6 +94,7 @@ addScheduleTaskBtn?.addEventListener('click', async () => {
   rerender();
 });
 
+/*
 async function addAiScheduleTasks() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note || !note.content?.trim()) {
@@ -162,8 +161,7 @@ async function addAiScheduleTasks() {
     addAiScheduleTaskBtn.textContent = prevLabel;
   }
 }
-
-addAiScheduleTaskBtn?.addEventListener('click', addAiScheduleTasks);
+*/
 
 function addTab() {
   const now = nowISO();
@@ -254,6 +252,84 @@ function addTodosToInbox(todoItems, sourceNoteId) {
   }
 
   return addedCount;
+}
+
+function extractLocalTodosFromNote(noteHtml) {
+  return extractTodoCandidatesFromHtml(noteHtml)
+    .map((line) => {
+      const { deadline, cleanedText } = extractDeadlineFromText(line);
+      return {
+        text: cleanedText,
+        difficulty: '중',
+        deadline,
+      };
+    })
+    .filter((item) => item.text);
+}
+
+async function addTodosFromCurrentNote() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note) {
+    alert('먼저 페이지를 선택하세요.');
+    return;
+  }
+
+  if (!note.content?.trim()) {
+    alert('할 일로 만들 노트 내용이 없습니다.');
+    return;
+  }
+
+  const apiKey = getApiKey();
+  const previousLabel = extractTodoBtn.textContent;
+  extractTodoBtn.disabled = true;
+  extractTodoBtn.textContent = apiKey ? 'AI 분석 중...' : '로컬 추출 중...';
+
+  try {
+    let todos = [];
+    let sourceLabel = '로컬';
+
+    if (apiKey) {
+      const prefs = getScheduleAIPreferences();
+      const existingTodos = prefs.useDeadlineDistribution || prefs.useExistingTodoTexts ? state.todos : [];
+      const behaviorSummary = prefs.useBehaviorSummary ? buildBehaviorSummary() : '';
+      todos = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
+      sourceLabel = 'AI';
+    } else {
+      todos = extractLocalTodosFromNote(note.content);
+    }
+
+    if (!todos.length) {
+      alert('노트에서 추가할 할 일을 찾지 못했습니다.');
+      return;
+    }
+
+    const addedCount = addTodosToInbox(todos, note.id);
+    if (addedCount === 0) {
+      alert('새로 추가할 후보가 없습니다. 이미 업무 목록이나 인박스에 있는 항목은 제외했습니다.');
+      return;
+    }
+
+    alert(`${sourceLabel}로 할 일 후보 ${addedCount}개를 추가했습니다. 업무 제안에서 적용할 수 있습니다.`);
+    rerender();
+  } catch (err) {
+    if (err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+      alert('API 키가 유효하지 않습니다. 설정에서 확인해주세요.');
+      return;
+    }
+
+    const fallbackTodos = extractLocalTodosFromNote(note.content);
+    const addedCount = addTodosToInbox(fallbackTodos, note.id);
+    if (addedCount > 0) {
+      alert(`AI 추출에 실패해서 로컬 기준으로 ${addedCount}개를 추가했습니다.`);
+      rerender();
+    } else {
+      alert(`할 일 추출 실패: ${err.message}`);
+    }
+  } finally {
+    extractTodoBtn.disabled = false;
+    extractTodoBtn.textContent = previousLabel;
+  }
 }
 
 async function extractTodosFromCurrentNote() {
@@ -413,6 +489,30 @@ function scheduleAutoSave() {
 const FONT_SIZE_STEPS = [12, 14, 15, 16, 18, 20, 24, 28, 34];
 const DEFAULT_FONT_SIZE = 15;
 const fontSizeLabel = document.getElementById('font-size-label');
+let lastEditorRange = null;
+
+function isInsideEditor(node) {
+  return node && (node === contentEl || contentEl.contains(node));
+}
+
+function saveEditorSelection() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+
+  const range = sel.getRangeAt(0);
+  if (!isInsideEditor(range.commonAncestorContainer)) return;
+  lastEditorRange = range.cloneRange();
+}
+
+function restoreEditorSelection() {
+  if (!lastEditorRange) return false;
+
+  const sel = window.getSelection();
+  if (!sel) return false;
+  sel.removeAllRanges();
+  sel.addRange(lastEditorRange.cloneRange());
+  return true;
+}
 
 toolbarEl.addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tbtn');
@@ -422,6 +522,7 @@ toolbarEl.addEventListener('mousedown', (e) => {
   if (btn.id === 'color-btn') return;
 
   e.preventDefault(); // keep focus in editor
+  restoreEditorSelection();
 
   // 할 일 추가 버튼
   if (btn.dataset.action === 'add-todo') {
@@ -500,7 +601,18 @@ function replaceFontSizeTags(size) {
   });
 }
 
+function selectNodeContents(node) {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const sel = window.getSelection();
+  if (!sel) return;
+  sel.removeAllRanges();
+  sel.addRange(range);
+  saveEditorSelection();
+}
+
 function applyFontSize(direction) {
+  restoreEditorSelection();
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || !contentEl.contains(sel.anchorNode)) {
     contentEl.focus();
@@ -522,23 +634,38 @@ function applyFontSize(direction) {
     } else {
       document.execCommand('fontSize', false, '7');
       replaceFontSizeTags(nextSize);
+      saveEditorSelection();
     }
   } else {
-    document.execCommand('fontSize', false, '7');
-    replaceFontSizeTags(nextSize);
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.fontSize = `${nextSize}px`;
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    selectNodeContents(span);
   }
 
+  saveEditorSelection();
   updateFontSizeLabel(nextSize);
   scheduleAutoSave();
   updateToolbarState();
 }
 
-contentEl.addEventListener('keyup', updateToolbarState);
-contentEl.addEventListener('mouseup', updateToolbarState);
+contentEl.addEventListener('keyup', () => {
+  saveEditorSelection();
+  updateToolbarState();
+});
+contentEl.addEventListener('mouseup', () => {
+  saveEditorSelection();
+  updateToolbarState();
+});
 contentEl.addEventListener('selectionchange', updateToolbarState);
 document.addEventListener('selectionchange', () => {
   const el = getSelectionElement();
-  if (el) updateToolbarState();
+  if (el) {
+    saveEditorSelection();
+    updateToolbarState();
+  }
 });
 
 // ── Text Color Picker ────────────────────────────────
@@ -548,6 +675,7 @@ const colorBtnBar = document.getElementById('color-btn-bar');
 
 colorBtn.addEventListener('mousedown', (e) => {
   e.preventDefault(); // keep focus in editor
+  restoreEditorSelection();
   colorPalette.classList.toggle('open');
 });
 
@@ -588,11 +716,13 @@ document.addEventListener('click', (e) => {
 
 colorPalette.addEventListener('mousedown', (e) => {
   e.preventDefault(); // keep focus in editor
+  restoreEditorSelection();
   const swatch = e.target.closest('.color-swatch');
   if (!swatch) return;
 
   const color = swatch.dataset.color;
   document.execCommand('foreColor', false, color);
+  saveEditorSelection();
   colorBtnBar.style.background = color;
   contentEl.focus();
   colorPalette.classList.remove('open');
@@ -768,7 +898,7 @@ addTodoBtn.addEventListener('click', async () => {
   addTodo(result.text, state.selectedNoteId || null, result.difficulty, result.deadline);
   rerender();
 });
-extractTodoBtn.addEventListener('click', extractTodosFromCurrentNote);
+extractTodoBtn.addEventListener('click', addTodosFromCurrentNote);
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;

@@ -229,8 +229,7 @@
             <input id="note-title" type="text" class="note-title-input" placeholder="제목 없음" />
             <div id="note-date" class="note-date"></div>
             <div class="note-actions">
-              <button id="extract-todo-btn" class="ghost-btn" title="AI로 노트에서 할 일 자동 추출 (Gemini API)">노트에서 할 일 추출</button>
-              <button id="add-ai-schedule-task-btn" class="ghost-btn" title="현재 노트 내용을 바탕으로 AI 일정 생성">AI 일정 추가</button>
+              <button id="extract-todo-btn" class="ghost-btn" title="API 키가 있으면 AI로, 없으면 로컬 기준으로 노트에서 할 일을 만듭니다">노트에서 할 일 추가</button>
               <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
             </div>
             <div class="note-title-underline"></div>
@@ -370,8 +369,8 @@
           </div>
 
           <hr class="settings-section-divider" />
-          <h4 class="settings-subtitle">AI 일정 추가 시 참조 내용</h4>
-          <p class="settings-desc">아래 항목은 "AI 일정 추가" 버튼 클릭 시 프롬프트에 포함할지 선택하며 브라우저에 저장됩니다.</p>
+          <h4 class="settings-subtitle">AI 할 일 추가 시 참조 내용</h4>
+          <p class="settings-desc">아래 항목은 "노트에서 할 일 추가" 버튼이 AI로 동작할 때 프롬프트에 포함할지 선택하며 브라우저에 저장됩니다.</p>
           <label class="settings-checkbox-row">
             <input type="checkbox" id="schedule-ai-pref-behavior" />
             <span>사용자 수정 패턴 (난이도/마감일 변경, 완료/삭제 경향)</span>

@@ -1,6 +1,10 @@
 export function extractTodoCandidatesFromHtml(html) {
   const div = document.createElement('div');
   div.innerHTML = html || '';
+  div.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+  div.querySelectorAll('p, div, li, h1, h2, blockquote').forEach((block) => {
+    block.appendChild(document.createTextNode('\n'));
+  });
   const text = div.textContent || '';
 
   return text
