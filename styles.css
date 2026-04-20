@@ -3533,7 +3533,7 @@ body {
   padding: 0 16px 5px;
   align-items: flex-end;
   gap: 2px;
-  background: #171717;
+  background: linear-gradient(180deg, #eaf7fb 0%, #f5fbff 100%);
   border-bottom: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -3592,7 +3592,9 @@ body {
 }
 
 .section-tab-label {
-  padding: 0 18px;
+  display: block;
+  max-width: 148px;
+  padding: 0 52px 0 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;
@@ -3635,12 +3637,12 @@ body {
   justify-content: center;
   gap: 0;
   padding: 0;
-  border: 1px solid #424242;
+  border: 1px solid #c7dce8;
   border-radius: 7px 7px 0 0;
-  background: #242424;
-  color: #e9e9e9;
+  background: #f8fdff;
+  color: #315466;
   font-size: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
   transform: none;
 }
 
@@ -3651,9 +3653,9 @@ body {
 }
 
 .add-section-tab-btn:hover {
-  border-color: #5a5a5a;
-  background: #303030;
-  color: #fff;
+  border-color: #8ebed2;
+  background: #fff;
+  color: #17394b;
   transform: none;
 }
 
