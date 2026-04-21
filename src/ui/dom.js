@@ -23,6 +23,7 @@ export const noteRecordBtn = document.getElementById('note-record-btn');
 export const appModeTabs = document.querySelectorAll('.app-mode-tab');
 export const notesViewEl = document.getElementById('notes-view');
 export const scheduleViewEl = document.getElementById('schedule-view');
+export const scheduleWorkspaceEl = document.querySelector('.schedule-workspace');
 export const sectionTabsBarEl = document.querySelector('.section-tabs-bar');
 export const toolbarElSchedule = document.getElementById('toolbar');
 export const scheduleTaskListEl = document.getElementById('schedule-task-list');

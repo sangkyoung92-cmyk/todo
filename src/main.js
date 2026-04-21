@@ -5,6 +5,7 @@ import {
   noteRecordBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
+  scheduleWorkspaceEl,
   addScheduleTaskBtn,
   plannerExtractBtn,
   plannerTopbarToggleBtn,
@@ -25,6 +26,7 @@ import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
+import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import {
   renderSchedule,
   initScheduleNav,
@@ -1359,6 +1361,8 @@ onAuthChange((user) => {
 });
 
 load();
+initNotesPanelResize(notesLayoutEl);
+initSchedulePanelResize(scheduleWorkspaceEl);
 initScheduleNav(rerender);
 // 저장된 모드로 초기 UI 적용
 applyAppMode(state.appMode || 'notes');

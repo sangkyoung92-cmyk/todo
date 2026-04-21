@@ -770,18 +770,19 @@ body {
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr 320px;
+  grid-template-columns: var(--notes-pages-width, 260px) minmax(0, 1fr) var(--notes-todo-width, 320px);
   overflow: hidden;
 }
 
 .layout.todo-panel-collapsed {
-  grid-template-columns: 260px 1fr 72px;
+  grid-template-columns: var(--notes-pages-width, 260px) minmax(0, 1fr) 88px;
 }
 
 /* ── Panels ──────────────────────────────────────────── */
 .panel {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -812,18 +813,28 @@ body {
 
 .todo-panel.collapsed .todo-panel-head {
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 6px;
 }
 
 .todo-panel.collapsed .todo-panel-head h2 {
-  max-width: none;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  display: none;
 }
 
 .todo-panel.collapsed .todo-panel-actions {
   flex-direction: column;
+  width: 100%;
+}
+
+.todo-panel.collapsed .todo-panel-toggle {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 4px;
+  white-space: nowrap;
+  word-break: keep-all;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
 }
 
 .todo-panel.collapsed #add-todo-btn,
@@ -2653,11 +2664,29 @@ body {
 .layout {
   padding: 0 24px 24px;
   gap: 18px;
-  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns:
+    clamp(120px, var(--notes-pages-width, 290px), 720px)
+    minmax(0, 1fr)
+    clamp(160px, var(--notes-todo-width, 340px), 820px);
 }
 
 .layout.todo-panel-collapsed {
-  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr) 72px;
+  grid-template-columns: clamp(120px, var(--notes-pages-width, 290px), 720px) minmax(0, 1fr) 88px;
+}
+
+.layout.is-panel-resize-ready,
+.schedule-workspace.is-panel-resize-ready,
+body.is-panel-resizing {
+  cursor: ew-resize;
+}
+
+body.is-panel-resizing {
+  user-select: none;
+}
+
+body.is-panel-resizing iframe,
+body.is-panel-resizing .note-content {
+  pointer-events: none;
 }
 
 .pages-panel,
@@ -2724,7 +2753,8 @@ body {
 }
 .note-content {
   padding: 28px 48px 48px;
-  max-width: 920px;
+  width: 100%;
+  max-width: none;
   font-size: 15px;
   --note-line-height: 1.85em;
   line-height: var(--note-line-height);
@@ -3114,9 +3144,9 @@ body {
 }
 
 .schedule-sidebar {
-  width: 320px;
-  min-width: 280px;
-  max-width: 340px;
+  width: clamp(160px, var(--schedule-sidebar-width, 320px), 760px);
+  min-width: 0;
+  max-width: none;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.88);
