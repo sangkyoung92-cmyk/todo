@@ -17,10 +17,19 @@ export function createSpeechRecorder({
   let recognition = null;
   let recording = false;
   let stopRequested = false;
+  let stopNotifyTimer = null;
 
   function setRecording(nextRecording) {
     recording = nextRecording;
     onStateChange?.(recording);
+  }
+
+  function scheduleStopComplete() {
+    if (stopNotifyTimer) clearTimeout(stopNotifyTimer);
+    stopNotifyTimer = setTimeout(() => {
+      stopNotifyTimer = null;
+      onStopComplete?.();
+    }, 700);
   }
 
   function start() {
@@ -46,14 +55,14 @@ export function createSpeechRecorder({
       setRecording(false);
       recognition = null;
       stopRequested = false;
+      if (stopNotifyTimer) clearTimeout(stopNotifyTimer);
+      stopNotifyTimer = null;
       onError?.(new Error(event.error || 'SPEECH_RECOGNITION_ERROR'));
     };
     recognition.onend = () => {
-      const shouldNotifyStop = stopRequested;
       setRecording(false);
       recognition = null;
       stopRequested = false;
-      if (shouldNotifyStop) onStopComplete?.();
     };
 
     try {
@@ -68,6 +77,8 @@ export function createSpeechRecorder({
     if (!recording || !recognition) return;
     stopRequested = true;
     recognition?.stop();
+    setRecording(false);
+    scheduleStopComplete();
   }
 
   return {

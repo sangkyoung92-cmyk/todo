@@ -1,4 +1,5 @@
-const SUMMARY_PROMPT_KEY = 'ai_summary_prompt_v1';
+const SUMMARY_PROMPT_KEY = 'ai_summary_prompt_v2';
+const LEGACY_SUMMARY_PROMPT_KEY = 'ai_summary_prompt_v1';
 
 export const DEFAULT_SUMMARY_PROMPT = [
   '녹음으로 받아쓴 내용을 한국어로 간결하게 요약하세요.',
@@ -8,7 +9,21 @@ export const DEFAULT_SUMMARY_PROMPT = [
 
 export function getSummaryPrompt() {
   const stored = localStorage.getItem(SUMMARY_PROMPT_KEY);
-  if (!stored) return DEFAULT_SUMMARY_PROMPT;
+  if (!stored) {
+    const legacy = localStorage.getItem(LEGACY_SUMMARY_PROMPT_KEY);
+    if (!legacy) return DEFAULT_SUMMARY_PROMPT;
+
+    const migrated = sanitizeUserPrompt(legacy);
+    if (migrated) {
+      localStorage.setItem(SUMMARY_PROMPT_KEY, migrated);
+      localStorage.removeItem(LEGACY_SUMMARY_PROMPT_KEY);
+      return migrated;
+    }
+
+    localStorage.removeItem(LEGACY_SUMMARY_PROMPT_KEY);
+    return DEFAULT_SUMMARY_PROMPT;
+  }
+
   const sanitized = sanitizeUserPrompt(stored);
   if (sanitized !== stored) localStorage.setItem(SUMMARY_PROMPT_KEY, sanitized);
   return sanitized || DEFAULT_SUMMARY_PROMPT;
@@ -26,6 +41,7 @@ export function saveSummaryPrompt(prompt) {
 
 export function resetSummaryPrompt() {
   localStorage.removeItem(SUMMARY_PROMPT_KEY);
+  localStorage.removeItem(LEGACY_SUMMARY_PROMPT_KEY);
   return DEFAULT_SUMMARY_PROMPT;
 }
 
