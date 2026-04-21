@@ -297,6 +297,16 @@ body {
   outline: none;
 }
 
+.settings-textarea {
+  width: 100%;
+  min-height: 132px;
+  height: auto;
+  padding: 10px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
 .settings-input:focus {
   border-color: #7B2FA0;
   background: #fff;
@@ -1035,6 +1045,12 @@ body {
 
 .ghost-btn:hover {
   background: #f3f2f1;
+}
+
+.ghost-btn.recording {
+  border-color: #d13438;
+  background: #fde7e9;
+  color: #a4262c;
 }
 
 .ghost-btn--icon {

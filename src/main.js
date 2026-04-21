@@ -2,6 +2,7 @@ import { load, nowISO, save, state, uid, getNextSectionColor } from './state/sto
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
+  noteRecordBtn, noteSummaryBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
@@ -18,6 +19,9 @@ import { addTodo } from './ui/todo.js';
 import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, getPlannerSuggestionsWithAI, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
+import { summarizeNoteWithAI } from './ai/summary.js';
+import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/summary-settings.js';
+import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
@@ -514,6 +518,106 @@ function scheduleAutoSave() {
 }
 
 // ── Toolbar ──────────────────────────────────────────
+function persistCurrentNoteImmediately() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note) return false;
+
+  if (state.saveTimer) clearTimeout(state.saveTimer);
+
+  const now = nowISO();
+  note.title = titleEl.value;
+  note.content = contentEl.innerHTML;
+  note.updatedAt = now;
+
+  const tab = state.tabs.find((x) => x.id === note.tabId);
+  if (tab) tab.updatedAt = now;
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+  renderNotes(rerender);
+  renderTabs(rerender);
+  saveStatusEl.textContent = '저장됨';
+  return true;
+}
+
+function appendHtmlToEditor(html) {
+  if (!contentEl || contentEl.getAttribute('contenteditable') === 'false') return false;
+  contentEl.insertAdjacentHTML('beforeend', html);
+  persistCurrentNoteImmediately();
+  contentEl.focus();
+  return true;
+}
+
+function escapeText(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function formatSummaryHtml(summary) {
+  const lines = summary
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const items = lines.length
+    ? lines.map((line) => `<li>${escapeText(line.replace(/^[-*]\s*/, ''))}</li>`).join('')
+    : `<li>${escapeText(summary)}</li>`;
+
+  return `
+    <hr>
+    <h2>AI 요약</h2>
+    <ul>${items}</ul>
+  `;
+}
+
+function appendTranscript(transcript) {
+  if (!state.selectedNoteId) {
+    alert('먼저 페이지를 선택하세요.');
+    return;
+  }
+  appendHtmlToEditor(`<p>${escapeText(transcript)}</p>`);
+}
+
+async function summarizeCurrentNote() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note) {
+    alert('먼저 페이지를 선택하세요.');
+    return;
+  }
+
+  persistCurrentNoteImmediately();
+  if (!note.content?.trim()) {
+    alert('요약할 노트 내용이 없습니다.');
+    return;
+  }
+
+  const previousLabel = noteSummaryBtn.textContent;
+  noteSummaryBtn.disabled = true;
+  noteSummaryBtn.textContent = '요약 중...';
+
+  try {
+    const summary = await summarizeNoteWithAI(note.content, note.title);
+    appendHtmlToEditor(formatSummaryHtml(summary));
+  } catch (err) {
+    if (err.message === 'API_KEY_MISSING') {
+      openSettingsDrawer();
+      alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+      return;
+    }
+    if (err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+      alert('API 키가 유효하지 않습니다. 설정에서 확인해주세요.');
+      return;
+    }
+    alert(`AI 요약 실패: ${err.message}`);
+  } finally {
+    noteSummaryBtn.disabled = false;
+    noteSummaryBtn.textContent = previousLabel;
+  }
+}
+
 const FONT_SIZE_STEPS = [12, 14, 15, 16, 18, 20, 24, 28, 34];
 const DEFAULT_FONT_SIZE = 15;
 const fontSizeLabel = document.getElementById('font-size-label');
@@ -913,6 +1017,23 @@ searchInput.addEventListener('keydown', (e) => {
 });
 
 // ── Event listeners ──────────────────────────────────
+const speechRecorder = createSpeechRecorder({
+  onTranscript: appendTranscript,
+  onStateChange: (isRecording) => {
+    if (!noteRecordBtn) return;
+    noteRecordBtn.textContent = isRecording ? '정지' : '녹음';
+    noteRecordBtn.classList.toggle('recording', isRecording);
+    noteRecordBtn.setAttribute('aria-pressed', String(isRecording));
+  },
+  onError: (err) => {
+    if (err.message === 'SPEECH_RECOGNITION_UNSUPPORTED') {
+      alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+      return;
+    }
+    alert(`녹음 오류: ${err.message}`);
+  },
+});
+
 addTabBtn.addEventListener('click', addTab);
 addNoteBtn.addEventListener('click', addNote);
 toggleTodoPanelBtn?.addEventListener('click', () => {
@@ -927,6 +1048,18 @@ addTodoBtn.addEventListener('click', async () => {
   rerender();
 });
 extractTodoBtn.addEventListener('click', addTodosFromCurrentNote);
+noteRecordBtn?.addEventListener('click', () => {
+  if (!speechRecorder.isSupported) {
+    alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+    return;
+  }
+  if (speechRecorder.isRecording()) {
+    speechRecorder.stop();
+  } else {
+    speechRecorder.start();
+  }
+});
+noteSummaryBtn?.addEventListener('click', summarizeCurrentNote);
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
@@ -951,6 +1084,10 @@ const scheduleAIPrefDeadline = document.getElementById('schedule-ai-pref-deadlin
 const scheduleAIPrefExisting = document.getElementById('schedule-ai-pref-existing');
 const scheduleAIPrefSave = document.getElementById('schedule-ai-pref-save');
 const scheduleAIPrefStatus = document.getElementById('schedule-ai-pref-status');
+const summaryPromptInput = document.getElementById('summary-prompt-input');
+const summaryPromptSave = document.getElementById('summary-prompt-save');
+const summaryPromptReset = document.getElementById('summary-prompt-reset');
+const summaryPromptStatus = document.getElementById('summary-prompt-status');
 
 function openSettingsDrawer() {
   geminiKeyInput.value = getApiKey();
@@ -959,6 +1096,8 @@ function openSettingsDrawer() {
   scheduleAIPrefDeadline.checked = !!prefs.useDeadlineDistribution;
   scheduleAIPrefExisting.checked = !!prefs.useExistingTodoTexts;
   scheduleAIPrefStatus.textContent = '';
+  summaryPromptInput.value = getSummaryPrompt();
+  summaryPromptStatus.textContent = '';
   updateKeyStatus();
   settingsDrawer.classList.add('open');
   settingsOverlay.classList.add('open');
@@ -1014,6 +1153,18 @@ scheduleAIPrefSave.addEventListener('click', () => {
   });
   scheduleAIPrefStatus.textContent = '✓ 저장됨';
   scheduleAIPrefStatus.dataset.state = 'saved';
+});
+
+summaryPromptSave.addEventListener('click', () => {
+  summaryPromptInput.value = saveSummaryPrompt(summaryPromptInput.value);
+  summaryPromptStatus.textContent = '저장됨';
+  summaryPromptStatus.dataset.state = 'saved';
+});
+
+summaryPromptReset.addEventListener('click', () => {
+  summaryPromptInput.value = resetSummaryPrompt();
+  summaryPromptStatus.textContent = '기본값 적용됨';
+  summaryPromptStatus.dataset.state = 'saved';
 });
 
 document.addEventListener('keydown', (e) => {

@@ -17,6 +17,8 @@ export const toggleTodoPanelBtn = document.getElementById('toggle-todo-panel-btn
 export const todoPanelEl = document.getElementById('todo-panel');
 export const notesLayoutEl = document.getElementById('notes-layout');
 export const extractTodoBtn = document.getElementById('extract-todo-btn');
+export const noteRecordBtn = document.getElementById('note-record-btn');
+export const noteSummaryBtn = document.getElementById('note-summary-btn');
 
 // 스케줄 탭 관련 DOM
 export const appModeTabs = document.querySelectorAll('.app-mode-tab');
