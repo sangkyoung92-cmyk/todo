@@ -55,7 +55,14 @@ function requestSummary(apiKey, content) {
 }
 
 function buildSummaryPrompt(recordingText) {
-  return `${getSummaryPrompt()}
+  const userPrompt = getSummaryPrompt();
+  return `다음은 사용자가 녹음 요약 방식을 위해 설정한 지시문입니다.
+${userPrompt}
+
+아래 고정 규칙은 반드시 지키세요.
+- 응답은 제목 없이 작성합니다.
+- 3~5개의 짧은 bullet로 작성합니다.
+- 녹음 내용에 없는 사실은 추가하지 않습니다.
 
 녹음 내용:
 ${recordingText}`;

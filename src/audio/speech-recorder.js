@@ -1,4 +1,9 @@
-export function createSpeechRecorder({ onTranscript, onStateChange, onError } = {}) {
+export function createSpeechRecorder({
+  onTranscript,
+  onStateChange,
+  onStopComplete,
+  onError,
+} = {}) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     return {
@@ -39,11 +44,16 @@ export function createSpeechRecorder({ onTranscript, onStateChange, onError } = 
     };
     recognition.onerror = (event) => {
       setRecording(false);
+      recognition = null;
+      stopRequested = false;
       onError?.(new Error(event.error || 'SPEECH_RECOGNITION_ERROR'));
     };
     recognition.onend = () => {
+      const shouldNotifyStop = stopRequested;
       setRecording(false);
-      if (!stopRequested) recognition = null;
+      recognition = null;
+      stopRequested = false;
+      if (shouldNotifyStop) onStopComplete?.();
     };
 
     try {
@@ -55,9 +65,9 @@ export function createSpeechRecorder({ onTranscript, onStateChange, onError } = 
   }
 
   function stop() {
+    if (!recording || !recognition) return;
     stopRequested = true;
     recognition?.stop();
-    setRecording(false);
   }
 
   return {

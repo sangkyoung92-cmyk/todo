@@ -2,7 +2,7 @@ import { load, nowISO, save, state, uid, getNextSectionColor } from './state/sto
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
-  noteRecordBtn, noteSummaryBtn,
+  noteRecordBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   addScheduleTaskBtn,
@@ -584,6 +584,18 @@ function formatSummaryHtml(summary) {
   `;
 }
 
+function formatRecordingHtml(recordingText) {
+  const speakers = ['A', 'B', 'C'];
+  const lines = recordingText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines
+    .map((line, index) => `<p><strong>발화자 ${speakers[index % speakers.length]}:</strong> ${escapeText(line)}</p>`)
+    .join('');
+}
+
 function appendTranscript(transcript) {
   if (!state.selectedNoteId) {
     alert('먼저 페이지를 선택하세요.');
@@ -597,7 +609,7 @@ function appendTranscript(transcript) {
   saveStatusEl.textContent = '녹음 저장됨';
 }
 
-async function summarizeCurrentRecording() {
+async function addRecordingToCurrentNote({ summarize }) {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
     alert('먼저 페이지를 선택하세요.');
@@ -610,13 +622,16 @@ async function summarizeCurrentRecording() {
     return;
   }
 
-  const previousLabel = noteSummaryBtn.textContent;
-  noteSummaryBtn.disabled = true;
-  noteSummaryBtn.textContent = '요약 중...';
+  noteRecordBtn.disabled = true;
+  noteRecordBtn.textContent = summarize ? '요약 중...' : '추가 중...';
 
   try {
-    const summary = await summarizeRecordingWithAI(recordingText);
-    appendHtmlToEditor(formatSummaryHtml(summary));
+    if (summarize) {
+      const summary = await summarizeRecordingWithAI(recordingText);
+      appendHtmlToEditor(formatSummaryHtml(summary));
+    } else {
+      appendHtmlToEditor(formatRecordingHtml(recordingText));
+    }
     setRecordingDraft(note.id, '');
   } catch (err) {
     if (err.message === 'API_KEY_MISSING') {
@@ -635,8 +650,8 @@ async function summarizeCurrentRecording() {
     }
     alert(`AI 요약 실패: ${err.message}`);
   } finally {
-    noteSummaryBtn.disabled = false;
-    noteSummaryBtn.textContent = previousLabel;
+    noteRecordBtn.disabled = false;
+    noteRecordBtn.textContent = '녹음';
   }
 }
 
@@ -1038,9 +1053,55 @@ searchInput.addEventListener('keydown', (e) => {
   }
 });
 
+const recordingModal = document.getElementById('recording-modal');
+const recordingModalOverlay = document.getElementById('recording-modal-overlay');
+const recordingModalSummary = document.getElementById('recording-modal-summary');
+const recordingModalSubmit = document.getElementById('recording-modal-submit');
+const recordingModalCancel = document.getElementById('recording-modal-cancel');
+const recordingModalDecline = document.getElementById('recording-modal-decline');
+
+function showRecordingAddModal() {
+  return new Promise((resolve) => {
+    recordingModalSummary.checked = false;
+    recordingModal.classList.add('open');
+    recordingModalOverlay.classList.add('open');
+
+    const close = (result) => {
+      recordingModal.classList.remove('open');
+      recordingModalOverlay.classList.remove('open');
+      recordingModalSubmit.removeEventListener('click', onSubmit);
+      recordingModalCancel.removeEventListener('click', onCancel);
+      recordingModalDecline.removeEventListener('click', onCancel);
+      recordingModalOverlay.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+    const onSubmit = () => close({ summarize: recordingModalSummary.checked });
+    const onCancel = () => close(null);
+
+    recordingModalSubmit.addEventListener('click', onSubmit);
+    recordingModalCancel.addEventListener('click', onCancel);
+    recordingModalDecline.addEventListener('click', onCancel);
+    recordingModalOverlay.addEventListener('click', onCancel);
+  });
+}
+
+async function confirmStoppedRecording() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  const recordingText = note ? getRecordingDraft(note.id) : '';
+  if (!recordingText) {
+    alert('녹음된 내용이 없습니다.');
+    return;
+  }
+
+  const result = await showRecordingAddModal();
+  if (!result) return;
+  await addRecordingToCurrentNote(result);
+}
+
 // ── Event listeners ──────────────────────────────────
 const speechRecorder = createSpeechRecorder({
   onTranscript: appendTranscript,
+  onStopComplete: confirmStoppedRecording,
   onStateChange: (isRecording) => {
     if (!noteRecordBtn) return;
     noteRecordBtn.textContent = isRecording ? '정지' : '녹음';
@@ -1078,11 +1139,14 @@ noteRecordBtn?.addEventListener('click', () => {
   if (speechRecorder.isRecording()) {
     speechRecorder.stop();
   } else {
+    if (!state.selectedNoteId) {
+      alert('먼저 페이지를 선택하세요.');
+      return;
+    }
     if (state.selectedNoteId) setRecordingDraft(state.selectedNoteId, '');
     speechRecorder.start();
   }
 });
-noteSummaryBtn?.addEventListener('click', summarizeCurrentRecording);
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
