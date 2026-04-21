@@ -229,8 +229,8 @@
             <input id="note-title" type="text" class="note-title-input" placeholder="제목 없음" />
             <div id="note-date" class="note-date"></div>
             <div class="note-actions">
-              <button id="note-record-btn" class="ghost-btn" type="button" title="마이크 음성을 현재 노트에 텍스트로 추가합니다">녹음</button>
-              <button id="note-summary-btn" class="ghost-btn" type="button" title="현재 노트를 AI로 요약해 노트에 추가합니다">AI 요약</button>
+              <button id="note-record-btn" class="ghost-btn" type="button" title="마이크 음성을 요약용 녹음 내용으로 저장합니다">녹음</button>
+              <button id="note-summary-btn" class="ghost-btn" type="button" title="녹음한 내용을 AI로 요약해 노트에 추가합니다">AI 요약</button>
               <button id="extract-todo-btn" class="ghost-btn" title="API 키가 있으면 AI로, 없으면 로컬 기준으로 노트에서 할 일을 만듭니다">노트에서 할 일 추가</button>
               <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
             </div>
@@ -392,7 +392,7 @@
 
           <hr class="settings-section-divider" />
           <h4 class="settings-subtitle">AI 요약 프롬프트</h4>
-          <p class="settings-desc">현재 노트 내용을 요약할 때 Gemini에 함께 전달할 지시문입니다.</p>
+          <p class="settings-desc">녹음한 내용을 요약할 때 Gemini에 함께 전달할 지시문입니다.</p>
           <label class="settings-label" for="summary-prompt-input">요약 지시문</label>
           <textarea
             id="summary-prompt-input"

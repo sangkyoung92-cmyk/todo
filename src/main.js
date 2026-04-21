@@ -19,7 +19,7 @@ import { addTodo } from './ui/todo.js';
 import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, getPlannerSuggestionsWithAI, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
-import { summarizeNoteWithAI } from './ai/summary.js';
+import { summarizeRecordingWithAI } from './ai/summary.js';
 import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/summary-settings.js';
 import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
@@ -550,6 +550,18 @@ function appendHtmlToEditor(html) {
   return true;
 }
 
+function getRecordingDraft(noteId) {
+  return (state.recordingDrafts?.[noteId] || '').trim();
+}
+
+function setRecordingDraft(noteId, text) {
+  if (!state.recordingDrafts) state.recordingDrafts = {};
+  state.recordingDrafts[noteId] = text.trim();
+  save();
+  markStateDirty();
+  scheduleSync();
+}
+
 function escapeText(text) {
   const div = document.createElement('div');
   div.textContent = text || '';
@@ -577,19 +589,24 @@ function appendTranscript(transcript) {
     alert('먼저 페이지를 선택하세요.');
     return;
   }
-  appendHtmlToEditor(`<p>${escapeText(transcript)}</p>`);
+  const previous = getRecordingDraft(state.selectedNoteId);
+  setRecordingDraft(
+    state.selectedNoteId,
+    [previous, transcript.trim()].filter(Boolean).join('\n'),
+  );
+  saveStatusEl.textContent = '녹음 저장됨';
 }
 
-async function summarizeCurrentNote() {
+async function summarizeCurrentRecording() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
     alert('먼저 페이지를 선택하세요.');
     return;
   }
 
-  persistCurrentNoteImmediately();
-  if (!note.content?.trim()) {
-    alert('요약할 노트 내용이 없습니다.');
+  const recordingText = getRecordingDraft(note.id);
+  if (!recordingText) {
+    alert('요약할 녹음 내용이 없습니다. 먼저 녹음 버튼으로 음성을 텍스트로 저장해주세요.');
     return;
   }
 
@@ -598,8 +615,9 @@ async function summarizeCurrentNote() {
   noteSummaryBtn.textContent = '요약 중...';
 
   try {
-    const summary = await summarizeNoteWithAI(note.content, note.title);
+    const summary = await summarizeRecordingWithAI(recordingText);
     appendHtmlToEditor(formatSummaryHtml(summary));
+    setRecordingDraft(note.id, '');
   } catch (err) {
     if (err.message === 'API_KEY_MISSING') {
       openSettingsDrawer();
@@ -609,6 +627,10 @@ async function summarizeCurrentNote() {
     if (err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
       alert('API 키가 유효하지 않습니다. 설정에서 확인해주세요.');
+      return;
+    }
+    if (err.message === 'API_OVERLOADED') {
+      alert('Gemini 서버가 현재 혼잡합니다. 잠시 후 다시 AI 요약을 눌러주세요.');
       return;
     }
     alert(`AI 요약 실패: ${err.message}`);
@@ -1056,10 +1078,11 @@ noteRecordBtn?.addEventListener('click', () => {
   if (speechRecorder.isRecording()) {
     speechRecorder.stop();
   } else {
+    if (state.selectedNoteId) setRecordingDraft(state.selectedNoteId, '');
     speechRecorder.start();
   }
 });
-noteSummaryBtn?.addEventListener('click', summarizeCurrentNote);
+noteSummaryBtn?.addEventListener('click', summarizeCurrentRecording);
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;

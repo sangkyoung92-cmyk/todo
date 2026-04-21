@@ -20,6 +20,7 @@ export const state = {
   todos: [],
   todoInbox: [],
   behaviorLog: [],
+  recordingDrafts: {},
   selectedTabId: null,
   selectedNoteId: null,
   saveTimer: null,
@@ -67,6 +68,7 @@ export function save() {
     todos: state.todos,
     todoInbox: state.todoInbox,
     behaviorLog: state.behaviorLog,
+    recordingDrafts: state.recordingDrafts,
     selectedTabId: state.selectedTabId,
     selectedNoteId: state.selectedNoteId,
     scheduleEntries: state.scheduleEntries,
@@ -91,6 +93,7 @@ export function load() {
     state.todos = [];
     state.todoInbox = [];
     state.behaviorLog = [];
+    state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedNoteId = null;
     state.scheduleEntries = [];
@@ -111,6 +114,7 @@ export function load() {
     state.todos = parsed.todos || [];
     state.todoInbox = parsed.todoInbox || [];
     state.behaviorLog = parsed.behaviorLog || [];
+    state.recordingDrafts = parsed.recordingDrafts || {};
 
     // Ensure all tabs have a color
     state.tabs.forEach((tab, i) => {
@@ -147,6 +151,7 @@ export function load() {
     state.todos = [];
     state.todoInbox = [];
     state.behaviorLog = [];
+    state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedNoteId = null;
     state.scheduleEntries = [];
