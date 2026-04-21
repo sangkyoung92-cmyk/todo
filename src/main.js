@@ -82,7 +82,9 @@ function setTodoPanelCollapsed(isCollapsed) {
   todoPanelEl?.classList.toggle('collapsed', isCollapsed);
   notesLayoutEl?.classList.toggle('todo-panel-collapsed', isCollapsed);
   if (toggleTodoPanelBtn) {
-    toggleTodoPanelBtn.textContent = isCollapsed ? '펼치기' : '접기';
+    toggleTodoPanelBtn.textContent = isCollapsed ? '›' : '접기';
+    toggleTodoPanelBtn.setAttribute('aria-label', isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기');
+    toggleTodoPanelBtn.title = isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기';
     toggleTodoPanelBtn.setAttribute('aria-expanded', String(!isCollapsed));
   }
 }

@@ -775,7 +775,7 @@ body {
 }
 
 .layout.todo-panel-collapsed {
-  grid-template-columns: var(--notes-pages-width, 260px) minmax(0, 1fr) 88px;
+  grid-template-columns: var(--notes-pages-width, 260px) minmax(0, 1fr) 64px;
 }
 
 /* ── Panels ──────────────────────────────────────────── */
@@ -813,9 +813,11 @@ body {
 
 .todo-panel.collapsed .todo-panel-head {
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 6px;
+  padding: 14px 8px;
+  min-height: 100%;
 }
 
 .todo-panel.collapsed .todo-panel-head h2 {
@@ -824,17 +826,26 @@ body {
 
 .todo-panel.collapsed .todo-panel-actions {
   flex-direction: column;
-  width: 100%;
+  align-items: center;
+  width: auto;
 }
 
 .todo-panel.collapsed .todo-panel-toggle {
-  width: 100%;
+  width: 38px;
+  height: 38px;
   min-width: 0;
-  padding: 6px 4px;
-  white-space: nowrap;
-  word-break: keep-all;
-  writing-mode: horizontal-tb;
-  text-orientation: mixed;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--accent, #287cff);
+  background: rgba(40, 124, 255, 0.1);
+  border-color: rgba(40, 124, 255, 0.18);
+}
+
+.todo-panel.collapsed .todo-panel-toggle:hover {
+  background: rgba(40, 124, 255, 0.16);
+  border-color: rgba(40, 124, 255, 0.28);
 }
 
 .todo-panel.collapsed #add-todo-btn,
@@ -2671,7 +2682,7 @@ body {
 }
 
 .layout.todo-panel-collapsed {
-  grid-template-columns: clamp(120px, var(--notes-pages-width, 290px), 720px) minmax(0, 1fr) 88px;
+  grid-template-columns: clamp(120px, var(--notes-pages-width, 290px), 720px) minmax(0, 1fr) 64px;
 }
 
 .layout.is-panel-resize-ready,
