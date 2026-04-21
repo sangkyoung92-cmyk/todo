@@ -8,6 +8,62 @@ import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { renderTodos } from './todo.js';
 
 let editingTabId = null;
+let draggedSectionId = null;
+let draggedNoteId = null;
+let suppressDragClick = false;
+
+function clearDragClasses() {
+  document
+    .querySelectorAll('.section-tab.dragging, .section-tab.drag-over, .section-tab.drop-before, .section-tab.drop-after, .page-item.dragging')
+    .forEach((el) => {
+      el.classList.remove('dragging', 'drag-over', 'drop-before', 'drop-after');
+    });
+}
+
+function hasDragType(dataTransfer, type) {
+  return Array.from(dataTransfer?.types || []).includes(type);
+}
+
+function reorderSection(sourceTabId, targetTabId, insertAfter) {
+  if (!sourceTabId || !targetTabId || sourceTabId === targetTabId) return false;
+
+  const fromIndex = state.tabs.findIndex((tab) => tab.id === sourceTabId);
+  const targetIndex = state.tabs.findIndex((tab) => tab.id === targetTabId);
+  if (fromIndex < 0 || targetIndex < 0) return false;
+
+  const [tab] = state.tabs.splice(fromIndex, 1);
+  let nextIndex = state.tabs.findIndex((item) => item.id === targetTabId);
+  if (insertAfter) nextIndex += 1;
+  state.tabs.splice(nextIndex, 0, tab);
+  tab.updatedAt = nowISO();
+  save();
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
+
+function moveNoteToSection(noteId, targetTabId) {
+  const note = state.notes.find((item) => item.id === noteId);
+  const tab = state.tabs.find((item) => item.id === targetTabId);
+  if (!note || !tab || note.tabId === targetTabId) return false;
+
+  const now = nowISO();
+  note.tabId = targetTabId;
+  note.updatedAt = now;
+  tab.updatedAt = now;
+  state.selectedTabId = targetTabId;
+  state.selectedNoteId = note.id;
+  state.searchQuery = '';
+
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
 
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
@@ -22,6 +78,8 @@ export function renderTabs(onRender) {
     li.className = `section-tab ${tab.id === state.selectedTabId ? 'active' : ''}`;
     li.style.setProperty('--section-color', tab.color);
     li.style.background = tab.color;
+    li.draggable = !isEditing;
+    li.dataset.tabId = tab.id;
 
     li.innerHTML = `
       <span class="section-tab-label">
@@ -42,6 +100,10 @@ export function renderTabs(onRender) {
     li.addEventListener('click', (e) => {
       if (isEditing) return;
       if (e.target.closest('.icon-btn')) return;
+      if (suppressDragClick) {
+        suppressDragClick = false;
+        return;
+      }
       state.selectedTabId = tab.id;
       const notes = getCurrentTabNotes();
       state.selectedNoteId = notes[0]?.id || null;
@@ -54,6 +116,68 @@ export function renderTabs(onRender) {
       if (e.target.closest('.icon-btn')) return;
       editingTabId = tab.id;
       onRender();
+    });
+
+    li.addEventListener('dragstart', (e) => {
+      if (isEditing || e.target.closest('.icon-btn, input')) {
+        e.preventDefault();
+        return;
+      }
+      draggedSectionId = tab.id;
+      suppressDragClick = true;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('application/x-onenote-section-id', tab.id);
+      setTimeout(() => li.classList.add('dragging'), 0);
+    });
+
+    li.addEventListener('dragover', (e) => {
+      const sectionId = hasDragType(e.dataTransfer, 'application/x-onenote-section-id')
+        ? draggedSectionId || e.dataTransfer.getData('application/x-onenote-section-id')
+        : '';
+      const noteId = hasDragType(e.dataTransfer, 'application/x-onenote-note-id')
+        ? draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id')
+        : '';
+      if (!sectionId && !noteId) return;
+
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      li.classList.toggle('drag-over', !!noteId);
+      li.classList.remove('drop-before', 'drop-after');
+
+      if (sectionId && sectionId !== tab.id) {
+        const rect = li.getBoundingClientRect();
+        li.classList.add(e.clientX > rect.left + rect.width / 2 ? 'drop-after' : 'drop-before');
+      }
+    });
+
+    li.addEventListener('dragleave', () => {
+      li.classList.remove('drag-over', 'drop-before', 'drop-after');
+    });
+
+    li.addEventListener('drop', (e) => {
+      const sectionId = draggedSectionId || e.dataTransfer.getData('application/x-onenote-section-id');
+      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
+      if (!sectionId && !noteId) return;
+
+      e.preventDefault();
+      const rect = li.getBoundingClientRect();
+      const insertAfter = e.clientX > rect.left + rect.width / 2;
+      const changed = sectionId
+        ? reorderSection(sectionId, tab.id, insertAfter)
+        : moveNoteToSection(noteId, tab.id);
+
+      draggedSectionId = null;
+      draggedNoteId = null;
+      clearDragClasses();
+      if (changed) onRender();
+    });
+
+    li.addEventListener('dragend', () => {
+      draggedSectionId = null;
+      clearDragClasses();
+      setTimeout(() => {
+        suppressDragClick = false;
+      }, 0);
     });
 
     if (isEditing) {
@@ -186,6 +310,8 @@ export function renderNotes(onRender) {
     const tab = state.tabs.find((t) => t.id === note.tabId);
     const li = document.createElement('li');
     li.className = `page-item ${note.id === state.selectedNoteId ? 'active' : ''}`;
+    li.draggable = true;
+    li.dataset.noteId = note.id;
 
     const sectionTag = isSearch && tab
       ? `<span class="page-section-tag" style="background:${tab.color}">${escapeHtml(tab.name)}</span>`
@@ -206,6 +332,10 @@ export function renderNotes(onRender) {
 
     li.addEventListener('click', (e) => {
       if (e.target.closest('.icon-btn')) return;
+      if (suppressDragClick || li.classList.contains('dragging')) {
+        suppressDragClick = false;
+        return;
+      }
       // If search result from different tab, switch to that tab too
       if (isSearch && note.tabId !== state.selectedTabId) {
         state.selectedTabId = note.tabId;
@@ -218,6 +348,26 @@ export function renderNotes(onRender) {
       renderEditor();
       renderNotes(onRender);
       renderTabs(onRender);
+    });
+
+    li.addEventListener('dragstart', (e) => {
+      if (e.target.closest('.icon-btn')) {
+        e.preventDefault();
+        return;
+      }
+      draggedNoteId = note.id;
+      suppressDragClick = true;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('application/x-onenote-note-id', note.id);
+      setTimeout(() => li.classList.add('dragging'), 0);
+    });
+
+    li.addEventListener('dragend', () => {
+      draggedNoteId = null;
+      clearDragClasses();
+      setTimeout(() => {
+        suppressDragClick = false;
+      }, 0);
     });
 
     li.querySelector('[data-action="delete-note"]').addEventListener('click', () => {

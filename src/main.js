@@ -222,7 +222,35 @@ function addTodoFromSelection() {
   const { deadline, cleanedText } = extractDeadlineFromText(text);
   setTodoPanelCollapsed(false);
   addTodo(cleanedText, state.selectedNoteId || null, '중', deadline);
+  markSelectedTextAsTodoSource();
   rerender();
+}
+
+function markSelectedTextAsTodoSource() {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  const sel = window.getSelection();
+  if (!note || !sel || !sel.rangeCount) return;
+
+  const range = sel.getRangeAt(0);
+  if (range.collapsed || !isInsideEditor(range.commonAncestorContainer)) return;
+
+  const marker = document.createElement('span');
+  marker.className = 'todo-source-mark';
+  marker.appendChild(range.extractContents());
+  range.insertNode(marker);
+  selectNodeContents(marker);
+
+  const now = nowISO();
+  note.content = contentEl.innerHTML;
+  note.updatedAt = now;
+
+  const tab = state.tabs.find((x) => x.id === note.tabId);
+  if (tab) tab.updatedAt = now;
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
 }
 
 function addTodosToInbox(todoItems, sourceNoteId) {
