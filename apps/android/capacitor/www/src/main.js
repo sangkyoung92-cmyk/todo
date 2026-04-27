@@ -17,8 +17,8 @@ import {
   todayKey,
 } from "../shared/date-utils.js";
 
-const firebaseAuth = window.Capacitor?.Plugins?.FirebaseAuthentication;
-const firestore = window.Capacitor?.Plugins?.FirebaseFirestore;
+const firebaseAuth = getNativePlugin("FirebaseAuthentication");
+const firestore = getNativePlugin("FirebaseFirestore");
 
 const WEEKDAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const LOCATION_STORAGE_KEY = "assistant_weather_location";
@@ -68,9 +68,19 @@ function helperBundle() {
   };
 }
 
+function getNativePlugin(name) {
+  const capacitor = window.Capacitor;
+  if (!capacitor) return null;
+  if (capacitor.Plugins?.[name]) return capacitor.Plugins[name];
+  if (typeof capacitor.registerPlugin === "function") {
+    return capacitor.registerPlugin(name);
+  }
+  return null;
+}
+
 function ensurePlugins() {
   if (firebaseAuth && firestore) return true;
-  alert("Android 앱 환경에서 실행해야 로그인과 동기화를 테스트할 수 있습니다.");
+  alert("Android 앱 플러그인을 불러오지 못했습니다. 앱을 완전히 종료한 뒤 다시 열어주세요.");
   return false;
 }
 
