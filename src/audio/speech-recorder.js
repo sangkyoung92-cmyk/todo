@@ -134,7 +134,15 @@ export function createSpeechRecorder({
       stopMeter();
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (err) {
+      recognition = null;
+      setRecording(false);
+      clearRestartTimer();
+      stopMeter();
+      onError?.(err);
+    }
   }
 
   async function start() {

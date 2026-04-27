@@ -652,8 +652,8 @@ const recordingPanel = createRecordingPanel({
   stopBtn: recordingStopBtn,
 });
 
-async function addRecordingToCurrentNote({ summarize }) {
-  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+async function addRecordingToNote(noteId, { summarize }) {
+  const note = state.notes.find((x) => x.id === noteId);
   if (!note) {
     alert('먼저 페이지를 선택하세요.');
     return;
@@ -671,11 +671,12 @@ async function addRecordingToCurrentNote({ summarize }) {
   try {
     if (summarize) {
       const summary = await summarizeRecordingWithAI(recordingText);
-      appendHtmlToEditor(formatSummaryHtml(summary));
+      appendHtmlToNote(note, formatSummaryHtml(summary));
     } else {
-      appendHtmlToEditor(formatRecordingHtml(recordingText));
+      appendHtmlToNote(note, formatRecordingHtml(recordingText));
     }
     setRecordingDraft(note.id, '');
+    if (state.selectedNoteId === note.id) renderEditor(rerender);
   } catch (err) {
     if (err.message === 'API_KEY_MISSING') {
       openSettingsDrawer();
@@ -695,6 +696,7 @@ async function addRecordingToCurrentNote({ summarize }) {
   } finally {
     noteRecordBtn.disabled = false;
     noteRecordBtn.textContent = '녹음';
+    activeRecordingNoteId = null;
     recordingPanel.reset();
   }
 }
@@ -1130,16 +1132,20 @@ function showRecordingAddModal() {
 }
 
 async function confirmStoppedRecording() {
-  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  const note = state.notes.find((x) => x.id === activeRecordingNoteId);
   const recordingText = note ? getRecordingDraft(note.id) : '';
   if (!recordingText) {
     alert('녹음된 내용이 없습니다.');
+    activeRecordingNoteId = null;
     return;
   }
 
   const result = await showRecordingAddModal();
-  if (!result) return;
-  await addRecordingToCurrentNote(result);
+  if (!result) {
+    activeRecordingNoteId = null;
+    return;
+  }
+  await addRecordingToNote(note.id, result);
 }
 
 // ── Event listeners ──────────────────────────────────
@@ -1198,7 +1204,8 @@ noteRecordBtn?.addEventListener('click', () => {
       alert('먼저 페이지를 선택하세요.');
       return;
     }
-    if (state.selectedNoteId) setRecordingDraft(state.selectedNoteId, '');
+    activeRecordingNoteId = state.selectedNoteId;
+    setRecordingDraft(activeRecordingNoteId, '');
     recordingPanel.setBusy('마이크 준비 중');
     speechRecorder.start();
   }
