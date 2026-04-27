@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,10 +9,7 @@ const wwwDir = resolve(projectRoot, 'www');
 const targetDir = resolve(wwwDir, 'shared');
 
 mkdirSync(targetDir, { recursive: true });
-cpSync(
-  resolve(projectRoot, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js'),
-  resolve(wwwDir, 'capacitor.js'),
-);
+rmSync(resolve(wwwDir, 'capacitor.js'), { force: true });
 
 const copies = [
   ['packages/shared/date-utils.js', 'date-utils.js'],

@@ -110,6 +110,15 @@ npm run sync
 npm run open:android
 ```
 
+### Android Firebase 플러그인 브릿지 확인
+Android 앱은 `www/capacitor.js`를 직접 번들하지 않고, Capacitor Android WebView가 시작할 때 주입하는 네이티브 브릿지를 사용합니다. `npm run sync`는 남아 있는 정적 `www/capacitor.js` 파일을 제거한 뒤 공유 모듈을 복사하므로, Firebase 플러그인 테스트 전 항상 다시 실행합니다.
+
+테스트 방법:
+1. `npm run sync` 실행 후 `android/app/src/main/assets/public/index.html`에 `capacitor.js` script 태그가 없는지 확인합니다.
+2. `android/app/src/main/assets/capacitor.plugins.json`에 `FirebaseAuthentication`, `FirebaseFirestore`가 모두 있는지 확인합니다.
+3. Android 기기에서 앱을 완전히 종료한 뒤 다시 열고 Google 로그인을 누릅니다.
+4. 플러그인 초기화 오류가 뜨면 경고창의 `platform`, `nativePromise`, `plugins`, `headers`, `missing` 값을 함께 확인합니다. `missing=none`이어야 정상입니다.
+
 Android Studio에서 실행한 뒤 다음을 확인합니다.
 
 1. Google 로그인 후 `오늘`, `음성`, `노트`, `캘린더` 하단 탭이 보이는지 확인

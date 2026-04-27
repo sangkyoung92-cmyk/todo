@@ -16,9 +16,13 @@ import {
   toDateKey,
   todayKey,
 } from "../shared/date-utils.js";
+import {
+  formatNativeBridgeDiagnostics,
+  waitForFirebasePlugins,
+} from "./native-plugins.js";
 
-const firebaseAuth = getNativePlugin("FirebaseAuthentication");
-const firestore = getNativePlugin("FirebaseFirestore");
+let firebaseAuth = null;
+let firestore = null;
 
 const WEEKDAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const LOCATION_STORAGE_KEY = "assistant_weather_location";
@@ -68,20 +72,26 @@ function helperBundle() {
   };
 }
 
-function getNativePlugin(name) {
-  const capacitor = window.Capacitor;
-  if (!capacitor) return null;
-  if (capacitor.Plugins?.[name]) return capacitor.Plugins[name];
-  if (typeof capacitor.registerPlugin === "function") {
-    return capacitor.registerPlugin(name);
-  }
-  return null;
+async function connectFirebasePlugins() {
+  if (firebaseAuth && firestore) return true;
+  const plugins = await waitForFirebasePlugins();
+  firebaseAuth = plugins.firebaseAuth;
+  firestore = plugins.firestore;
+  return true;
 }
 
-function ensurePlugins() {
-  if (firebaseAuth && firestore) return true;
-  alert("Android 앱 플러그인을 불러오지 못했습니다. 앱을 완전히 종료한 뒤 다시 열어주세요.");
-  return false;
+async function ensurePlugins() {
+  try {
+    return await connectFirebasePlugins();
+  } catch (error) {
+    console.error(error);
+    alert(
+      "Android Firebase 플러그인을 아직 사용할 수 없습니다.\n"
+        + `${error.message || error}\n`
+        + formatNativeBridgeDiagnostics()
+    );
+    return false;
+  }
 }
 
 async function loadStateDocument(uid) {
@@ -553,7 +563,7 @@ async function refreshCurrentUser() {
 }
 
 async function handleAuthClick() {
-  if (!ensurePlugins()) return;
+  if (!(await ensurePlugins())) return;
   if (appState.authBusy) return;
 
   appState.authBusy = true;
@@ -670,7 +680,7 @@ els.deleteTaskBtn.addEventListener("click", async () => {
 
 async function bootstrap() {
   els.todayDate.textContent = formatTodayLabel();
-  if (!ensurePlugins()) return;
+  if (!(await ensurePlugins())) return;
 
   await firebaseAuth.addListener("authStateChange", async () => {
     await refreshCurrentUser();
