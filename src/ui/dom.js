@@ -18,6 +18,11 @@ export const todoPanelEl = document.getElementById('todo-panel');
 export const notesLayoutEl = document.getElementById('notes-layout');
 export const extractTodoBtn = document.getElementById('extract-todo-btn');
 export const noteRecordBtn = document.getElementById('note-record-btn');
+export const recordingPanelEl = document.getElementById('recording-panel');
+export const recordingStatusEl = document.getElementById('recording-status');
+export const recordingWaveformEl = document.getElementById('recording-waveform');
+export const recordingTimerEl = document.getElementById('recording-timer');
+export const recordingStopBtn = document.getElementById('recording-stop-btn');
 
 // 스케줄 탭 관련 DOM
 export const appModeTabs = document.querySelectorAll('.app-mode-tab');

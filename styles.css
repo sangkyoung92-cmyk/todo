@@ -1055,6 +1055,90 @@ body {
   gap: 8px;
 }
 
+.recording-panel {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(120px, 240px) auto auto;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+  padding: 8px 10px;
+  border: 1px solid rgba(209, 52, 56, 0.24);
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #201f1e;
+}
+
+.recording-panel[hidden] {
+  display: none;
+}
+
+.recording-panel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 82px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a4262c;
+}
+
+.recording-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d13438;
+  box-shadow: 0 0 0 0 rgba(209, 52, 56, 0.34);
+  animation: recordingPulse 1.4s ease-out infinite;
+}
+
+.recording-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.recording-waveform-bar {
+  width: 4px;
+  height: calc(100% * var(--bar-scale));
+  min-height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #e85d75, #a4262c);
+  transition: height 90ms ease;
+}
+
+.recording-timer {
+  min-width: 42px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 700;
+  color: #605e5c;
+}
+
+.recording-stop-btn {
+  border: 0;
+  border-radius: 6px;
+  background: #d13438;
+  color: #fff;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recording-stop-btn:hover {
+  background: #a4262c;
+}
+
+@keyframes recordingPulse {
+  0% { box-shadow: 0 0 0 0 rgba(209, 52, 56, 0.34); }
+  70% { box-shadow: 0 0 0 8px rgba(209, 52, 56, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(209, 52, 56, 0); }
+}
+
 .ghost-btn {
   border: 1px solid #d2d0ce;
   background: #fff;
@@ -3762,6 +3846,11 @@ body.is-panel-resizing .note-content {
   flex-wrap: wrap;
 }
 
+.recording-panel {
+  border-color: rgba(208, 64, 73, 0.24);
+  background: rgba(255, 247, 247, 0.96);
+}
+
 .note-content hr {
   border: 0;
   height: 1px;
@@ -3947,5 +4036,14 @@ body.is-panel-resizing .note-content {
 
   .note-actions {
     align-items: stretch;
+  }
+
+  .recording-panel {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .recording-stop-btn {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }

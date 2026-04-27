@@ -233,6 +233,15 @@
               <button id="extract-todo-btn" class="ghost-btn" title="API 키가 있으면 AI로, 없으면 로컬 기준으로 노트에서 할 일을 만듭니다">노트에서 할 일 추가</button>
               <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
             </div>
+            <div id="recording-panel" class="recording-panel" hidden>
+              <div class="recording-panel-status">
+                <span class="recording-live-dot" aria-hidden="true"></span>
+                <span id="recording-status">녹음 중</span>
+              </div>
+              <div id="recording-waveform" class="recording-waveform" aria-hidden="true"></div>
+              <time id="recording-timer" class="recording-timer">00:00</time>
+              <button id="recording-stop-btn" class="recording-stop-btn" type="button">정지</button>
+            </div>
             <div class="note-title-underline"></div>
           </div>
           <div

@@ -3,6 +3,11 @@ import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
   noteRecordBtn,
+  recordingPanelEl,
+  recordingStatusEl,
+  recordingWaveformEl,
+  recordingTimerEl,
+  recordingStopBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
   scheduleWorkspaceEl,
@@ -26,6 +31,7 @@ import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js';
+import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import {
   renderSchedule,
@@ -613,6 +619,14 @@ function appendTranscript(transcript) {
   saveStatusEl.textContent = '녹음 저장됨';
 }
 
+const recordingPanel = createRecordingPanel({
+  panelEl: recordingPanelEl,
+  statusEl: recordingStatusEl,
+  waveformEl: recordingWaveformEl,
+  timerEl: recordingTimerEl,
+  stopBtn: recordingStopBtn,
+});
+
 async function addRecordingToCurrentNote({ summarize }) {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
@@ -656,6 +670,7 @@ async function addRecordingToCurrentNote({ summarize }) {
   } finally {
     noteRecordBtn.disabled = false;
     noteRecordBtn.textContent = '녹음';
+    recordingPanel.reset();
   }
 }
 
@@ -1106,11 +1121,13 @@ async function confirmStoppedRecording() {
 const speechRecorder = createSpeechRecorder({
   onTranscript: appendTranscript,
   onStopComplete: confirmStoppedRecording,
+  onMeter: (meter) => recordingPanel.updateMeter(meter),
   onStateChange: (isRecording) => {
     if (!noteRecordBtn) return;
     noteRecordBtn.textContent = isRecording ? '정지' : '녹음';
     noteRecordBtn.classList.toggle('recording', isRecording);
     noteRecordBtn.setAttribute('aria-pressed', String(isRecording));
+    recordingPanel.setRecording(isRecording);
   },
   onError: (err) => {
     if (err.message === 'SPEECH_RECOGNITION_UNSUPPORTED') {
@@ -1118,6 +1135,7 @@ const speechRecorder = createSpeechRecorder({
       return;
     }
     alert(`녹음 오류: ${err.message}`);
+    recordingPanel.reset();
   },
 });
 
@@ -1148,9 +1166,11 @@ noteRecordBtn?.addEventListener('click', () => {
       return;
     }
     if (state.selectedNoteId) setRecordingDraft(state.selectedNoteId, '');
+    recordingPanel.setBusy('마이크 준비 중');
     speechRecorder.start();
   }
 });
+recordingPanel.onStop(() => speechRecorder.stop());
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
