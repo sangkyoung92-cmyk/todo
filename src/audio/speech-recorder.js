@@ -18,6 +18,8 @@ export function createSpeechRecorder({
   let recognition = null;
   let recording = false;
   let stopNotifyTimer = null;
+  let restartTimer = null;
+  let stopRequested = false;
   let startedAt = 0;
   let meterStream = null;
   let audioContext = null;
@@ -30,6 +32,11 @@ export function createSpeechRecorder({
     onStateChange?.(recording);
   }
 
+  function clearRestartTimer() {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = null;
+  }
+
   function stopMeter() {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
@@ -38,6 +45,15 @@ export function createSpeechRecorder({
     audioContext?.close?.();
     audioContext = null;
     analyser = null;
+  }
+
+  function scheduleRecognitionRestart() {
+    if (stopRequested || !recording) return;
+    clearRestartTimer();
+    restartTimer = setTimeout(() => {
+      restartTimer = null;
+      if (!stopRequested && recording) startRecognition();
+    }, 250);
   }
 
   async function startMeter() {
@@ -80,11 +96,7 @@ export function createSpeechRecorder({
     }, 700);
   }
 
-  async function start() {
-    if (recording) return;
-
-    startedAt = Date.now();
-    levels = Array(32).fill(0.12);
+  function startRecognition() {
     recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
     recognition.continuous = true;
@@ -101,32 +113,54 @@ export function createSpeechRecorder({
       if (transcript) onTranscript?.(transcript);
     };
     recognition.onerror = (event) => {
-      setRecording(false);
+      const error = event.error || 'SPEECH_RECOGNITION_ERROR';
       recognition = null;
+      if (error === 'no-speech' && !stopRequested) return;
+
+      setRecording(false);
       if (stopNotifyTimer) clearTimeout(stopNotifyTimer);
       stopNotifyTimer = null;
+      clearRestartTimer();
       stopMeter();
-      onError?.(new Error(event.error || 'SPEECH_RECOGNITION_ERROR'));
+      onError?.(new Error(error));
     };
     recognition.onend = () => {
-      setRecording(false);
       recognition = null;
+      if (!stopRequested && recording) {
+        scheduleRecognitionRestart();
+        return;
+      }
+      setRecording(false);
       stopMeter();
     };
 
+    recognition.start();
+  }
+
+  async function start() {
+    if (recording) return;
+
+    stopRequested = false;
+    startedAt = Date.now();
+    levels = Array(32).fill(0.12);
+
     try {
       await startMeter();
-      recognition.start();
+      startRecognition();
     } catch (err) {
       setRecording(false);
+      clearRestartTimer();
       stopMeter();
       onError?.(err);
     }
   }
 
   function stop() {
-    if (!recording || !recognition) return;
+    if (!recording) return;
+    stopRequested = true;
+    clearRestartTimer();
     recognition?.stop();
+    recognition = null;
     setRecording(false);
     stopMeter();
     scheduleStopComplete();

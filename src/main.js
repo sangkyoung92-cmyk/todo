@@ -560,6 +560,29 @@ function appendHtmlToEditor(html) {
   return true;
 }
 
+function appendHtmlToNote(note, html) {
+  if (!note) return false;
+  if (state.selectedNoteId === note.id) return appendHtmlToEditor(html);
+
+  if (state.saveTimer) clearTimeout(state.saveTimer);
+
+  const now = nowISO();
+  note.content = `${note.content || ''}${html}`;
+  note.updatedAt = now;
+
+  const tab = state.tabs.find((x) => x.id === note.tabId);
+  if (tab) tab.updatedAt = now;
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+  renderNotes(rerender);
+  renderTabs(rerender);
+  saveStatusEl.textContent = '녹음 추가됨';
+  return true;
+}
+
 function getRecordingDraft(noteId) {
   return (state.recordingDrafts?.[noteId] || '').trim();
 }
@@ -571,6 +594,8 @@ function setRecordingDraft(noteId, text) {
   markStateDirty();
   scheduleSync();
 }
+
+let activeRecordingNoteId = null;
 
 function escapeText(text) {
   const div = document.createElement('div');
@@ -607,13 +632,13 @@ function formatRecordingHtml(recordingText) {
 }
 
 function appendTranscript(transcript) {
-  if (!state.selectedNoteId) {
+  if (!activeRecordingNoteId) {
     alert('먼저 페이지를 선택하세요.');
     return;
   }
-  const previous = getRecordingDraft(state.selectedNoteId);
+  const previous = getRecordingDraft(activeRecordingNoteId);
   setRecordingDraft(
-    state.selectedNoteId,
+    activeRecordingNoteId,
     [previous, transcript.trim()].filter(Boolean).join('\n'),
   );
   saveStatusEl.textContent = '녹음 저장됨';
