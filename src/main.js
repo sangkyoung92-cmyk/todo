@@ -1134,8 +1134,16 @@ const speechRecorder = createSpeechRecorder({
       alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
       return;
     }
-    alert(`녹음 오류: ${err.message}`);
     recordingPanel.reset();
+    if (err.message === 'no-speech') {
+      saveStatusEl.textContent = '말소리가 감지되지 않았습니다';
+      return;
+    }
+    if (err.message === 'aborted') {
+      saveStatusEl.textContent = '녹음이 취소되었습니다';
+      return;
+    }
+    alert(`녹음 오류: ${err.message}`);
   },
 });
 
