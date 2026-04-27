@@ -5,9 +5,14 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 const repoRoot = resolve(projectRoot, '..', '..', '..');
-const targetDir = resolve(projectRoot, 'www', 'shared');
+const wwwDir = resolve(projectRoot, 'www');
+const targetDir = resolve(wwwDir, 'shared');
 
 mkdirSync(targetDir, { recursive: true });
+cpSync(
+  resolve(projectRoot, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js'),
+  resolve(wwwDir, 'capacitor.js'),
+);
 
 const copies = [
   ['packages/shared/date-utils.js', 'date-utils.js'],
