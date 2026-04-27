@@ -24,10 +24,20 @@ npm run open:android
 2. Build and run the app.
 3. Confirm the first screen shows the companion login state.
 4. Test Google login.
-5. Verify `오늘`, `이번 주`, `캘린더`, `빠른 추가` tabs render.
+5. Verify `오늘`, `음성`, `노트`, `캘린더` bottom tabs render.
 6. Add a task in the mobile app and confirm it appears in the web app.
 7. Toggle task completion in the mobile app and confirm it updates in the web app.
 8. Edit and delete a task in the mobile app and confirm both sync correctly.
+9. On the `오늘` tab, tap `현재 위치로 날씨 브리핑 받기` and confirm Android asks for location permission.
+10. Confirm the today screen still shows a local briefing when weather/AI briefing data is unavailable.
+
+## Today Briefing UI
+
+- The mobile app now prioritizes the `오늘` screen over the old large hero layout.
+- The first screen shows a one-line briefing, location/weather readiness, carry-item chips, top 3 tasks, and the full today task list.
+- The app first tries a configured `assistantBriefingEndpoint` from `users/{uid}/data/state`, then reads `users/{uid}/briefings/{YYYY-MM-DD}`, then falls back to a local schedule-based briefing.
+- Location is cached in localStorage under `assistant_weather_location` and is sent only to a configured briefing endpoint.
+- Audio capture is represented by the `음성` tab and large voice CTA; actual speech recognition/transcription remains follow-up work.
 
 ## Known Follow-Up Work
 
@@ -40,5 +50,6 @@ npm run open:android
 
 1. Replace Firebase web login in the Android companion with a native/Capacitor sign-in flow.
 2. Verify Firestore auth/session persistence on a real device.
-3. Add a lightweight loading/error state for mobile sync.
-4. Do one UI pass for Korean copy, spacing, and touch targets.
+3. Add the server-side weather/AI briefing function that writes `users/{uid}/briefings/{YYYY-MM-DD}`.
+4. Replace the current voice CTA placeholder with native speech recognition/transcription.
+5. Add app icons, splash assets, and release signing config.

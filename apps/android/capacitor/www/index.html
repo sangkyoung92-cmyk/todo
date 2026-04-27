@@ -3,108 +3,99 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Todo Companion</title>
+    <title>Todo Assistant</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="bg-orb bg-orb--mint"></div>
-    <div class="bg-orb bg-orb--sand"></div>
-
     <div class="app-shell">
-      <header class="mobile-topbar">
+      <header class="app-topbar">
         <div>
-          <p class="eyebrow">COMPANION</p>
-          <h1>내 일정</h1>
-          <p class="header-copy">오늘과 이번 주 일정을 더 빠르고 보기 좋게 확인하는 모바일 컴패니언입니다.</p>
+          <p id="today-date" class="topbar-date">오늘</p>
+          <h1>오늘 브리핑</h1>
         </div>
-        <button id="auth-button" class="auth-btn">Google 로그인</button>
+        <button id="auth-button" class="text-button">Google 로그인</button>
       </header>
 
-      <main class="mobile-main">
-        <section id="auth-empty" class="state-card state-card--hero">
-          <div class="state-card__badge">Schedule Companion</div>
-          <h2>웹에서 만든 일정을 모바일에서 바로 확인하세요.</h2>
-          <p>같은 Google 계정으로 로그인하면 오늘 일정, 이번 주 일정, 캘린더, 빠른 추가까지 자연스럽게 이어집니다.</p>
+      <main class="app-main">
+        <section id="auth-empty" class="empty-panel">
+          <span class="status-pill">Assistant</span>
+          <h2>모바일에서 오늘 할 일을 바로 확인하세요.</h2>
+          <p>같은 Google 계정으로 로그인하면 웹에서 만든 일정과 할 일을 앱에서 이어서 볼 수 있습니다.</p>
         </section>
 
         <section id="content-shell" class="content-shell hidden">
-          <section class="hero-card">
-            <div>
-              <p class="hero-card__eyebrow">Today Focus</p>
-              <h2 id="hero-title">오늘은 0개의 일정</h2>
-              <p id="hero-subtitle" class="hero-card__subtitle">로그인하면 일정 요약이 여기에 자동으로 정리됩니다.</p>
+          <section id="today-view" class="view-panel"></section>
+
+          <section id="voice-view" class="view-panel hidden">
+            <div class="section-heading">
+              <h2>음성 등록</h2>
+              <p>일정, 할 일, 노트 내용을 말로 빠르게 남기는 화면입니다.</p>
             </div>
-            <div class="hero-stats">
-              <div class="hero-stat">
-                <span class="hero-stat__label">오늘</span>
-                <strong id="stat-today">0</strong>
-              </div>
-              <div class="hero-stat">
-                <span class="hero-stat__label">이번 주</span>
-                <strong id="stat-week">0</strong>
-              </div>
-              <div class="hero-stat">
-                <span class="hero-stat__label">완료</span>
-                <strong id="stat-done">0</strong>
-              </div>
+            <div class="voice-panel">
+              <button id="voice-primary-btn" class="voice-record-btn" type="button">말하기</button>
+              <p>예: 내일 오후 3시에 병원 예약 추가해줘</p>
+              <form id="quick-add-form" class="quick-form">
+                <label>
+                  <span>할 일</span>
+                  <input id="quick-add-text" type="text" placeholder="발표 자료 검토" required />
+                </label>
+                <div class="form-grid">
+                  <label>
+                    <span>마감</span>
+                    <input id="quick-add-deadline" type="date" />
+                  </label>
+                  <label>
+                    <span>난이도</span>
+                    <select id="quick-add-difficulty">
+                      <option value="상">상</option>
+                      <option value="중" selected>중</option>
+                      <option value="하">하</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="submit" class="primary-btn">일정 추가</button>
+              </form>
             </div>
           </section>
 
-          <nav class="segmented-nav">
-            <button class="segmented-nav__item active" data-view="today">오늘</button>
-            <button class="segmented-nav__item" data-view="week">이번 주</button>
-            <button class="segmented-nav__item" data-view="calendar">캘린더</button>
-            <button class="segmented-nav__item" data-view="quick-add">빠른 추가</button>
-          </nav>
+          <section id="notes-view" class="view-panel hidden">
+            <div class="section-heading">
+              <h2>노트</h2>
+              <p>녹음 노트와 웹 노트 요약을 모바일에서 빠르게 확인할 자리입니다.</p>
+            </div>
+            <div id="notes-list" class="empty-panel compact">
+              <p>아직 모바일 노트 목록은 연결 전입니다. 다음 단계에서 녹음 전사와 요약 노트를 붙이면 됩니다.</p>
+            </div>
+          </section>
 
-          <section id="today-view" class="view-panel"></section>
-          <section id="week-view" class="view-panel hidden"></section>
           <section id="calendar-view" class="view-panel hidden">
             <div class="calendar-panel">
               <div class="calendar-toolbar">
-                <button id="calendar-prev" class="ghost-btn ghost-btn--icon">이전</button>
-                <div class="calendar-heading">
-                  <p class="calendar-heading__label">Calendar</p>
+                <button id="calendar-prev" class="icon-btn" type="button" aria-label="이전">‹</button>
+                <div>
+                  <p>캘린더</p>
                   <strong id="calendar-label"></strong>
                 </div>
-                <button id="calendar-next" class="ghost-btn ghost-btn--icon">다음</button>
+                <button id="calendar-next" class="icon-btn" type="button" aria-label="다음">›</button>
               </div>
               <div class="calendar-mode-switch">
-                <button class="mode-btn active" data-mode="week">주간</button>
-                <button class="mode-btn" data-mode="month">월간</button>
+                <button class="mode-btn active" data-mode="week" type="button">주간</button>
+                <button class="mode-btn" data-mode="month" type="button">월간</button>
               </div>
               <div id="calendar-grid"></div>
             </div>
           </section>
-          <section id="quick-add-view" class="view-panel hidden">
-            <form id="quick-add-form" class="form-card">
-              <div class="form-card__header">
-                <p class="eyebrow">Quick Add</p>
-                <h2>3초 안에 일정 추가</h2>
-              </div>
-              <label>
-                <span>업무명</span>
-                <input id="quick-add-text" type="text" placeholder="예: 발표자료 검토" required />
-              </label>
-              <label>
-                <span>기한</span>
-                <input id="quick-add-deadline" type="date" />
-              </label>
-              <label>
-                <span>난이도</span>
-                <select id="quick-add-difficulty">
-                  <option value="상">상</option>
-                  <option value="중" selected>중</option>
-                  <option value="하">하</option>
-                </select>
-              </label>
-              <button type="submit" class="primary-btn">일정 추가</button>
-            </form>
-          </section>
         </section>
       </main>
 
-      <button id="fab" class="fab hidden" aria-label="일정 추가">+</button>
+      <nav id="bottom-nav" class="bottom-nav hidden" aria-label="주요 화면">
+        <button class="bottom-nav__item active" data-view="today" type="button">오늘</button>
+        <button class="bottom-nav__item" data-view="voice" type="button">음성</button>
+        <button class="bottom-nav__item" data-view="notes" type="button">노트</button>
+        <button class="bottom-nav__item" data-view="calendar" type="button">캘린더</button>
+      </nav>
+
+      <button id="fab" class="voice-fab hidden" type="button" aria-label="음성으로 일정 등록">말하기</button>
     </div>
 
     <div id="task-modal" class="modal hidden" aria-hidden="true">
@@ -112,29 +103,31 @@
       <div class="modal__sheet">
         <div class="modal__header">
           <div>
-            <p class="eyebrow">Edit</p>
-            <h2>일정 수정</h2>
+            <p>일정 편집</p>
+            <h2>할 일 수정</h2>
           </div>
-          <button type="button" class="ghost-btn ghost-btn--icon" data-close-modal="true">닫기</button>
+          <button type="button" class="icon-btn" data-close-modal="true" aria-label="닫기">×</button>
         </div>
-        <form id="task-edit-form" class="form-card form-card--flat">
+        <form id="task-edit-form" class="quick-form">
           <input id="edit-task-id" type="hidden" />
           <label>
-            <span>업무명</span>
+            <span>할 일</span>
             <input id="edit-task-text" type="text" required />
           </label>
-          <label>
-            <span>기한</span>
-            <input id="edit-task-deadline" type="date" />
-          </label>
-          <label>
-            <span>난이도</span>
-            <select id="edit-task-difficulty">
-              <option value="상">상</option>
-              <option value="중">중</option>
-              <option value="하">하</option>
-            </select>
-          </label>
+          <div class="form-grid">
+            <label>
+              <span>마감</span>
+              <input id="edit-task-deadline" type="date" />
+            </label>
+            <label>
+              <span>난이도</span>
+              <select id="edit-task-difficulty">
+                <option value="상">상</option>
+                <option value="중">중</option>
+                <option value="하">하</option>
+              </select>
+            </label>
+          </div>
           <div class="form-actions">
             <button type="button" id="delete-task-btn" class="danger-btn">삭제</button>
             <button type="submit" class="primary-btn">저장</button>

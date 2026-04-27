@@ -3,7 +3,6 @@ import {
   addTask,
   deleteTask,
   editTask,
-  getTaskProgress,
   toggleTaskSectionDone,
 } from "../shared/tasks.js";
 import {
@@ -21,44 +20,45 @@ import {
 const firebaseAuth = window.Capacitor?.Plugins?.FirebaseAuthentication;
 const firestore = window.Capacitor?.Plugins?.FirebaseFirestore;
 
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
+const LOCATION_STORAGE_KEY = "assistant_weather_location";
 
 const els = {
   authButton: document.getElementById("auth-button"),
   authEmpty: document.getElementById("auth-empty"),
-  contentShell: document.getElementById("content-shell"),
-  fab: document.getElementById("fab"),
-  views: document.querySelectorAll(".view-panel"),
-  navButtons: document.querySelectorAll(".segmented-nav__item"),
-  modeButtons: document.querySelectorAll(".mode-btn"),
-  todayView: document.getElementById("today-view"),
-  weekView: document.getElementById("week-view"),
-  quickAddForm: document.getElementById("quick-add-form"),
-  calendarPrev: document.getElementById("calendar-prev"),
-  calendarNext: document.getElementById("calendar-next"),
-  calendarLabel: document.getElementById("calendar-label"),
+  bottomNav: document.getElementById("bottom-nav"),
   calendarGrid: document.getElementById("calendar-grid"),
-  modal: document.getElementById("task-modal"),
-  taskEditForm: document.getElementById("task-edit-form"),
-  editTaskId: document.getElementById("edit-task-id"),
-  editTaskText: document.getElementById("edit-task-text"),
+  calendarLabel: document.getElementById("calendar-label"),
+  calendarNext: document.getElementById("calendar-next"),
+  calendarPrev: document.getElementById("calendar-prev"),
+  contentShell: document.getElementById("content-shell"),
+  deleteTaskBtn: document.getElementById("delete-task-btn"),
   editTaskDeadline: document.getElementById("edit-task-deadline"),
   editTaskDifficulty: document.getElementById("edit-task-difficulty"),
-  deleteTaskBtn: document.getElementById("delete-task-btn"),
-  heroTitle: document.getElementById("hero-title"),
-  heroSubtitle: document.getElementById("hero-subtitle"),
-  statToday: document.getElementById("stat-today"),
-  statWeek: document.getElementById("stat-week"),
-  statDone: document.getElementById("stat-done"),
+  editTaskId: document.getElementById("edit-task-id"),
+  editTaskText: document.getElementById("edit-task-text"),
+  fab: document.getElementById("fab"),
+  modeButtons: document.querySelectorAll(".mode-btn"),
+  modal: document.getElementById("task-modal"),
+  navButtons: document.querySelectorAll(".bottom-nav__item"),
+  quickAddForm: document.getElementById("quick-add-form"),
+  taskEditForm: document.getElementById("task-edit-form"),
+  todayDate: document.getElementById("today-date"),
+  todayView: document.getElementById("today-view"),
+  views: document.querySelectorAll(".view-panel"),
+  voicePrimaryBtn: document.getElementById("voice-primary-btn"),
 };
 
 const appState = {
-  uid: null,
   activeView: "today",
-  state: createEmptyScheduleState(),
-  rawDoc: {},
   authBusy: false,
+  briefing: null,
+  briefingStatus: "idle",
+  location: readCachedLocation(),
+  rawDoc: {},
+  state: createEmptyScheduleState(),
+  uid: null,
+  weatherStatus: readCachedLocation() ? "ready" : "permission-needed",
 };
 
 function helperBundle() {
@@ -70,7 +70,7 @@ function helperBundle() {
 
 function ensurePlugins() {
   if (firebaseAuth && firestore) return true;
-  alert("이 화면은 Android Capacitor 앱에서 테스트해야 합니다. Android Studio로 실행해 주세요.");
+  alert("Android 앱 환경에서 실행해야 로그인과 동기화를 테스트할 수 있습니다.");
   return false;
 }
 
@@ -82,13 +82,63 @@ async function loadStateDocument(uid) {
   return {
     raw: data,
     schedule: {
-      todos: data.todos || [],
+      todos: normalizeTodos(data.todos || []),
       scheduleEntries: data.scheduleEntries || [],
       scheduleView: data.scheduleView || "week",
       scheduleWeekStart: data.scheduleWeekStart || toDateKey(new Date()),
       scheduleMonth: data.scheduleMonth || todayKey().slice(0, 7),
     },
   };
+}
+
+async function loadBriefing(uid) {
+  appState.briefingStatus = "loading";
+  renderToday();
+
+  const date = todayKey();
+  try {
+    const endpointBriefing = await requestEndpointBriefing(uid, date).catch((error) => {
+      console.warn("Configured briefing endpoint failed:", error);
+      return null;
+    });
+    if (endpointBriefing) {
+      appState.briefing = endpointBriefing;
+      appState.briefingStatus = "ready";
+      return;
+    }
+
+    const { snapshot } = await firestore.getDocument({
+      reference: `users/${uid}/briefings/${date}`,
+    });
+    appState.briefing = snapshot?.data || null;
+    appState.briefingStatus = appState.briefing ? "ready" : "fallback";
+  } catch (error) {
+    console.warn("Failed to load assistant briefing:", error);
+    appState.briefing = null;
+    appState.briefingStatus = "fallback";
+  } finally {
+    renderToday();
+  }
+}
+
+async function requestEndpointBriefing(uid, date) {
+  const endpoint = appState.rawDoc.assistantBriefingEndpoint;
+  if (!endpoint || !appState.location) return null;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      uid,
+      date,
+      location: appState.location,
+      todos: appState.state.todos,
+      scheduleEntries: appState.state.scheduleEntries,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`Briefing endpoint failed: ${response.status}`);
+  return response.json();
 }
 
 async function saveStateDocument(uid) {
@@ -124,17 +174,17 @@ function setActiveView(view) {
   els.views.forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `${view}-view`);
   });
+  els.fab.classList.toggle("voice-fab--compact", view !== "today");
 }
 
-function formatDeadline(deadline) {
-  if (!deadline) return "기한 없음";
-  const [, month, day] = deadline.split("-");
-  return `${parseInt(month, 10)}/${parseInt(day, 10)}`;
-}
-
-function difficultyBadge(difficulty) {
-  const cls = difficulty === "상" ? "high" : difficulty === "하" ? "low" : "";
-  return `<span class="badge ${cls}">${escapeHtml(difficulty || "중")}</span>`;
+function normalizeTodos(todos) {
+  return todos.map((todo) => {
+    if (["상", "중", "하"].includes(todo.difficulty)) return todo;
+    const difficulty = String(todo.difficulty || "중");
+    if (difficulty.includes("상") || difficulty.includes("어려")) return { ...todo, difficulty: "상" };
+    if (difficulty.includes("하") || difficulty.includes("간단")) return { ...todo, difficulty: "하" };
+    return { ...todo, difficulty: "중" };
+  });
 }
 
 function getTodosForDate(dateKey) {
@@ -148,208 +198,188 @@ function getTodosForDate(dateKey) {
 }
 
 function getTodayItems() {
-  return getTodosForDate(todayKey());
+  return getTodosForDate(todayKey()).sort(sortTodoEntries);
 }
 
-function getWeekTodos() {
+function getOverdueItems() {
+  const today = todayKey();
+  return appState.state.todos
+    .filter((todo) => !todo.done && todo.deadline && todo.deadline < today)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
+function getWeekItems() {
   const weekDates = getWeekDates(fromDateKey(appState.state.scheduleWeekStart));
   const seen = new Set();
-  const weekItems = [];
+  const items = [];
 
   weekDates.forEach((date) => {
     getTodosForDate(toDateKey(date)).forEach(({ todo, entry }) => {
       if (seen.has(todo.id)) return;
       seen.add(todo.id);
-      weekItems.push({ todo, entry });
+      items.push({ todo, entry });
     });
   });
 
-  return weekItems;
+  return items.sort(sortTodoEntries);
 }
 
-function renderHero() {
+function sortTodoEntries(left, right) {
+  const leftDone = left.entry?.done || left.todo.done;
+  const rightDone = right.entry?.done || right.todo.done;
+  if (leftDone !== rightDone) return leftDone ? 1 : -1;
+  return difficultyRank(right.todo.difficulty) - difficultyRank(left.todo.difficulty)
+    || (left.todo.deadline || "9999-99-99").localeCompare(right.todo.deadline || "9999-99-99");
+}
+
+function difficultyRank(value) {
+  if (value === "상") return 3;
+  if (value === "중") return 2;
+  return 1;
+}
+
+function buildBriefing() {
+  const server = appState.briefing;
   const todayItems = getTodayItems();
-  const weekItems = getWeekTodos();
-  const doneCount = appState.state.scheduleEntries.filter((entry) => entry.done).length;
+  const overdue = getOverdueItems();
+  const fallback = buildLocalBriefing(todayItems, overdue);
 
-  els.statToday.textContent = String(todayItems.length);
-  els.statWeek.textContent = String(weekItems.length);
-  els.statDone.textContent = String(doneCount);
-
-  if (!todayItems.length) {
-    els.heroTitle.textContent = "오늘은 조금 여유로운 날";
-    els.heroSubtitle.textContent = "급한 일정이 없다면 이번 주 할 일을 미리 정리해 두기 좋습니다.";
-    return;
-  }
-
-  const firstTask = todayItems[0].todo.text;
-  els.heroTitle.textContent = `오늘은 ${todayItems.length}개의 일정`;
-  els.heroSubtitle.textContent = `${firstTask}${todayItems.length > 1 ? " 포함" : ""} 일정이 준비되어 있습니다.`;
+  return {
+    ...fallback,
+    ...server,
+    carryItems: uniqueList([...asList(server?.carryItems), ...fallback.carryItems]).slice(0, 6),
+    scheduleWarnings: uniqueList([...asList(server?.scheduleWarnings), ...fallback.scheduleWarnings]).slice(0, 4),
+    topPriorities: (asList(server?.topPriorities).length ? asList(server?.topPriorities) : fallback.topPriorities).slice(0, 3),
+    suggestedOrder: (asList(server?.suggestedOrder).length ? asList(server?.suggestedOrder) : fallback.suggestedOrder).slice(0, 4),
+  };
 }
 
-function renderTaskCards(items, sectionKey, emptyCopy) {
-  if (!items.length) {
-    return `<div class="state-card"><p class="empty-copy">${emptyCopy}</p></div>`;
-  }
+function buildLocalBriefing(todayItems, overdue) {
+  const activeToday = todayItems.filter(({ entry, todo }) => !entry.done && !todo.done);
+  const headline = activeToday.length
+    ? `오늘은 ${activeToday.length}개의 일정 중 ${activeToday[0].todo.text}부터 처리하면 좋아요.`
+    : "오늘 확정된 일정은 여유가 있어요. 미리 밀린 일을 정리하기 좋습니다.";
 
-  return `
-    <div class="task-list">
-      ${items
-        .map((todo) => {
-          const progress = getTaskProgress(appState.state, todo.id);
-          return `
-            <article class="task-card" data-task-id="${todo.id}">
-              <div class="task-card__row">
-                <div class="task-card__main">
-                  <button class="task-toggle ${todo.done ? "is-done" : ""}" data-action="toggle-section" data-section="${sectionKey}" data-task-id="${todo.id}" aria-label="완료 토글"></button>
-                  <div>
-                    <span class="task-card__title ${todo.done ? "done" : ""}">${escapeHtml(todo.text)}</span>
-                    <div class="task-card__subtitle">${todo.deadline ? `기한 ${formatDeadline(todo.deadline)}` : "언제든 진행 가능"}</div>
-                  </div>
-                </div>
-                <div class="task-card__actions">
-                  <button class="ghost-btn" data-action="edit" data-task-id="${todo.id}">수정</button>
-                </div>
-              </div>
-              <div class="task-card__meta">
-                <div class="task-card__meta-group">
-                  ${difficultyBadge(todo.difficulty)}
-                  <span class="badge">${todo.done ? "완료됨" : "진행 중"}</span>
-                </div>
-                <span class="task-card__progress">${progress.total ? `${progress.done}/${progress.total}` : "단일 일정"}</span>
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
+  const carryItems = appState.location ? ["충전기"] : [];
+  const scheduleWarnings = [];
+  if (overdue.length) scheduleWarnings.push(`마감이 지난 일이 ${overdue.length}개 있어요.`);
+  if (activeToday.length >= 5) scheduleWarnings.push("오늘 일정이 많아 우선순위를 줄이는 게 좋아요.");
+  if (appState.weatherStatus === "permission-needed") scheduleWarnings.push("현재 위치를 허용하면 날씨 준비물을 제안할 수 있어요.");
+
+  return {
+    headline,
+    weatherSummary: appState.location
+      ? "위치는 확인했어요. 서버 날씨 브리핑이 연결되면 우산과 겉옷 제안을 더 정확히 보여줍니다."
+      : "현재 위치 권한이 필요해요.",
+    carryItems,
+    scheduleWarnings,
+    topPriorities: activeToday.map(({ todo }) => todo.text),
+    suggestedOrder: activeToday.map(({ todo }) => todo.text),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 function renderToday() {
-  const todayItems = getTodayItems().map(({ todo }) => todo);
+  if (!els.todayView) return;
+  const todayItems = getTodayItems();
+  const activeToday = todayItems.filter(({ entry, todo }) => !entry.done && !todo.done);
+  const briefing = buildBriefing();
+  const locationLabel = appState.location ? "현재 위치 기준" : "위치 권한 전";
+
+  els.todayDate.textContent = formatTodayLabel();
   els.todayView.innerHTML = `
-    <div class="view-heading">
-      <div>
-        <h2>오늘</h2>
-        <p>${todayItems.length}개의 일정이 잡혀 있습니다.</p>
+    <section class="briefing-panel">
+      <div class="briefing-meta">
+        <span>${locationLabel}</span>
+        <span>${formatBriefingStatus()}</span>
       </div>
-    </div>
-    ${renderTaskCards(todayItems, "today", "오늘 등록된 일정이 없습니다. 빠른 추가에서 바로 만들어보세요.")}
+      <h2>${escapeHtml(briefing.headline)}</h2>
+      <p>${escapeHtml(briefing.weatherSummary || "날씨 브리핑을 준비하고 있어요.")}</p>
+      ${renderLocationPrompt()}
+    </section>
+
+    <section class="carry-panel">
+      <div class="section-heading compact-heading">
+        <h2>챙길 것</h2>
+        <p>${briefing.carryItems.length ? "오늘 상황 기준" : "날씨 연결 대기"}</p>
+      </div>
+      <div class="chip-row">
+        ${renderCarryChips(briefing.carryItems)}
+      </div>
+      ${renderWarnings(briefing.scheduleWarnings)}
+    </section>
+
+    <section class="priority-panel">
+      <div class="section-heading compact-heading">
+        <h2>핵심 일정</h2>
+        <p>${activeToday.length}개 남음</p>
+      </div>
+      ${renderPriorityItems(todayItems.slice(0, 3))}
+    </section>
+
+    <section class="all-tasks-panel">
+      <div class="section-heading compact-heading">
+        <h2>전체 일정</h2>
+        <p>${todayItems.length}개</p>
+      </div>
+      ${renderTaskRows(todayItems, "today", "오늘 등록된 일정이 없어요. 음성으로 바로 추가해보세요.")}
+    </section>
   `;
+
+  bindActionButtons();
+  document.getElementById("location-briefing-btn")?.addEventListener("click", requestLocationForBriefing);
 }
 
-function renderWeek() {
-  const weekDates = getWeekDates(fromDateKey(appState.state.scheduleWeekStart));
-  const seen = new Set();
-  const weekItems = [];
-
-  weekDates.forEach((date) => {
-    getTodosForDate(toDateKey(date)).forEach(({ todo }) => {
-      if (seen.has(todo.id)) return;
-      seen.add(todo.id);
-      weekItems.push(todo);
-    });
-  });
-
-  els.weekView.innerHTML = `
-    <div class="view-heading">
-      <div>
-        <h2>이번 주</h2>
-        <p>${getWeekRangeLabel(weekDates)}</p>
-      </div>
-    </div>
-    ${renderTaskCards(weekItems, "week", "이번 주 일정이 아직 없습니다.")}
-  `;
+function renderCarryChips(items) {
+  if (!items.length) {
+    return `
+      <span class="carry-chip muted">위치 허용</span>
+      <span class="carry-chip muted">날씨 연결</span>
+    `;
+  }
+  return items.map((item) => `<span class="carry-chip">${escapeHtml(item)}</span>`).join("");
 }
 
-function renderMonthGrid(year, month) {
-  const weeks = getMonthGrid(year, month);
+function renderWarnings(warnings) {
+  if (!warnings.length) return "";
   return `
-    <div class="calendar-grid-shell">
-      <div class="calendar-weekdays">
-        ${WEEKDAY_LABELS_KO.map((label) => `<span>${label}</span>`).join("")}
-      </div>
-      <div class="month-grid">
-        ${weeks
-          .map(
-            (week) => `
-              <div class="month-grid__row">
-                ${week
-                  .map((date) => {
-                    const dateKey = toDateKey(date);
-                    const items = getTodosForDate(dateKey);
-                    return `
-                      <article class="calendar-day ${isToday(dateKey) ? "calendar-day--today" : ""} ${!isSameMonth(date, year, month) ? "calendar-day--muted" : ""}">
-                        <div class="calendar-day__top">
-                          <span class="calendar-day__date">${date.getDate()}일</span>
-                          <span class="calendar-day__count">${items.length}개</span>
-                        </div>
-                        <div class="calendar-day__items">
-                          ${items
-                            .slice(0, 3)
-                            .map(
-                              ({ entry, todo }) => `
-                                <div class="calendar-entry ${entry.done ? "is-done" : ""}">
-                                  <span class="calendar-dot"></span>
-                                  <span>${escapeHtml(todo.text)}</span>
-                                </div>
-                              `,
-                            )
-                            .join("")}
-                          ${items.length > 3 ? `<div class="calendar-more">+${items.length - 3} more</div>` : ""}
-                        </div>
-                      </article>
-                    `;
-                  })
-                  .join("")}
-              </div>
-            `,
-          )
-          .join("")}
-      </div>
+    <div class="warning-list">
+      ${warnings.map((warning) => `<div>${escapeHtml(warning)}</div>`).join("")}
     </div>
   `;
 }
 
-function renderWeekGrid(weekDates) {
+function renderLocationPrompt() {
+  if (appState.location) return "";
+  return `<button id="location-briefing-btn" class="secondary-btn" type="button">현재 위치로 날씨 브리핑 받기</button>`;
+}
+
+function renderPriorityItems(items) {
+  if (!items.length) {
+    return `<div class="empty-panel compact"><p>오늘은 비어 있어요. 음성 버튼으로 빠르게 일정을 추가할 수 있습니다.</p></div>`;
+  }
   return `
-    <div class="week-grid">
-      ${weekDates
-        .map((date, index) => {
-          const dateKey = toDateKey(date);
-          const items = getTodosForDate(dateKey);
-          return `
-            <article class="week-card ${isToday(dateKey) ? "week-card--today" : ""}">
-              <div class="week-card__top">
-                <div class="week-card__day">
-                  <span class="week-card__label">${WEEKDAY_LABELS[index]}</span>
-                  <strong class="week-card__date">${date.getMonth() + 1}/${date.getDate()}</strong>
-                </div>
-                <span class="week-card__count">${items.length}개</span>
-              </div>
-              <div class="week-card__list">
-                ${
-                  items.length
-                    ? items
-                        .slice(0, 4)
-                        .map(
-                          ({ entry, todo }) => `
-                            <div class="week-card__item ${entry.done ? "is-done" : ""}">
-                              <span class="calendar-dot"></span>
-                              <span>${escapeHtml(todo.text)}</span>
-                            </div>
-                          `,
-                        )
-                        .join("")
-                    : `<p class="empty-copy">비어 있음</p>`
-                }
-              </div>
-            </article>
-          `;
-        })
-        .join("")}
+    <div class="priority-list">
+      ${items.map(({ entry, todo }, index) => renderTaskRow({ entry, todo }, "today", index + 1)).join("")}
     </div>
+  `;
+}
+
+function renderTaskRows(items, sectionKey, emptyCopy) {
+  if (!items.length) return `<div class="empty-panel compact"><p>${emptyCopy}</p></div>`;
+  return `<div class="task-list">${items.map((item) => renderTaskRow(item, sectionKey)).join("")}</div>`;
+}
+
+function renderTaskRow({ entry, todo }, sectionKey, order = null) {
+  const done = entry.done || todo.done;
+  return `
+    <article class="task-row" data-task-id="${todo.id}">
+      <button class="task-toggle ${done ? "is-done" : ""}" data-action="toggle-section" data-section="${sectionKey}" data-task-id="${todo.id}" aria-label="완료 전환"></button>
+      <button class="task-row__body" data-action="edit" data-task-id="${todo.id}" type="button">
+        <span class="task-row__title ${done ? "done" : ""}">${order ? `${order}. ` : ""}${escapeHtml(todo.text)}</span>
+        <span class="task-row__meta">${formatDeadline(todo.deadline)} · ${escapeHtml(todo.difficulty || "중")}</span>
+      </button>
+    </article>
   `;
 }
 
@@ -367,7 +397,52 @@ function renderCalendar() {
 
   const weekDates = getWeekDates(fromDateKey(appState.state.scheduleWeekStart));
   els.calendarLabel.textContent = getWeekRangeLabel(weekDates);
-  els.calendarGrid.innerHTML = renderWeekGrid(weekDates);
+  els.calendarGrid.innerHTML = renderWeekList(weekDates);
+}
+
+function renderMonthGrid(year, month) {
+  const weeks = getMonthGrid(year, month);
+  return `
+    <div class="month-grid">
+      <div class="calendar-weekdays">${WEEKDAY_LABELS_KO.map((label) => `<span>${label}</span>`).join("")}</div>
+      ${weeks.flat().map((date) => {
+        const dateKey = toDateKey(date);
+        const items = getTodosForDate(dateKey);
+        return `
+          <div class="month-day ${isToday(dateKey) ? "today" : ""} ${!isSameMonth(date, year, month) ? "muted" : ""}">
+            <strong>${date.getDate()}</strong>
+            <span>${items.length ? `${items.length}개` : ""}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderWeekList(weekDates) {
+  return `
+    <div class="week-list">
+      ${weekDates.map((date, index) => {
+        const dateKey = toDateKey(date);
+        const items = getTodosForDate(dateKey);
+        return `
+          <section class="week-day ${isToday(dateKey) ? "today" : ""}">
+            <div class="week-day__heading">
+              <strong>${WEEKDAY_LABELS_KO[index]} ${date.getMonth() + 1}/${date.getDate()}</strong>
+              <span>${items.length}개</span>
+            </div>
+            ${renderTaskRows(items, "week", "비어 있음")}
+          </section>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderAll() {
+  renderToday();
+  renderCalendar();
+  setActiveView(appState.activeView);
 }
 
 function bindActionButtons() {
@@ -384,15 +459,6 @@ function bindActionButtons() {
   document.querySelectorAll('[data-action="edit"]').forEach((el) => {
     el.addEventListener("click", () => openTaskModal(el.dataset.taskId));
   });
-}
-
-function renderAll() {
-  renderHero();
-  renderToday();
-  renderWeek();
-  renderCalendar();
-  setActiveView(appState.activeView);
-  bindActionButtons();
 }
 
 function openTaskModal(taskId) {
@@ -412,6 +478,38 @@ function closeTaskModal() {
   els.modal.setAttribute("aria-hidden", "true");
 }
 
+async function requestLocationForBriefing() {
+  if (!navigator.geolocation) {
+    appState.weatherStatus = "unavailable";
+    renderToday();
+    return;
+  }
+
+  appState.weatherStatus = "loading";
+  renderToday();
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      appState.location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        updatedAt: new Date().toISOString(),
+      };
+      appState.weatherStatus = "ready";
+      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(appState.location));
+      renderToday();
+      if (appState.uid) await loadBriefing(appState.uid);
+    },
+    (error) => {
+      console.warn("Location permission failed:", error);
+      appState.weatherStatus = "permission-denied";
+      renderToday();
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 1000 * 60 * 30 },
+  );
+}
+
 async function loadForUser(uid) {
   const { raw, schedule } = await loadStateDocument(uid);
   appState.uid = uid;
@@ -420,8 +518,10 @@ async function loadForUser(uid) {
   els.authButton.textContent = "로그아웃";
   els.authEmpty.classList.add("hidden");
   els.contentShell.classList.remove("hidden");
+  els.bottomNav.classList.remove("hidden");
   els.fab.classList.remove("hidden");
   renderAll();
+  await loadBriefing(uid);
 }
 
 async function refreshCurrentUser() {
@@ -430,9 +530,11 @@ async function refreshCurrentUser() {
     appState.uid = null;
     appState.rawDoc = {};
     appState.state = createEmptyScheduleState();
+    appState.briefing = null;
     els.authButton.textContent = "Google 로그인";
     els.authEmpty.classList.remove("hidden");
     els.contentShell.classList.add("hidden");
+    els.bottomNav.classList.add("hidden");
     els.fab.classList.add("hidden");
     return;
   }
@@ -455,9 +557,7 @@ async function handleAuthClick() {
       return;
     }
 
-    await firebaseAuth.signInWithGoogle({
-      useCredentialManager: false,
-    });
+    await firebaseAuth.signInWithGoogle({ useCredentialManager: false });
     await refreshCurrentUser();
   } finally {
     appState.authBusy = false;
@@ -527,7 +627,8 @@ els.quickAddForm.addEventListener("submit", async (event) => {
   renderAll();
 });
 
-els.fab.addEventListener("click", () => setActiveView("quick-add"));
+els.fab.addEventListener("click", () => setActiveView("voice"));
+els.voicePrimaryBtn.addEventListener("click", () => document.getElementById("quick-add-text")?.focus());
 
 document.querySelectorAll('[data-close-modal="true"]').forEach((el) => {
   el.addEventListener("click", closeTaskModal);
@@ -535,10 +636,9 @@ document.querySelectorAll('[data-close-modal="true"]').forEach((el) => {
 
 els.taskEditForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const taskId = els.editTaskId.value;
   editTask(
     appState.state,
-    taskId,
+    els.editTaskId.value,
     {
       text: els.editTaskText.value,
       difficulty: els.editTaskDifficulty.value,
@@ -552,14 +652,14 @@ els.taskEditForm.addEventListener("submit", async (event) => {
 });
 
 els.deleteTaskBtn.addEventListener("click", async () => {
-  const taskId = els.editTaskId.value;
-  deleteTask(appState.state, taskId);
+  deleteTask(appState.state, els.editTaskId.value);
   await persist();
   closeTaskModal();
   renderAll();
 });
 
 async function bootstrap() {
+  els.todayDate.textContent = formatTodayLabel();
   if (!ensurePlugins()) return;
 
   await firebaseAuth.addListener("authStateChange", async () => {
@@ -573,6 +673,45 @@ bootstrap().catch((error) => {
   console.error(error);
   alert(`앱 초기화 중 오류가 발생했습니다: ${error.message || error}`);
 });
+
+function readCachedLocation() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCATION_STORAGE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function formatTodayLabel() {
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  }).format(new Date());
+}
+
+function formatBriefingStatus() {
+  if (appState.briefingStatus === "loading") return "브리핑 생성 중";
+  if (appState.briefingStatus === "ready") return "AI 브리핑";
+  if (appState.weatherStatus === "permission-denied") return "위치 권한 꺼짐";
+  return "로컬 브리핑";
+}
+
+function formatDeadline(deadline) {
+  if (!deadline) return "마감 없음";
+  const [, month, day] = deadline.split("-");
+  return `${Number(month)}/${Number(day)} 마감`;
+}
+
+function uniqueList(items) {
+  return [...new Set(items.filter(Boolean).map((item) => String(item).trim()).filter(Boolean))];
+}
+
+function asList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
 
 function escapeHtml(str) {
   return String(str)
