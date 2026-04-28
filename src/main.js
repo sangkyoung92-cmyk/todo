@@ -631,12 +631,12 @@ function formatRecordingHtml(recordingText) {
     .join('');
 }
 
-function appendTranscript(transcript) {
+function appendTranscript(transcript, { replace = false } = {}) {
   if (!activeRecordingNoteId) {
     alert('먼저 페이지를 선택하세요.');
     return;
   }
-  const previous = getRecordingDraft(activeRecordingNoteId);
+  const previous = replace ? '' : getRecordingDraft(activeRecordingNoteId);
   setRecordingDraft(
     activeRecordingNoteId,
     [previous, transcript.trim()].filter(Boolean).join('\n'),
@@ -1160,18 +1160,48 @@ const speechRecorder = createSpeechRecorder({
     noteRecordBtn.setAttribute('aria-pressed', String(isRecording));
     recordingPanel.setRecording(isRecording);
   },
+  onProcessingChange: (isProcessing) => {
+    if (!noteRecordBtn) return;
+    noteRecordBtn.disabled = isProcessing;
+    if (isProcessing) {
+      noteRecordBtn.textContent = '정리 중...';
+      recordingPanel.setBusy('녹음 텍스트 변환 중');
+    } else if (!speechRecorder.isRecording()) {
+      noteRecordBtn.textContent = '녹음';
+    }
+  },
   onError: (err) => {
-    if (err.message === 'SPEECH_RECOGNITION_UNSUPPORTED') {
-      alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+    if (err.message === 'AUDIO_RECORDING_UNSUPPORTED') {
+      alert('이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
       return;
     }
-    recordingPanel.reset();
+    if (err.message === 'SPEECH_RECOGNITION_UNSUPPORTED') {
+      alert('이 브라우저는 실시간 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+      return;
+    }
     if (err.message === 'no-speech') {
       saveStatusEl.textContent = '말소리가 감지되지 않았습니다';
       return;
     }
     if (err.message === 'aborted') {
       saveStatusEl.textContent = '녹음이 취소되었습니다';
+      return;
+    }
+    if (err.message === 'API_KEY_MISSING') {
+      saveStatusEl.textContent = '실시간 텍스트만 저장되었습니다';
+      return;
+    }
+    if (err.message === 'API_KEY_INVALID') {
+      openSettingsDrawer();
+      alert('Gemini API 키가 유효하지 않아 전체 녹음을 텍스트로 변환하지 못했습니다.');
+      return;
+    }
+    if (err.message === 'API_OVERLOADED') {
+      saveStatusEl.textContent = '음성 변환이 지연되었습니다. 잠시 후 다시 시도해주세요';
+      return;
+    }
+    if (err.message === 'TRANSCRIPT_EMPTY') {
+      saveStatusEl.textContent = '음성 변환 결과가 비어 있습니다';
       return;
     }
     alert(`녹음 오류: ${err.message}`);
@@ -1193,8 +1223,9 @@ addTodoBtn.addEventListener('click', async () => {
 });
 extractTodoBtn.addEventListener('click', addTodosFromCurrentNote);
 noteRecordBtn?.addEventListener('click', () => {
+  if (speechRecorder.isBusy()) return;
   if (!speechRecorder.isSupported) {
-    alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+    alert('이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
     return;
   }
   if (speechRecorder.isRecording()) {
