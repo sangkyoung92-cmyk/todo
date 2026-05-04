@@ -35,8 +35,8 @@ npm run open:android
 
 - The mobile app now prioritizes the `오늘` screen over the old large hero layout.
 - The first screen shows a one-line briefing, location/weather readiness, carry-item chips, top 3 tasks, and the full today task list.
-- The app first tries a configured `assistantBriefingEndpoint` from `users/{uid}/data/state`, then reads `users/{uid}/briefings/{YYYY-MM-DD}`, then falls back to a local schedule-based briefing.
-- Location is cached in localStorage under `assistant_weather_location` and is sent only to a configured briefing endpoint.
+- The app first tries a configured `assistantBriefingEndpoint` from `users/{uid}/data/state`, then reads `users/{uid}/briefings/{YYYY-MM-DD}`, then falls back to a local schedule/weather-based briefing.
+- Location is cached in localStorage under `assistant_weather_location`; weather forecasts are fetched directly from Open-Meteo and cached under `assistant_weather_forecast` for 30 minutes.
 - Audio capture is represented by the `음성` tab and large voice CTA; actual speech recognition/transcription remains follow-up work.
 
 ## Known Follow-Up Work
@@ -50,6 +50,6 @@ npm run open:android
 
 1. Replace Firebase web login in the Android companion with a native/Capacitor sign-in flow.
 2. Verify Firestore auth/session persistence on a real device.
-3. Add the server-side weather/AI briefing function that writes `users/{uid}/briefings/{YYYY-MM-DD}`.
+3. Add the optional server-side AI briefing function that writes `users/{uid}/briefings/{YYYY-MM-DD}`.
 4. Replace the current voice CTA placeholder with native speech recognition/transcription.
 5. Add app icons, splash assets, and release signing config.

@@ -110,6 +110,15 @@ npm run sync
 npm run open:android
 ```
 
+릴리스 APK 빌드 검증은 JDK 21로 실행합니다. Windows PowerShell에서 Android Studio 내장 JDK를 쓰는 예시는 다음과 같습니다.
+
+```powershell
+cd apps/android/capacitor/android
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+.\gradlew.bat assembleRelease
+```
+
 ### Android Firebase 플러그인 브릿지 확인
 Android 앱은 `www/capacitor.js`를 직접 번들하지 않고, Capacitor Android WebView가 시작할 때 주입하는 네이티브 브릿지를 사용합니다. `npm run sync`는 남아 있는 정적 `www/capacitor.js` 파일을 제거한 뒤 공유 모듈을 복사하므로, Firebase 플러그인 테스트 전 항상 다시 실행합니다.
 
@@ -124,10 +133,13 @@ Android Studio에서 실행한 뒤 다음을 확인합니다.
 1. Google 로그인 후 `오늘`, `음성`, `노트`, `캘린더` 하단 탭이 보이는지 확인
 2. `오늘` 화면에서 AI 브리핑 문서가 없을 때도 로컬 브리핑이 표시되는지 확인
 3. `현재 위치로 날씨 브리핑 받기`를 눌렀을 때 위치 권한 요청이 뜨는지 확인
-4. 위치 권한 거부/날씨 실패 상태에서도 오늘 일정 목록과 음성 등록 버튼이 유지되는지 확인
-5. `음성` 탭의 빠른 입력으로 할 일을 추가하면 `오늘` 화면과 웹 앱에 반영되는지 확인
+4. 위치 허용 후 현재 기온/체감/오늘 최고·최저/강수확률이 브리핑 문장에 표시되고, 우산·겉옷 같은 `챙길 것` 칩이 날씨에 맞게 바뀌는지 확인
+5. 위치 권한 거부/날씨 실패 상태에서도 오늘 일정 목록과 음성 등록 버튼이 유지되는지 확인
+6. `음성` 탭의 빠른 입력으로 할 일을 추가하면 `오늘` 화면과 웹 앱에 반영되는지 확인
 
-날씨/AI 브리핑 서버가 준비되면 `users/{uid}/briefings/{YYYY-MM-DD}` 문서에 `headline`, `weatherSummary`, `carryItems`, `scheduleWarnings`, `topPriorities`, `suggestedOrder` 필드를 저장하면 앱이 우선 사용합니다. 또는 `users/{uid}/data/state.assistantBriefingEndpoint`에 HTTPS endpoint를 설정하면 앱이 현재 위치와 일정 데이터를 POST로 보내 브리핑을 받아옵니다.
+모바일 날씨 브리핑은 별도 서버 없이 현재 위치를 얻은 뒤 Open-Meteo Forecast API(`https://api.open-meteo.com/v1/forecast`)를 직접 호출합니다. 응답은 `assistant_weather_forecast` localStorage 키에 30분 동안 캐시하며, 캐시가 오래되거나 현재 위치와 멀어지면 다시 받아옵니다. API 호출이 실패하면 저장된 날씨가 있으면 `저장된 날씨` 상태로 보여주고, 없으면 일정 기반 로컬 브리핑을 유지합니다.
+
+AI 브리핑 서버가 준비되면 기존처럼 `users/{uid}/briefings/{YYYY-MM-DD}` 문서에 `headline`, `weatherSummary`, `carryItems`, `scheduleWarnings`, `topPriorities`, `suggestedOrder` 필드를 저장하면 앱이 우선 사용합니다. 또는 `users/{uid}/data/state.assistantBriefingEndpoint`에 HTTPS endpoint를 설정하면 앱이 현재 위치, 날씨, 일정 데이터를 POST로 보내 더 개인화된 브리핑을 받아옵니다.
 
 ### 스마트 플래너 사용
 - 스케줄 탭 상단의 `스마트 플래너`는 `할 일 제안` 박스 하나로 노트 후보와 일정 재배치 제안을 함께 표시합니다.
@@ -270,3 +282,16 @@ python3 -m http.server 4173
 ### 녹음 안정성 메모
 - 녹음 중 브라우저가 `no-speech`를 반환해도 녹음 세션을 자동 재시작합니다.
 - 녹음 내용은 정지/추가 시점에 선택된 노트가 아니라 녹음을 시작했던 노트에 추가됩니다.
+
+### Android Google login troubleshooting
+
+로그인 버튼이 반응 없이 오래 기다린 뒤 `Firebase native plugins are not ready` 진단을 띄우는 경우:
+
+1. `cd apps/android/capacitor && npm run sync`를 실행해 Android assets에 최신 `www`를 복사합니다.
+2. Android Studio에서 앱을 완전히 삭제하거나 강제 종료한 뒤 다시 설치/실행합니다.
+3. Google 로그인 버튼을 누르면 즉시 `Google login...` 상태가 보여야 하며, Auth 브릿지가 아직 준비되지 않은 경우 최대 12초 대기 후 진단 메시지가 표시됩니다.
+4. 로그인은 `FirebaseAuthentication`만 먼저 확인하고, 로그인 후 클라우드 데이터 로딩 시 `FirebaseFirestore`를 확인합니다.
+5. `Android Firebase login is not ready yet`은 보통 Firebase 콘솔 설정 문제가 아니라 앱의 Capacitor 네이티브 브릿지/플러그인 준비 문제입니다. 최신 APK를 재설치해도 계속되면 alert의 `platform`, `nativePromise`, `plugins`, `headers`, `missing` 값을 확인합니다.
+6. Google 계정 선택 후 실패하거나 `ApiException: 10`/`DEVELOPER_ERROR`가 뜨는 경우에는 Firebase Console의 Android 앱에 설치 APK 서명 인증서 SHA-1/SHA-256을 추가하고 `google-services.json`을 갱신해야 합니다.
+7. `missing=FirebaseAuthentication`이고 `plugins`/`headers`에 `FirebaseAuthentication`이 없으면 Android `variables.gradle`에 `rgcfaIncludeGoogle = true`가 필요합니다. 이 값이 없으면 Google 로그인 SDK가 런타임 APK에 포함되지 않아 Auth 플러그인이 등록되지 않을 수 있습니다.
+8. `headers=FirebaseAuthentication`인데도 `unable to find plugin`이 계속 뜨면 이전 APK가 남아 있을 가능성이 높으므로 앱을 삭제한 뒤 새 APK를 다시 설치합니다.

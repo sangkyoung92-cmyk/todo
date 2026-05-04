@@ -18,14 +18,26 @@ import {
 } from "../shared/date-utils.js";
 import {
   formatNativeBridgeDiagnostics,
+  getFirebaseAuthPluginFallback,
+  waitForFirebaseAuthPlugin,
   waitForFirebasePlugins,
 } from "./native-plugins.js";
+import {
+  buildWeatherInsights,
+  fetchWeatherForecast,
+  isWeatherForLocation,
+  isWeatherFresh,
+  readCachedWeather,
+  writeCachedWeather,
+} from "./weather.js";
 
 let firebaseAuth = null;
 let firestore = null;
 
 const WEEKDAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 const LOCATION_STORAGE_KEY = "assistant_weather_location";
+const cachedLocation = readCachedLocation();
+const cachedWeather = readCachedWeather();
 
 const els = {
   authButton: document.getElementById("auth-button"),
@@ -58,11 +70,12 @@ const appState = {
   authBusy: false,
   briefing: null,
   briefingStatus: "idle",
-  location: readCachedLocation(),
+  location: cachedLocation,
   rawDoc: {},
   state: createEmptyScheduleState(),
   uid: null,
-  weatherStatus: readCachedLocation() ? "ready" : "permission-needed",
+  weather: isWeatherForLocation(cachedWeather, cachedLocation) ? cachedWeather : null,
+  weatherStatus: getInitialWeatherStatus(cachedLocation, cachedWeather),
 };
 
 function helperBundle() {
@@ -80,6 +93,18 @@ async function connectFirebasePlugins() {
   return true;
 }
 
+async function connectFirebaseAuthPlugin() {
+  if (firebaseAuth) return true;
+  const fallbackAuth = getFirebaseAuthPluginFallback();
+  if (fallbackAuth) {
+    firebaseAuth = fallbackAuth;
+    return true;
+  }
+  const plugins = await waitForFirebaseAuthPlugin();
+  firebaseAuth = plugins.firebaseAuth;
+  return true;
+}
+
 async function ensurePlugins() {
   try {
     return await connectFirebasePlugins();
@@ -89,6 +114,21 @@ async function ensurePlugins() {
       "Android Firebase 플러그인을 아직 사용할 수 없습니다.\n"
         + `${error.message || error}\n`
         + formatNativeBridgeDiagnostics()
+    );
+    return false;
+  }
+}
+
+async function ensurePluginsForLogin() {
+  try {
+    return await connectFirebaseAuthPlugin();
+  } catch (error) {
+    console.error(error);
+    alert(
+      "Android Firebase login is not ready yet.\n"
+        + `${error.message || error}\n`
+        + "Build: 20260502-native-plugin-header-guard\n\n"
+        + formatNativeBridgeDiagnostics(["FirebaseAuthentication"])
     );
     return false;
   }
@@ -152,6 +192,7 @@ async function requestEndpointBriefing(uid, date) {
       uid,
       date,
       location: appState.location,
+      weather: appState.weather,
       todos: appState.state.todos,
       scheduleEntries: appState.state.scheduleEntries,
     }),
@@ -276,21 +317,19 @@ function buildBriefing() {
 
 function buildLocalBriefing(todayItems, overdue) {
   const activeToday = todayItems.filter(({ entry, todo }) => !entry.done && !todo.done);
+  const weather = buildWeatherInsights(appState.weather, appState.weatherStatus, Boolean(appState.location));
   const headline = activeToday.length
     ? `오늘은 ${activeToday.length}개의 일정 중 ${activeToday[0].todo.text}부터 처리하면 좋아요.`
     : "오늘 확정된 일정은 여유가 있어요. 미리 밀린 일을 정리하기 좋습니다.";
 
-  const carryItems = appState.location ? ["충전기"] : [];
-  const scheduleWarnings = [];
+  const carryItems = weather.carryItems;
+  const scheduleWarnings = [...weather.scheduleWarnings];
   if (overdue.length) scheduleWarnings.push(`마감이 지난 일이 ${overdue.length}개 있어요.`);
   if (activeToday.length >= 5) scheduleWarnings.push("오늘 일정이 많아 우선순위를 줄이는 게 좋아요.");
-  if (appState.weatherStatus === "permission-needed") scheduleWarnings.push("현재 위치를 허용하면 날씨 준비물을 제안할 수 있어요.");
 
   return {
     headline,
-    weatherSummary: appState.location
-      ? "위치는 확인했어요. 서버 날씨 브리핑이 연결되면 우산과 겉옷 제안을 더 정확히 보여줍니다."
-      : "현재 위치 권한이 필요해요.",
+    weatherSummary: weather.weatherSummary,
     carryItems,
     scheduleWarnings,
     topPriorities: activeToday.map(({ todo }) => todo.text),
@@ -347,14 +386,24 @@ function renderToday() {
   `;
 
   bindActionButtons();
-  document.getElementById("location-briefing-btn")?.addEventListener("click", requestLocationForBriefing);
+  document.getElementById("location-briefing-btn")?.addEventListener("click", () => {
+    if (appState.location) {
+      refreshWeatherForLocation({ force: true }).catch(console.error);
+      return;
+    }
+    requestLocationForBriefing();
+  });
 }
 
 function renderCarryChips(items) {
   if (!items.length) {
+    const firstChip = appState.weatherStatus === "loading"
+      ? "날씨 확인 중"
+      : appState.location ? "날씨 대기" : "위치 허용";
+    const secondChip = appState.location ? "날씨 새로고침" : "날씨 연결";
     return `
-      <span class="carry-chip muted">위치 허용</span>
-      <span class="carry-chip muted">날씨 연결</span>
+      <span class="carry-chip muted">${firstChip}</span>
+      <span class="carry-chip muted">${secondChip}</span>
     `;
   }
   return items.map((item) => `<span class="carry-chip">${escapeHtml(item)}</span>`).join("");
@@ -370,8 +419,14 @@ function renderWarnings(warnings) {
 }
 
 function renderLocationPrompt() {
-  if (appState.location) return "";
-  return `<button id="location-briefing-btn" class="secondary-btn" type="button">현재 위치로 날씨 브리핑 받기</button>`;
+  if (appState.weatherStatus === "loading") return "";
+  if (!appState.location) {
+    return `<button id="location-briefing-btn" class="secondary-btn" type="button">현재 위치로 날씨 브리핑 받기</button>`;
+  }
+  if (["failed", "stale"].includes(appState.weatherStatus)) {
+    return `<button id="location-briefing-btn" class="secondary-btn" type="button">날씨 다시 받기</button>`;
+  }
+  return "";
 }
 
 function renderPriorityItems(items) {
@@ -516,9 +571,10 @@ async function requestLocationForBriefing() {
         accuracy: position.coords.accuracy,
         updatedAt: new Date().toISOString(),
       };
-      appState.weatherStatus = "ready";
+      appState.weatherStatus = "loading";
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(appState.location));
       renderToday();
+      await refreshWeatherForLocation({ force: true });
       if (appState.uid) await loadBriefing(appState.uid);
     },
     (error) => {
@@ -530,7 +586,46 @@ async function requestLocationForBriefing() {
   );
 }
 
+async function refreshWeatherForLocation({ force = false } = {}) {
+  if (!appState.location) {
+    appState.weatherStatus = "permission-needed";
+    renderToday();
+    return null;
+  }
+
+  if (
+    !force
+    && appState.weather
+    && isWeatherForLocation(appState.weather, appState.location)
+    && isWeatherFresh(appState.weather)
+  ) {
+    appState.weatherStatus = "ready";
+    renderToday();
+    return appState.weather;
+  }
+
+  appState.weatherStatus = "loading";
+  renderToday();
+
+  try {
+    const weather = await fetchWeatherForecast(appState.location);
+    appState.weather = weather;
+    appState.weatherStatus = "ready";
+    writeCachedWeather(weather);
+    return weather;
+  } catch (error) {
+    console.warn("Failed to load weather forecast:", error);
+    appState.weatherStatus = appState.weather && isWeatherForLocation(appState.weather, appState.location)
+      ? "stale"
+      : "failed";
+    return appState.weather;
+  } finally {
+    renderToday();
+  }
+}
+
 async function loadForUser(uid) {
+  if (!(await ensurePlugins())) return;
   const { raw, schedule } = await loadStateDocument(uid);
   appState.uid = uid;
   appState.rawDoc = raw;
@@ -541,6 +636,9 @@ async function loadForUser(uid) {
   els.bottomNav.classList.remove("hidden");
   els.fab.classList.remove("hidden");
   renderAll();
+  if (appState.location) {
+    refreshWeatherForLocation().catch(console.error);
+  }
   await loadBriefing(uid);
 }
 
@@ -563,13 +661,16 @@ async function refreshCurrentUser() {
 }
 
 async function handleAuthClick() {
-  if (!(await ensurePlugins())) return;
   if (appState.authBusy) return;
 
   appState.authBusy = true;
+  const previousLabel = els.authButton.textContent;
   els.authButton.disabled = true;
+  els.authButton.textContent = "Google login...";
 
   try {
+    if (!(await ensurePluginsForLogin())) return;
+
     const { user } = await firebaseAuth.getCurrentUser();
     if (user) {
       await firebaseAuth.signOut();
@@ -582,6 +683,7 @@ async function handleAuthClick() {
   } finally {
     appState.authBusy = false;
     els.authButton.disabled = false;
+    if (!appState.uid) els.authButton.textContent = previousLabel;
   }
 }
 
@@ -590,6 +692,13 @@ els.authButton.addEventListener("click", () => {
     console.error(error);
     if (String(error?.message || error).includes("12502")) {
       refreshCurrentUser().catch(console.error);
+      return;
+    }
+    if (String(error?.message || error).includes("unable to find plugin")) {
+      alert(
+        `Android Firebase plugin call failed: ${error.message || error}\n`
+          + formatNativeBridgeDiagnostics(["FirebaseAuthentication"])
+      );
       return;
     }
     alert(`로그인 처리 중 오류가 발생했습니다: ${error.message || error}`);
@@ -680,11 +789,16 @@ els.deleteTaskBtn.addEventListener("click", async () => {
 
 async function bootstrap() {
   els.todayDate.textContent = formatTodayLabel();
-  if (!(await ensurePlugins())) return;
+  if (!(await connectFirebaseAuthPlugin().catch((error) => {
+    console.warn("Firebase auth plugin is not ready during bootstrap:", error);
+    return false;
+  }))) return;
 
-  await firebaseAuth.addListener("authStateChange", async () => {
-    await refreshCurrentUser();
-  });
+  if (typeof firebaseAuth.addListener === "function") {
+    await firebaseAuth.addListener("authStateChange", async () => {
+      await refreshCurrentUser();
+    });
+  }
 
   await refreshCurrentUser();
 }
@@ -713,8 +827,18 @@ function formatTodayLabel() {
 function formatBriefingStatus() {
   if (appState.briefingStatus === "loading") return "브리핑 생성 중";
   if (appState.briefingStatus === "ready") return "AI 브리핑";
+  if (appState.weatherStatus === "loading") return "날씨 확인 중";
+  if (appState.weatherStatus === "ready") return "날씨 브리핑";
+  if (appState.weatherStatus === "stale") return "저장된 날씨";
+  if (appState.weatherStatus === "failed") return "날씨 연결 실패";
   if (appState.weatherStatus === "permission-denied") return "위치 권한 꺼짐";
   return "로컬 브리핑";
+}
+
+function getInitialWeatherStatus(location, weather) {
+  if (!location) return "permission-needed";
+  if (!isWeatherForLocation(weather, location)) return "stale";
+  return isWeatherFresh(weather) ? "ready" : "stale";
 }
 
 function formatDeadline(deadline) {

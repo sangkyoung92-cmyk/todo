@@ -1,5 +1,15 @@
 package com.sangkyoung.todo.companion;
 
+import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
+import io.capawesome.capacitorjs.plugins.firebase.authentication.FirebaseAuthenticationPlugin;
+import io.capawesome.capacitorjs.plugins.firebase.firestore.FirebaseFirestorePlugin;
 
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(FirebaseAuthenticationPlugin.class);
+        registerPlugin(FirebaseFirestorePlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
