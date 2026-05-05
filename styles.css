@@ -4426,7 +4426,7 @@ textarea:focus-visible,
 }
 
 .layout.todo-panel-collapsed {
-  grid-template-columns: clamp(220px, var(--notes-pages-width, 280px), 360px) minmax(460px, 1fr) 56px;
+  grid-template-columns: clamp(220px, var(--notes-pages-width, 280px), 360px) minmax(460px, 1fr) 46px;
 }
 
 .pages-panel,
@@ -4630,7 +4630,7 @@ textarea:focus-visible,
 .note-content {
   padding: 24px 32px 48px;
   font-size: 16px;
-  line-height: 1.75;
+  line-height: 29px;
   letter-spacing: 0;
 }
 
@@ -4644,7 +4644,7 @@ textarea:focus-visible,
 }
 
 .note-content.ruled-paper {
-  --note-line-height: 1.75em;
+  --note-line-height: 29px;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
@@ -4652,6 +4652,21 @@ textarea:focus-visible,
     rgba(15, 118, 110, 0.11) calc(var(--note-line-height) - 1px),
     rgba(15, 118, 110, 0.11) var(--note-line-height)
   );
+  background-position: 0 0;
+}
+
+.note-content.ruled-paper p,
+.note-content.ruled-paper div,
+.note-content.ruled-paper li {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: var(--note-line-height);
+}
+
+.note-content.ruled-paper ul,
+.note-content.ruled-paper ol {
+  margin-top: 0;
+  margin-bottom: var(--note-line-height);
 }
 
 .todo-panel.collapsed .todo-panel-head {
@@ -4666,6 +4681,31 @@ textarea:focus-visible,
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-size: 22px;
+}
+
+.layout.todo-panel-collapsed .editor-panel {
+  min-width: 0;
+}
+
+.layout.todo-panel-collapsed .note-header-area,
+.layout.todo-panel-collapsed .note-content {
+  max-width: min(1180px, calc(100% - 64px));
+}
+
+.layout.todo-panel-collapsed .todo-panel {
+  border-color: transparent;
+  background: transparent;
+}
+
+.layout.todo-panel-collapsed .todo-panel.collapsed .todo-panel-head {
+  min-height: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+}
+
+.layout.todo-panel-collapsed .todo-panel.collapsed .todo-panel-toggle {
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.14);
 }
 
 .note-todo-filter-bar,
