@@ -301,7 +301,9 @@ export function renderNotes(onRender) {
   if (notes.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'empty-state';
-    empty.textContent = isSearch ? '검색 결과가 없습니다.' : '페이지가 없습니다.';
+    empty.innerHTML = isSearch
+      ? '<strong>검색 결과가 없습니다.</strong><span>다른 단어로 다시 찾아보세요.</span>'
+      : '<strong>아직 페이지가 없습니다.</strong><span>상단의 + 페이지 버튼으로 첫 노트를 만드세요.</span>';
     noteListEl.appendChild(empty);
     return;
   }
