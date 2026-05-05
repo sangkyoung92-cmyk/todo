@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Todo Companion</string>
-    <string name="title_activity_main">Todo Companion</string>
+    <string name="app_name">정리노트</string>
+    <string name="title_activity_main">정리노트</string>
     <string name="package_name">com.sangkyoung.todo.companion</string>
     <string name="custom_url_scheme">com.sangkyoung.todo.companion</string>
 </resources>

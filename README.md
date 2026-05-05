@@ -101,7 +101,7 @@ python3 -m http.server 4173
   - `docs/ai-personalization.md`
 
 ### Android 비서앱 실행
-Android companion 앱은 `오늘` 화면을 중심으로 브리핑, 날씨 준비물, 핵심 일정, 음성 등록 진입점을 보여줍니다.
+Android 앱 표시명은 `정리노트`이며, `오늘` 화면을 중심으로 브리핑, 날씨 준비물, 핵심 일정, 음성 등록 진입점을 보여줍니다.
 
 ```bash
 cd apps/android/capacitor
@@ -118,6 +118,8 @@ $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
 .\gradlew.bat assembleRelease
 ```
+
+빌드가 끝나면 release unsigned APK는 `apps/android/capacitor/android/app/build/outputs/apk/release/app-release-unsigned.apk`에 생성됩니다. 로컬 설치 테스트용 debug APK는 `apps/android/capacitor/android/app/build/outputs/apk/debug/app-debug.apk`에 생성됩니다.
 
 ### Android Firebase 플러그인 브릿지 확인
 Android 앱은 `www/capacitor.js`를 직접 번들하지 않고, Capacitor Android WebView가 시작할 때 주입하는 네이티브 브릿지를 사용합니다. `npm run sync`는 남아 있는 정적 `www/capacitor.js` 파일을 제거한 뒤 공유 모듈을 복사하므로, Firebase 플러그인 테스트 전 항상 다시 실행합니다.

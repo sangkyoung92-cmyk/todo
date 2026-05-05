@@ -1,6 +1,6 @@
 {
   "appId": "com.sangkyoung.todo.companion",
-  "appName": "Todo Companion",
+  "appName": "정리노트",
   "webDir": "www",
   "bundledWebRuntime": false,
   "plugins": {
