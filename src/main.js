@@ -1,4 +1,4 @@
-import { load, nowISO, save, state, uid, getNextSectionColor } from './state/store.js';
+import { load, nowISO, save, state, uid, getNextSectionColor, pruneDeletedNotes } from './state/store.js';
 import {
   addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
@@ -14,6 +14,7 @@ import {
   addScheduleTaskBtn,
   plannerExtractBtn,
   plannerTopbarToggleBtn,
+  trashToggleBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
@@ -46,12 +47,43 @@ import { showScheduleModal } from './ui/schedule-modal.js';
 import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 
 function rerender() {
+  pruneExpiredTrash();
   if (state.appMode === 'schedule') {
     renderSchedule(rerender);
   } else {
     renderAll(rerender);
   }
   syncEditorChrome();
+}
+
+function pruneExpiredTrash() {
+  const changed = pruneDeletedNotes();
+  if (!changed) return false;
+
+  save();
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
+
+function setNoteListMode(mode, options = {}) {
+  state.noteListMode = mode === 'trash' ? 'trash' : 'notes';
+  state.searchQuery = '';
+  searchInput.value = '';
+
+  if (state.noteListMode === 'trash') {
+    state.selectedDeletedNoteId = options.selectedDeletedNoteId || state.deletedNotes[0]?.id || null;
+    state.selectedNoteId = null;
+  } else {
+    state.selectedDeletedNoteId = null;
+    if (options.selectedTabId) state.selectedTabId = options.selectedTabId;
+    state.selectedNoteId = options.selectedNoteId
+      || state.notes.find((note) => note.tabId === state.selectedTabId)?.id
+      || null;
+  }
+
+  save();
+  rerender();
 }
 
 function syncEditorChrome() {
@@ -231,6 +263,8 @@ function addTab() {
   };
 
   state.tabs.push(tab);
+  state.noteListMode = 'notes';
+  state.selectedDeletedNoteId = null;
   state.selectedTabId = tab.id;
   state.selectedNoteId = null;
   save();
@@ -254,6 +288,8 @@ function addNote() {
     updatedAt: now,
   };
 
+  state.noteListMode = 'notes';
+  state.selectedDeletedNoteId = null;
   state.notes.push(note);
   state.selectedNoteId = note.id;
 
@@ -1292,6 +1328,9 @@ noteRecordBtn?.addEventListener('click', () => {
 });
 recordingPanel.onStop(() => speechRecorder.stop());
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
+trashToggleBtn?.addEventListener('click', () => {
+  setNoteListMode(state.noteListMode === 'trash' ? 'notes' : 'trash');
+});
 plannerTopbarToggleBtn?.addEventListener('click', () => {
   state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
   save();
@@ -1539,8 +1578,12 @@ onAuthChange((user) => {
 });
 
 load();
+pruneExpiredTrash();
 initNotesPanelResize(notesLayoutEl);
 initSchedulePanelResize(scheduleWorkspaceEl);
 initScheduleNav(rerender);
 // 저장된 모드로 초기 UI 적용
 applyAppMode(state.appMode || 'notes');
+window.setInterval(() => {
+  if (pruneExpiredTrash()) rerender();
+}, 60 * 60 * 1000);

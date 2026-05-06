@@ -4466,6 +4466,12 @@ textarea:focus-visible,
   text-transform: none;
 }
 
+.panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .add-btn,
 .ghost-btn,
 .settings-btn,
@@ -4514,6 +4520,20 @@ textarea:focus-visible,
   color: var(--accent-strong);
 }
 
+.ghost-btn.active {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.ghost-btn:disabled,
+.settings-btn:disabled {
+  border-color: var(--line);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  cursor: not-allowed;
+}
+
 .list {
   padding: 10px;
 }
@@ -4540,6 +4560,17 @@ textarea:focus-visible,
   border-left-color: var(--accent);
 }
 
+.page-item.trashed {
+  border-style: dashed;
+  border-left-color: rgba(208, 64, 73, 0.24);
+}
+
+.page-item.trashed.active {
+  background: #fff6f6;
+  border-color: rgba(208, 64, 73, 0.2);
+  border-left-color: #d04049;
+}
+
 .page-title {
   color: var(--text);
   font-size: 14px;
@@ -4559,6 +4590,28 @@ textarea:focus-visible,
 
 .page-actions {
   opacity: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-item.trashed .page-actions,
+.page-item:hover .page-actions,
+.page-item.active .page-actions {
+  opacity: 1;
+}
+
+.trash-tag {
+  background: #eef3f6;
+  color: #55707e;
+}
+
+.danger-icon-btn {
+  color: #b5454d;
+}
+
+.danger-icon-btn:hover {
+  background: #fff1f2;
+  color: #9f1d35;
 }
 
 .empty-state,

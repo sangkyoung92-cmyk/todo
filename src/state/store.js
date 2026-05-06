@@ -6,6 +6,8 @@ export const SECTION_COLORS = [
   '#5B8DEF', '#37A987', '#F29F67', '#E87EA1',
   '#8A7CF6', '#4FA3B8', '#9D7FEA', '#F3B562',
 ];
+export const TRASH_RETENTION_DAYS = 7;
+export const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 
@@ -17,14 +19,17 @@ function getDefaultWeekStart() {
 export const state = {
   tabs: [],
   notes: [],
+  deletedNotes: [],
   todos: [],
   todoInbox: [],
   behaviorLog: [],
   recordingDrafts: {},
   selectedTabId: null,
   selectedNoteId: null,
+  selectedDeletedNoteId: null,
   saveTimer: null,
   searchQuery: '',
+  noteListMode: 'notes', // 'notes' | 'trash'
   pendingDeleteNoteIds: [], // tracks note IDs to delete from Firestore (not persisted)
   // Schedule state
   scheduleEntries: [],      // { id, todoId, date, done, completedAt, createdAt, updatedAt }
@@ -61,16 +66,53 @@ export function getNextSectionColor() {
   return SECTION_COLORS[used % SECTION_COLORS.length];
 }
 
+export function pruneDeletedNotes(referenceTime = Date.now()) {
+  if (!Array.isArray(state.deletedNotes) || state.deletedNotes.length === 0) {
+    if (state.selectedDeletedNoteId !== null) {
+      state.selectedDeletedNoteId = null;
+      return true;
+    }
+    return false;
+  }
+
+  const cutoff = referenceTime - TRASH_RETENTION_MS;
+  const nextDeletedNotes = state.deletedNotes.filter((note) => {
+    const deletedAt = Date.parse(note?.deletedAt || '');
+    if (!Number.isFinite(deletedAt)) return true;
+    return deletedAt > cutoff;
+  });
+
+  let changed = nextDeletedNotes.length !== state.deletedNotes.length;
+  if (changed) {
+    state.deletedNotes = nextDeletedNotes;
+  }
+
+  const hasSelectedDeletedNote = state.deletedNotes.some((note) => note.id === state.selectedDeletedNoteId);
+  if (!hasSelectedDeletedNote) {
+    const nextSelectedDeletedNoteId = state.deletedNotes[0]?.id || null;
+    if (state.selectedDeletedNoteId !== nextSelectedDeletedNoteId) {
+      state.selectedDeletedNoteId = nextSelectedDeletedNoteId;
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 export function save() {
+  pruneDeletedNotes();
   const payload = {
     tabs: state.tabs,
     notes: state.notes,
+    deletedNotes: state.deletedNotes,
     todos: state.todos,
     todoInbox: state.todoInbox,
     behaviorLog: state.behaviorLog,
     recordingDrafts: state.recordingDrafts,
     selectedTabId: state.selectedTabId,
     selectedNoteId: state.selectedNoteId,
+    selectedDeletedNoteId: state.selectedDeletedNoteId,
+    noteListMode: state.noteListMode,
     scheduleEntries: state.scheduleEntries,
     appMode: state.appMode,
     scheduleView: state.scheduleView,
@@ -90,13 +132,16 @@ export function load() {
   if (!raw) {
     state.tabs = [];
     state.notes = [];
+    state.deletedNotes = [];
     state.todos = [];
     state.todoInbox = [];
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedNoteId = null;
+    state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
+    state.noteListMode = 'notes';
     state.appMode = 'notes';
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
@@ -111,6 +156,7 @@ export function load() {
     const parsed = JSON.parse(raw);
     state.tabs = parsed.tabs || [];
     state.notes = parsed.notes || [];
+    state.deletedNotes = parsed.deletedNotes || [];
     state.todos = parsed.todos || [];
     state.todoInbox = parsed.todoInbox || [];
     state.behaviorLog = parsed.behaviorLog || [];
@@ -126,6 +172,9 @@ export function load() {
     state.selectedTabId = parsed.selectedTabId || state.tabs[0]?.id || null;
     const tabNotes = getCurrentTabNotes();
     state.selectedNoteId = parsed.selectedNoteId || tabNotes[0]?.id || null;
+    state.selectedDeletedNoteId = parsed.selectedDeletedNoteId || state.deletedNotes[0]?.id || null;
+    state.noteListMode = parsed.noteListMode === 'trash' ? 'trash' : 'notes';
+    pruneDeletedNotes();
 
     state.scheduleEntries = parsed.scheduleEntries || [];
     state.appMode = parsed.appMode || 'notes';
@@ -148,13 +197,16 @@ export function load() {
     console.error('Failed to parse storage:', error);
     state.tabs = [];
     state.notes = [];
+    state.deletedNotes = [];
     state.todos = [];
     state.todoInbox = [];
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedNoteId = null;
+    state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
+    state.noteListMode = 'notes';
     state.appMode = 'notes';
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();

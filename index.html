@@ -215,10 +215,13 @@
       <section class="panel pages-panel">
         <div class="panel-head">
           <h2 id="current-section-name">페이지</h2>
-          <button id="add-note-btn" class="add-btn">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
-            페이지
-          </button>
+          <div class="panel-head-actions">
+            <button id="trash-toggle-btn" class="ghost-btn ghost-btn--small" type="button" aria-pressed="false">휴지통</button>
+            <button id="add-note-btn" class="add-btn">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
+              페이지
+            </button>
+          </div>
         </div>
         <ul id="note-list" class="list"></ul>
       </section>

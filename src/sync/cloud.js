@@ -1,13 +1,12 @@
 import {
   doc,
-  setDoc,
   getDoc,
   collection,
   getDocs,
   writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db } from '../firebase-config.js';
-import { state, save, nowISO } from '../state/store.js';
+import { state, save, nowISO, pruneDeletedNotes } from '../state/store.js';
 
 let currentUid = null;
 const dirtyNoteIds = new Set();
@@ -138,11 +137,14 @@ export async function loadFromCloud(rerender) {
       // This account has no cloud state yet: start from empty account workspace.
       state.tabs = [];
       state.notes = [];
+      state.deletedNotes = [];
       state.todos = [];
       state.todoInbox = [];
       state.behaviorLog = [];
       state.selectedTabId = null;
       state.selectedNoteId = null;
+      state.selectedDeletedNoteId = null;
+      state.noteListMode = 'notes';
       state.scheduleEntries = [];
       save();
       dirtyNoteIds.clear();
@@ -161,8 +163,11 @@ export async function loadFromCloud(rerender) {
     state.todos = cloudData.todos || [];
     state.todoInbox = cloudData.todoInbox || [];
     state.behaviorLog = cloudData.behaviorLog || [];
+    state.deletedNotes = cloudData.deletedNotes || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
     state.selectedNoteId = cloudData.selectedNoteId || null;
+    state.selectedDeletedNoteId = null;
+    state.noteListMode = 'notes';
     state.notes = cloudNotes;
     state.scheduleEntries = cloudData.scheduleEntries || [];
     if (cloudData.appMode) state.appMode = cloudData.appMode;
@@ -170,16 +175,21 @@ export async function loadFromCloud(rerender) {
     if (cloudData.scheduleWeekStart) state.scheduleWeekStart = cloudData.scheduleWeekStart;
     if (cloudData.scheduleMonth) state.scheduleMonth = cloudData.scheduleMonth;
     state.smartPlannerCollapsed = cloudData.smartPlannerCollapsed || false;
+    const prunedExpiredTrash = pruneDeletedNotes();
 
     // Persist to localStorage and clear pending local sync queue
     save();
     dirtyNoteIds.clear();
-    hasDirtyState = false;
+    hasDirtyState = prunedExpiredTrash;
     state.pendingDeleteNoteIds.length = 0;
 
     rerender?.();
 
-    updateSyncStatus('synced');
+    if (prunedExpiredTrash) {
+      scheduleSync();
+    } else {
+      updateSyncStatus('synced');
+    }
   } catch (err) {
     console.error('Failed to load from cloud:', err);
     updateSyncStatus('error', describeSyncError(err, 'load'));
@@ -189,6 +199,10 @@ export async function loadFromCloud(rerender) {
 /** Write all dirty notes and state doc to Firestore */
 export async function syncToCloud() {
   if (!currentUid) return;
+  const prunedExpiredTrash = pruneDeletedNotes();
+  if (prunedExpiredTrash) {
+    hasDirtyState = true;
+  }
   if (!hasDirtyState && dirtyNoteIds.size === 0 && state.pendingDeleteNoteIds.length === 0) return;
 
   try {
@@ -198,6 +212,7 @@ export async function syncToCloud() {
     const stateRef = doc(db, 'users', currentUid, 'data', 'state');
     batch.set(stateRef, {
       tabs: state.tabs,
+      deletedNotes: state.deletedNotes,
       todos: state.todos,
       todoInbox: state.todoInbox,
       behaviorLog: state.behaviorLog,
