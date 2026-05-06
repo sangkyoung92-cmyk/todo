@@ -19,8 +19,38 @@ export function setSyncStatusCallback(cb) {
   syncStatusCallback = cb;
 }
 
-function updateSyncStatus(status) {
-  syncStatusCallback?.(status);
+function describeSyncError(err, phase) {
+  const code = err?.code || '';
+  const rawMessage = err?.message || String(err || '');
+  let summary = phase === 'load'
+    ? '클라우드 데이터를 불러오지 못했습니다.'
+    : '클라우드에 변경사항을 저장하지 못했습니다.';
+
+  if (code === 'permission-denied') {
+    summary = 'Firestore 권한이 없어서 동기화에 실패했습니다.';
+  } else if (code === 'unauthenticated') {
+    summary = '로그인 세션이 없어서 동기화에 실패했습니다.';
+  } else if (code === 'unavailable') {
+    summary = '네트워크 또는 Firebase 서버 연결 문제로 동기화에 실패했습니다.';
+  } else if (code === 'failed-precondition') {
+    summary = 'Firestore 설정이 완료되지 않았거나 필요한 조건이 충족되지 않았습니다.';
+  } else if (code === 'not-found') {
+    summary = '필요한 Firestore 리소스를 찾지 못했습니다.';
+  }
+
+  return {
+    phase,
+    code,
+    rawMessage,
+    summary,
+  };
+}
+
+function updateSyncStatus(status, error = null) {
+  syncStatusCallback?.({
+    status,
+    error: error || null,
+  });
 }
 
 export function setCurrentUser(uid) {
@@ -152,7 +182,7 @@ export async function loadFromCloud(rerender) {
     updateSyncStatus('synced');
   } catch (err) {
     console.error('Failed to load from cloud:', err);
-    updateSyncStatus('error');
+    updateSyncStatus('error', describeSyncError(err, 'load'));
   }
 }
 
@@ -204,6 +234,6 @@ export async function syncToCloud() {
     updateSyncStatus('synced');
   } catch (err) {
     console.error('Sync to cloud failed:', err);
-    updateSyncStatus('error');
+    updateSyncStatus('error', describeSyncError(err, 'sync'));
   }
 }

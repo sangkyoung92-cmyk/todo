@@ -1378,9 +1378,45 @@ const SYNC_LABELS = {
   error: '☁ 오류',
 };
 
-setSyncStatusCallback((status) => {
+function buildSyncErrorMessage(error) {
+  if (!error) return '';
+  const lines = [error.summary];
+  if (error.code) lines.push(`코드: ${error.code}`);
+  if (error.rawMessage) lines.push(`원본: ${error.rawMessage}`);
+  return lines.join('\n');
+}
+
+function clearSyncStatusDisplay() {
+  syncStatusEl.textContent = '';
+  syncStatusEl.title = '';
+  syncStatusEl.dataset.status = '';
+  syncStatusEl.dataset.errorMessage = '';
+  syncStatusEl.setAttribute('aria-label', '');
+  syncStatusEl.style.cursor = '';
+}
+
+setSyncStatusCallback(({ status, error }) => {
   syncStatusEl.textContent = SYNC_LABELS[status] || '';
   syncStatusEl.dataset.status = status;
+  if (status === 'error' && error) {
+    const message = buildSyncErrorMessage(error);
+    syncStatusEl.title = message;
+    syncStatusEl.dataset.errorMessage = message;
+    syncStatusEl.setAttribute('aria-label', message);
+    syncStatusEl.style.cursor = 'help';
+    return;
+  }
+
+  syncStatusEl.title = '';
+  syncStatusEl.dataset.errorMessage = '';
+  syncStatusEl.setAttribute('aria-label', syncStatusEl.textContent);
+  syncStatusEl.style.cursor = '';
+});
+
+syncStatusEl.addEventListener('click', () => {
+  const message = syncStatusEl.dataset.errorMessage || '';
+  if (!message) return;
+  alert(message);
 });
 
 // ── Auth ─────────────────────────────────────────────
@@ -1432,7 +1468,7 @@ function renderAuthArea(user) {
         }
       }
     });
-    syncStatusEl.textContent = '';
+    clearSyncStatusDisplay();
   }
 }
 
@@ -1449,7 +1485,7 @@ onAuthChange((user) => {
     loadFromCloud(rerender);
   } else {
     setCurrentUser(null);
-    syncStatusEl.textContent = '';
+    clearSyncStatusDisplay();
   }
 });
 
