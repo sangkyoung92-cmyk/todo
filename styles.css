@@ -4594,13 +4594,13 @@ textarea:focus-visible,
 .note-header-area,
 .note-content {
   width: 100%;
-  max-width: 920px;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .note-header-area {
-  padding: 32px 32px 0;
+  padding: 32px clamp(24px, 3.2vw, 56px) 0;
 }
 
 .note-title-input {
@@ -4628,10 +4628,19 @@ textarea:focus-visible,
 }
 
 .note-content {
-  padding: 24px 32px 48px;
+  --note-virtual-scroll-space: 0px;
+  padding: 24px clamp(24px, 3.2vw, 56px) 48px;
   font-size: 16px;
   line-height: 29px;
   letter-spacing: 0;
+  overscroll-behavior-y: contain;
+}
+
+.note-content::after {
+  content: '';
+  display: block;
+  block-size: var(--note-virtual-scroll-space);
+  pointer-events: none;
 }
 
 .note-content:empty::before {
@@ -4689,7 +4698,7 @@ textarea:focus-visible,
 
 .layout.todo-panel-collapsed .note-header-area,
 .layout.todo-panel-collapsed .note-content {
-  max-width: min(1180px, calc(100% - 64px));
+  max-width: none;
 }
 
 .layout.todo-panel-collapsed .todo-panel {

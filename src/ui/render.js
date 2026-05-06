@@ -11,6 +11,7 @@ let editingTabId = null;
 let draggedSectionId = null;
 let draggedNoteId = null;
 let suppressDragClick = false;
+let lastRenderedNoteId = null;
 
 function clearDragClasses() {
   document
@@ -390,6 +391,7 @@ export function renderNotes(onRender) {
 export function renderEditor() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   const disabled = !note;
+  const noteId = note?.id || null;
 
   titleEl.disabled = disabled;
   contentEl.contentEditable = disabled ? 'false' : 'true';
@@ -397,16 +399,22 @@ export function renderEditor() {
   if (disabled) {
     titleEl.value = '';
     contentEl.innerHTML = '';
+    contentEl.style.setProperty('--note-virtual-scroll-space', '0px');
     noteDateEl.textContent = '';
+    lastRenderedNoteId = null;
     saveStatusEl.textContent = '선택된 페이지 없음';
     return;
   }
 
+  if (noteId !== lastRenderedNoteId) {
+    contentEl.style.setProperty('--note-virtual-scroll-space', '0px');
+  }
   titleEl.value = note.title;
   contentEl.innerHTML = note.content;
   contentEl.classList.toggle('ruled-paper', state.notePaperMode !== 'plain');
   noteDateEl.textContent = `최종 수정: ${formatDate(note.updatedAt)}`;
   saveStatusEl.textContent = '저장됨';
+  lastRenderedNoteId = noteId;
 }
 
 export function renderAll(onRender) {

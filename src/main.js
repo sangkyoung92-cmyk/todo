@@ -61,6 +61,49 @@ function syncEditorChrome() {
   document.getElementById('toggle-ruled-btn')?.classList.toggle('active', isRuled);
 }
 
+const MAX_EDITOR_VIRTUAL_SPACE = 2400;
+const EDITOR_VIRTUAL_SCROLL_TRIGGER = 2;
+
+function getEditorVirtualScrollSpace() {
+  if (!contentEl) return 0;
+  const value = Number.parseFloat(
+    getComputedStyle(contentEl).getPropertyValue('--note-virtual-scroll-space'),
+  );
+  return Number.isFinite(value) ? value : 0;
+}
+
+function setEditorVirtualScrollSpace(height) {
+  if (!contentEl) return;
+  const next = Math.max(0, Math.min(MAX_EDITOR_VIRTUAL_SPACE, Math.round(height)));
+  contentEl.style.setProperty('--note-virtual-scroll-space', `${next}px`);
+}
+
+function getEditorNativeScrollable() {
+  if (!contentEl) return 0;
+  const virtualSpace = getEditorVirtualScrollSpace();
+  return Math.max(0, contentEl.scrollHeight - contentEl.clientHeight - virtualSpace);
+}
+
+function expandEditorVirtualScroll(deltaY) {
+  if (!contentEl || deltaY <= 0) return;
+  const maxScroll = Math.max(0, contentEl.scrollHeight - contentEl.clientHeight);
+  const remaining = maxScroll - contentEl.scrollTop;
+  if (remaining > EDITOR_VIRTUAL_SCROLL_TRIGGER) return;
+  setEditorVirtualScrollSpace(getEditorVirtualScrollSpace() + deltaY);
+}
+
+function syncEditorVirtualScrollSpace() {
+  if (!contentEl) return;
+  const current = getEditorVirtualScrollSpace();
+  if (!current) return;
+  const nativeScrollable = getEditorNativeScrollable();
+  const usedVirtualSpace = Math.max(0, contentEl.scrollTop - nativeScrollable);
+  const next = usedVirtualSpace <= 1 ? 0 : usedVirtualSpace;
+  if (Math.abs(next - current) > 1) {
+    setEditorVirtualScrollSpace(next);
+  }
+}
+
 // ── 앱 모드 전환 (노트 / 스케줄) ─────────────────
 function applyAppMode(mode) {
   state.appMode = mode;
@@ -1037,7 +1080,13 @@ contentEl.addEventListener('click', (e) => {
   }
 });
 
-contentEl.addEventListener('scroll', () => { if (selectedImg) updateImgOverlay(); });
+contentEl.addEventListener('wheel', (e) => {
+  expandEditorVirtualScroll(e.deltaY);
+}, { passive: true });
+contentEl.addEventListener('scroll', () => {
+  syncEditorVirtualScrollSpace();
+  if (selectedImg) updateImgOverlay();
+});
 window.addEventListener('resize', () => { if (selectedImg) updateImgOverlay(); });
 window.addEventListener('scroll', () => { if (selectedImg) updateImgOverlay(); }, true);
 
