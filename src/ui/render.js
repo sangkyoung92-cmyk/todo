@@ -1,4 +1,11 @@
-import { state, getCurrentTabNotes, nowISO, save } from '../state/store.js';
+import {
+  state,
+  getCurrentTabNotes,
+  nowISO,
+  save,
+  TRASH_RETENTION_DAYS,
+  TRASH_RETENTION_MS,
+} from '../state/store.js';
 import { escapeHtml, formatDate, formatDateShort } from '../utils/format.js';
 import {
   addNoteBtn,
@@ -186,6 +193,19 @@ function renderActiveItemActions() {
   `;
 }
 
+function getTrashRetentionLabel(deletedAt) {
+  const deletedTime = Date.parse(deletedAt || '');
+  if (!Number.isFinite(deletedTime)) {
+    return `${TRASH_RETENTION_DAYS}일 보관`;
+  }
+
+  const remainingMs = Math.max(0, deletedTime + TRASH_RETENTION_MS - Date.now());
+  const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+
+  if (remainingDays <= 0) return '오늘 삭제';
+  return `${remainingDays}일 뒤 삭제`;
+}
+
 export function renderTabs(onRender) {
   tabListEl.innerHTML = '';
   const activeTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
@@ -216,6 +236,13 @@ export function renderTabs(onRender) {
         </button>
       </div>
     `;
+
+    if (trashMode) {
+      const metaEl = li.querySelector('.page-meta');
+      if (metaEl) {
+        metaEl.insertAdjacentHTML('beforeend', ` <span class="trash-retention-meta">· ${getTrashRetentionLabel(note.deletedAt || note.updatedAt)}</span>`);
+      }
+    }
 
     li.addEventListener('click', (e) => {
       if (isEditing) return;

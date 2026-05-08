@@ -950,12 +950,12 @@ export function initScheduleNav(onRender) {
     renderSchedule(onRender);
   });
 
-  scheduleGotoDateInput?.addEventListener('change', applyGotoDate);
   scheduleGotoDateInput?.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
     applyGotoDate();
   });
+  scheduleGotoDateInput?.addEventListener('dateinput:pick', applyGotoDate);
 
   document.querySelectorAll('.schedule-view-btn').forEach((btn) => {
     btn.addEventListener('click', () => {

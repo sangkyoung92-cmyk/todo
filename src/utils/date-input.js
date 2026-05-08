@@ -74,6 +74,8 @@ export function configureDateTextInput(input, options = {}) {
 
   input.dataset.dateTextInputReady = 'true';
 
+  ensureDatePickerButton(input, { min: options.min, max: options.max });
+
   input.addEventListener('input', () => {
     const nextValue = formatDateDigits(stripToDigits(input.value));
     if (input.value !== nextValue) {
@@ -93,6 +95,61 @@ export function configureDateTextInput(input, options = {}) {
     if (nextValue === undefined) return;
     input.value = nextValue || '';
   });
+}
+
+function ensureDatePickerButton(input, options = {}) {
+  if (input.dataset.datePickerEnhanced === 'true') return;
+  input.dataset.datePickerEnhanced = 'true';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'date-input-combo';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'date-picker-btn';
+  button.title = '달력 열기';
+  button.setAttribute('aria-label', '달력 열기');
+  button.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 2a1 1 0 011 1v1h6V3a1 1 0 112 0v1h1a2 2 0 012 2v9a3 3 0 01-3 3H5a3 3 0 01-3-3V6a2 2 0 012-2h1V3a1 1 0 011-1zm10 7H4v6a1 1 0 001 1h10a1 1 0 001-1V9zM5 6a1 1 0 00-1 1h12a1 1 0 00-1-1H5z"/></svg>';
+
+  const picker = document.createElement('input');
+  picker.type = 'date';
+  picker.className = 'date-picker-native';
+  picker.tabIndex = -1;
+  picker.setAttribute('aria-hidden', 'true');
+  picker.min = options.min || DEFAULT_MIN;
+  picker.max = options.max || DEFAULT_MAX;
+
+  const syncPickerValue = () => {
+    const dateKey = readDateInputValue(input, {
+      allowEmpty: true,
+      min: picker.min,
+      max: picker.max,
+      report: false,
+    });
+    picker.value = dateKey || '';
+  };
+
+  button.addEventListener('click', () => {
+    syncPickerValue();
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker();
+      return;
+    }
+    picker.click();
+  });
+
+  picker.addEventListener('change', () => {
+    setDateInputValue(input, picker.value || '');
+    input.dispatchEvent(new CustomEvent('dateinput:pick', {
+      bubbles: true,
+      detail: { value: picker.value || null },
+    }));
+  });
+
+  wrapper.appendChild(button);
+  wrapper.appendChild(picker);
 }
 
 export function readDateInputValue(input, options = {}) {

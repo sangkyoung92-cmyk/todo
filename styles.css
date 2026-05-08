@@ -5151,6 +5151,56 @@ textarea:focus-visible,
   flex-shrink: 0;
 }
 
+.date-input-combo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.date-input-combo .todo-modal-date,
+.date-input-combo .schedule-goto-date {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.date-picker-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.date-picker-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.date-picker-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.date-picker-native {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trash-retention-meta {
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
 .schedule-task-section-toggle[data-section="today"] {
   color: #0f766e;
 }
