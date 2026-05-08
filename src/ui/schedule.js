@@ -51,6 +51,10 @@ import {
   buildLocalPlannerSuggestions,
 } from '../../packages/schedule-core/planner.js';
 import { showScheduleModal } from './schedule-modal.js';
+import {
+  configureDateTextInput,
+  readDateInputValue,
+} from '../utils/date-input.js';
 
 let onRenderCallback = null;
 let taskFilter = 'active';
@@ -68,6 +72,8 @@ const SCHEDULE_SECTIONS = [
 const taskHelpers = { uid, nowISO };
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
+
+configureDateTextInput(scheduleGotoDateInput);
 
 function persistAndSync() {
   save();
@@ -509,9 +515,7 @@ function bindTaskListEvents(targetEl, onRender, options = {}) {
   targetEl.querySelectorAll('[data-action="edit-inline"]').forEach((el) => {
     el.addEventListener('click', (event) => {
       event.stopPropagation();
-      const card = el.closest('.schedule-task-card');
-      if (!card) return;
-      openTaskTextEdit(card, el.dataset.todoId, onRender);
+      editTask(el.dataset.todoId).then(() => onRender());
     });
   });
 
@@ -537,7 +541,7 @@ function bindTaskListEvents(targetEl, onRender, options = {}) {
     el.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      openTaskDeadlineEdit(el, el.dataset.todoId, onRender);
+      editTask(el.dataset.todoId).then(() => onRender());
     });
   });
 
@@ -910,6 +914,20 @@ export function initScheduleNav(onRender) {
   // 달력 이벤트 위임 초기화 (한 번만 등록)
   initCalendarEventDelegation();
 
+  const applyGotoDate = () => {
+    const dateStr = readDateInputValue(scheduleGotoDateInput, { allowEmpty: true, report: true });
+    if (!dateStr) return;
+
+    const targetDate = fromDateKey(dateStr);
+    if (state.scheduleView === 'week') {
+      state.scheduleWeekStart = toDateKey(getSunday(targetDate));
+    } else {
+      state.scheduleMonth = dateStr.slice(0, 7);
+    }
+    save();
+    renderSchedule(onRender);
+  };
+
   schedulePrevBtn?.addEventListener('click', () => {
     if (state.scheduleView === 'week') prevWeek();
     else prevMonth();
@@ -932,17 +950,11 @@ export function initScheduleNav(onRender) {
     renderSchedule(onRender);
   });
 
-  scheduleGotoDateInput?.addEventListener('change', () => {
-    const dateStr = scheduleGotoDateInput.value;
-    if (!DATE_KEY_PATTERN.test(dateStr)) return;
-    const targetDate = fromDateKey(dateStr);
-    if (state.scheduleView === 'week') {
-      state.scheduleWeekStart = toDateKey(getSunday(targetDate));
-    } else {
-      state.scheduleMonth = dateStr.slice(0, 7);
-    }
-    save();
-    renderSchedule(onRender);
+  scheduleGotoDateInput?.addEventListener('change', applyGotoDate);
+  scheduleGotoDateInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    applyGotoDate();
   });
 
   document.querySelectorAll('.schedule-view-btn').forEach((btn) => {

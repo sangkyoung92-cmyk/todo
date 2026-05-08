@@ -14,7 +14,7 @@ import {
   addScheduleTaskBtn,
   plannerExtractBtn,
   plannerTopbarToggleBtn,
-  trashToggleBtn,
+  topbarTrashBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
@@ -150,6 +150,11 @@ function applyAppMode(mode) {
   if (sectionTabsBarEl) sectionTabsBarEl.style.display = isSchedule ? 'none' : '';
   if (toolbarEl) toolbarEl.style.display = isSchedule ? 'none' : '';
   if (plannerTopbarToggleBtn) plannerTopbarToggleBtn.hidden = !isSchedule;
+  if (topbarTrashBtn) {
+    const trashActive = !isSchedule && state.noteListMode === 'trash';
+    topbarTrashBtn.classList.toggle('active', trashActive);
+    topbarTrashBtn.setAttribute('aria-pressed', String(trashActive));
+  }
 
   // 탭 버튼 active 상태
   appModeTabs.forEach((tab) => {
@@ -1328,7 +1333,10 @@ noteRecordBtn?.addEventListener('click', () => {
 });
 recordingPanel.onStop(() => speechRecorder.stop());
 plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
-trashToggleBtn?.addEventListener('click', () => {
+topbarTrashBtn?.addEventListener('click', () => {
+  if (state.appMode !== 'notes') {
+    applyAppMode('notes');
+  }
   setNoteListMode(state.noteListMode === 'trash' ? 'notes' : 'trash');
 });
 plannerTopbarToggleBtn?.addEventListener('click', () => {

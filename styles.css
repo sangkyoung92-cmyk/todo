@@ -5128,6 +5128,65 @@ textarea:focus-visible,
   box-shadow: var(--focus-ring);
 }
 
+.topbar-icon-btn.active,
+.topbar-action-btn.active {
+  border-color: rgba(15, 118, 110, 0.3);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.panel-head {
+  min-width: 0;
+}
+
+#current-section-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.panel-head-actions {
+  flex-shrink: 0;
+}
+
+.schedule-task-section-toggle[data-section="today"] {
+  color: #0f766e;
+}
+
+.schedule-task-section-toggle[data-section="today"] .schedule-task-section-count {
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+}
+
+.schedule-task-section-toggle[data-section="week"] {
+  color: #1d4ed8;
+}
+
+.schedule-task-section-toggle[data-section="week"] .schedule-task-section-count {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.schedule-task-section-toggle[data-section="month"] {
+  color: #7c3aed;
+}
+
+.schedule-task-section-toggle[data-section="month"] .schedule-task-section-count {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+
+.schedule-task-section-toggle[data-section="other"] {
+  color: #475569;
+}
+
+.schedule-task-section-toggle[data-section="other"] .schedule-task-section-count {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
 @media (max-width: 1200px) {
   .layout {
     grid-template-columns: 240px minmax(0, 1fr);

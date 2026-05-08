@@ -11,7 +11,7 @@ import {
   saveStatusEl,
   tabListEl,
   titleEl,
-  trashToggleBtn,
+  topbarTrashBtn,
 } from './dom.js';
 import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { renderTodos } from './todo.js';
@@ -48,12 +48,11 @@ function clearSearchUI() {
 function syncNotesPanelHead() {
   const trashMode = state.noteListMode === 'trash';
 
-  if (trashToggleBtn) {
-    trashToggleBtn.textContent = trashMode
-      ? '노트 보기'
-      : `휴지통${state.deletedNotes.length ? ` (${state.deletedNotes.length})` : ''}`;
-    trashToggleBtn.classList.toggle('active', trashMode);
-    trashToggleBtn.setAttribute('aria-pressed', String(trashMode));
+  if (topbarTrashBtn) {
+    const isActive = trashMode && state.appMode === 'notes';
+    topbarTrashBtn.classList.toggle('active', isActive);
+    topbarTrashBtn.setAttribute('aria-pressed', String(isActive));
+    topbarTrashBtn.title = isActive ? '휴지통 닫기' : '휴지통';
   }
 
   if (addNoteBtn) {
@@ -227,6 +226,7 @@ export function renderTabs(onRender) {
       }
       state.noteListMode = 'notes';
       state.selectedDeletedNoteId = null;
+      clearSearchUI();
       state.selectedTabId = tab.id;
       state.selectedNoteId = getCurrentTabNotes()[0]?.id || null;
       save();
@@ -402,12 +402,15 @@ export function renderNotes(onRender) {
   const isSearch = state.searchQuery.trim().length > 0;
 
   if (trashMode) {
-    currentSectionNameEl.textContent = '휴지통';
+    currentSectionNameEl.textContent = '페이지';
+    currentSectionNameEl.title = '삭제된 페이지';
   } else if (isSearch) {
-    currentSectionNameEl.textContent = `검색: "${state.searchQuery}"`;
+    currentSectionNameEl.textContent = '검색 결과';
+    currentSectionNameEl.title = `검색: "${state.searchQuery}"`;
   } else {
     const tab = state.tabs.find((item) => item.id === state.selectedTabId);
     currentSectionNameEl.textContent = tab ? tab.name : '페이지';
+    currentSectionNameEl.title = tab ? tab.name : '페이지';
   }
 
   let notes;
@@ -571,7 +574,7 @@ export function renderEditor() {
       ? '휴지통에서 페이지를 선택하면 여기에서 내용을 미리 볼 수 있습니다.'
       : '';
     lastRenderedNoteKey = null;
-    saveStatusEl.textContent = trashMode ? '휴지통' : '선택된 페이지 없음';
+    saveStatusEl.textContent = trashMode ? '읽기 전용' : '선택된 페이지 없음';
     return;
   }
 
@@ -585,7 +588,7 @@ export function renderEditor() {
   noteDateEl.textContent = trashMode
     ? `휴지통 이동: ${formatDate(note.deletedAt || note.updatedAt)}`
     : `최종 수정: ${formatDate(note.updatedAt)}`;
-  saveStatusEl.textContent = trashMode ? '휴지통' : '저장됨';
+  saveStatusEl.textContent = trashMode ? '읽기 전용' : '저장됨';
   lastRenderedNoteKey = noteKey;
 }
 

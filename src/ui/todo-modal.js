@@ -1,4 +1,14 @@
-const DIFFICULTY_COLORS = { '상': '#e74c3c', '중': '#e67e22', '하': '#27ae60' };
+import {
+  configureDateTextInput,
+  readDateInputValue,
+  setDateInputValue,
+} from '../utils/date-input.js';
+
+const DIFFICULTY_COLORS = {
+  '\uC0C1': '#e74c3c',
+  '\uC911': '#e67e22',
+  '\uD558': '#27ae60',
+};
 
 const overlayEl = document.getElementById('todo-modal-overlay');
 const modalEl = document.getElementById('todo-modal');
@@ -8,7 +18,7 @@ const diffBtns = document.querySelectorAll('.todo-modal-diff-btn');
 const submitBtn = document.getElementById('todo-modal-submit');
 const cancelBtn = document.getElementById('todo-modal-cancel');
 
-let selectedDifficulty = '중';
+let selectedDifficulty = '\uC911';
 let resolvePromise = null;
 
 function setDifficulty(diff) {
@@ -24,8 +34,8 @@ function setDifficulty(diff) {
 
 function open() {
   textInput.value = '';
-  deadlineInput.value = '';
-  setDifficulty('중');
+  setDateInputValue(deadlineInput, '');
+  setDifficulty('\uC911');
   overlayEl.classList.add('open');
   modalEl.classList.add('open');
   setTimeout(() => textInput.focus(), 50);
@@ -42,14 +52,22 @@ function close(result) {
 
 function submit() {
   const text = textInput.value.trim();
+  const deadline = readDateInputValue(deadlineInput, { allowEmpty: true, report: true });
+
   if (!text) {
     textInput.focus();
     return;
   }
+
+  if (deadline === undefined) {
+    deadlineInput.focus();
+    return;
+  }
+
   close({
     text,
     difficulty: selectedDifficulty,
-    deadline: deadlineInput.value || null,
+    deadline,
   });
 }
 
@@ -57,23 +75,30 @@ diffBtns.forEach((btn) => {
   btn.addEventListener('click', () => setDifficulty(btn.dataset.diff));
 });
 
+configureDateTextInput(deadlineInput);
+
 submitBtn.addEventListener('click', submit);
 cancelBtn.addEventListener('click', () => close(null));
 overlayEl.addEventListener('click', () => close(null));
 
-textInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); submit(); }
-  if (e.key === 'Escape') { e.preventDefault(); close(null); }
+textInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submit();
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close(null);
+  }
 });
 
-modalEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { e.preventDefault(); close(null); }
+modalEl.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close(null);
+  }
 });
 
-/**
- * 할 일 추가 모달을 열고 결과를 반환한다.
- * @returns {Promise<{ text: string, difficulty: string, deadline: string|null } | null>}
- */
 export function showAddTodoModal() {
   return new Promise((resolve) => {
     resolvePromise = resolve;
