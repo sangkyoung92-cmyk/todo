@@ -16,7 +16,7 @@ import {
   plannerTopbarToggleBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260508d';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
