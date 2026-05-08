@@ -237,13 +237,6 @@ export function renderTabs(onRender) {
       </div>
     `;
 
-    if (trashMode) {
-      const metaEl = li.querySelector('.page-meta');
-      if (metaEl) {
-        metaEl.insertAdjacentHTML('beforeend', ` <span class="trash-retention-meta">· ${getTrashRetentionLabel(note.deletedAt || note.updatedAt)}</span>`);
-      }
-    }
-
     li.addEventListener('click', (e) => {
       if (isEditing) return;
       if (e.target.closest('.icon-btn')) return;
@@ -502,6 +495,13 @@ export function renderNotes(onRender) {
         ${trashMode ? renderTrashItemActions() : renderActiveItemActions()}
       </div>
     `;
+
+    if (trashMode) {
+      const metaEl = li.querySelector('.page-meta');
+      if (metaEl) {
+        metaEl.insertAdjacentHTML('beforeend', ` <span class="trash-retention-meta">· ${getTrashRetentionLabel(note.deletedAt || note.updatedAt)}</span>`);
+      }
+    }
 
     li.addEventListener('click', (e) => {
       if (e.target.closest('.icon-btn, .ghost-btn')) return;
