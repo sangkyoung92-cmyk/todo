@@ -334,8 +334,8 @@ function addTodoFromNoteText(text, options = {}) {
   const sourceNoteId = options.sourceNoteId || state.selectedNoteId || null;
   const projectName = getNoteProjectName(sourceNoteId);
   setTodoPanelCollapsed(false);
-  addTodo(cleanedText, sourceNoteId, '중', deadline, projectName);
-  markSelectedTextAsTodoSource(options.markRange);
+  const todoId = addTodo(cleanedText, sourceNoteId, '중', deadline, projectName);
+  markSelectedTextAsTodoSource(options.markRange, todoId);
   rerender();
 }
 
@@ -352,7 +352,7 @@ function getCurrentEditorRange() {
   return range.cloneRange();
 }
 
-function markSelectedTextAsTodoSource(sourceRange = null) {
+function markSelectedTextAsTodoSource(sourceRange = null, todoId = null) {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) return;
 
@@ -362,6 +362,7 @@ function markSelectedTextAsTodoSource(sourceRange = null) {
 
   const marker = document.createElement('span');
   marker.className = 'todo-source-mark';
+  if (todoId) marker.dataset.todoId = todoId;
   marker.appendChild(range.extractContents());
   range.insertNode(marker);
   selectNodeContents(marker);

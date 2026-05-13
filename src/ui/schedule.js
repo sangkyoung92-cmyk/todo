@@ -13,6 +13,7 @@ import {
   plannerAiAdviceEl,
   scheduleGotoTodayBtn,
   scheduleGotoDateInput,
+  contentEl,
 } from './dom.js';
 import {
   getSunday,
@@ -27,7 +28,7 @@ import {
   isSameMonth,
 } from '../utils/date-utils.js';
 import { getHolidayName, isHoliday, isWeekend } from '../utils/holiday-utils.js';
-import { markStateDirty, scheduleSync } from '../sync/cloud.js';
+import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import {
   buildTodoSectionsFromSchedule,
   getTodoSectionCompletion,
@@ -261,8 +262,49 @@ function toggleTaskDone(todoId, sectionKey, checked) {
 }
 
 function deleteTask(todoId) {
+  restoreTodoSourceMark(todoId);
   if (!deleteCoreTask(state, todoId)) return;
   persistAndSync();
+}
+
+function restoreTodoSourceMark(todoId) {
+  const todo = state.todos.find((item) => item.id === todoId);
+  if (!todo?.sourceNoteId) return;
+
+  const note = state.notes.find((item) => item.id === todo.sourceNoteId);
+  if (!note?.content) return;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = note.content;
+  const marks = [...wrap.querySelectorAll('.todo-source-mark')];
+  const target = marks.find((mark) => mark.dataset.todoId === todoId)
+    || marks.find((mark) => !mark.dataset.todoId && normalizeText(mark.textContent) === normalizeText(todo.text));
+  if (!target) return;
+
+  while (target.firstChild) {
+    target.parentNode.insertBefore(target.firstChild, target);
+  }
+  target.remove();
+
+  const now = nowISO();
+  note.content = wrap.innerHTML;
+  note.updatedAt = now;
+
+  const tab = state.tabs.find((item) => item.id === note.tabId);
+  if (tab) tab.updatedAt = now;
+
+  if (state.selectedNoteId === note.id && contentEl) {
+    contentEl.innerHTML = note.content;
+  }
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+}
+
+function normalizeText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
 async function editTask(todoId) {
