@@ -168,9 +168,11 @@ function getVisiblePlannerSuggestions() {
   });
 }
 
-export function addScheduleTask(text, deadline, difficulty) {
+export function addScheduleTask(text, deadline, difficulty, projectName = '', description = '') {
   const todoId = addCoreTask(state, {
     text,
+    projectName,
+    description,
     deadline,
     difficulty,
   }, taskHelpers);
@@ -269,6 +271,8 @@ async function editTask(todoId) {
 
   const result = await showScheduleModal({
     text: todo.text,
+    projectName: todo.projectName || '',
+    description: todo.description || '',
     deadline: todo.deadline || '',
     difficulty: todo.difficulty || '중',
   });
@@ -279,6 +283,8 @@ async function editTask(todoId) {
 
   if (!editCoreTask(state, todoId, {
     text: nextText,
+    projectName: result.projectName || '',
+    description: result.description || '',
     difficulty: result.difficulty || '중',
     deadline: result.deadline || null,
   }, taskHelpers)) {
@@ -442,6 +448,7 @@ export function renderTaskListInto(targetEl, onRender = rerenderSchedule, option
 
       html += `
         <li class="schedule-task-card ${sectionDone ? 'done-task' : ''}" ${draggable ? 'draggable="true"' : ''} data-todo-id="${todo.id}">
+          ${todo.projectName ? `<div class="schedule-task-project" title="${escapeHtml(todo.projectName)}">${escapeHtml(todo.projectName)}</div>` : ''}
           <div class="schedule-task-card-head">
             <div class="schedule-task-title-row">
               <input
@@ -471,6 +478,7 @@ export function renderTaskListInto(targetEl, onRender = rerenderSchedule, option
               <div class="schedule-progress-bar-fill" style="width:${percent}%"></div>
             </div>
           </div>
+          ${todo.description ? `<p class="schedule-task-description">${escapeHtml(todo.description)}</p>` : ''}
         </li>
       `;
     });
@@ -809,7 +817,13 @@ function initCalendarEventDelegation() {
     if (!dateKey) return;
     const result = await showScheduleModal({ deadline: dateKey, difficulty: '중' });
     if (!result) return;
-    addScheduleTask(result.text, result.deadline || dateKey, result.difficulty || '중');
+    addScheduleTask(
+      result.text,
+      result.deadline || dateKey,
+      result.difficulty || '중',
+      result.projectName || '',
+      result.description || '',
+    );
     rerenderSchedule();
   });
 }

@@ -12,9 +12,11 @@ const DIFFICULTY_COLORS = {
 
 const overlayEl = document.getElementById('todo-modal-overlay');
 const modalEl = document.getElementById('todo-modal');
+const projectInput = document.getElementById('todo-modal-project');
 const textInput = document.getElementById('todo-modal-text');
 const deadlineInput = document.getElementById('todo-modal-deadline');
-const diffBtns = document.querySelectorAll('.todo-modal-diff-btn');
+const descriptionInput = document.getElementById('todo-modal-description');
+const diffBtns = modalEl.querySelectorAll('.todo-modal-diff-btn');
 const submitBtn = document.getElementById('todo-modal-submit');
 const cancelBtn = document.getElementById('todo-modal-cancel');
 
@@ -33,7 +35,9 @@ function setDifficulty(diff) {
 }
 
 function open() {
+  projectInput.value = '';
   textInput.value = '';
+  descriptionInput.value = '';
   setDateInputValue(deadlineInput, '');
   setDifficulty('\uC911');
   overlayEl.classList.add('open');
@@ -65,9 +69,11 @@ function submit() {
   }
 
   close({
+    projectName: projectInput.value.trim(),
     text,
     difficulty: selectedDifficulty,
     deadline,
+    description: descriptionInput.value.trim(),
   });
 }
 
@@ -86,6 +92,13 @@ textInput.addEventListener('keydown', (event) => {
     event.preventDefault();
     submit();
   }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    close(null);
+  }
+});
+
+descriptionInput.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     event.preventDefault();
     close(null);

@@ -4,9 +4,11 @@ import { todoListEl } from './dom.js';
 import { renderTaskListInto } from './schedule.js';
 import { addTask } from '../../packages/schedule-core/tasks.js';
 
-export function addTodo(text, sourceNoteId = null, difficulty = null, deadline = null) {
+export function addTodo(text, sourceNoteId = null, difficulty = null, deadline = null, projectName = '', description = '') {
   const todoId = addTask(state, {
     text,
+    projectName,
+    description,
     sourceNoteId,
     difficulty,
     deadline,

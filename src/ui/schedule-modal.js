@@ -8,8 +8,10 @@ const overlay = document.getElementById('schedule-modal-overlay');
 const modal = document.getElementById('schedule-modal');
 const cancelBtn = document.getElementById('schedule-modal-cancel');
 const submitBtn = document.getElementById('schedule-modal-submit');
+const projectInput = document.getElementById('schedule-modal-project');
 const textInput = document.getElementById('schedule-modal-text');
 const deadlineInput = document.getElementById('schedule-modal-deadline');
+const descriptionInput = document.getElementById('schedule-modal-description');
 const titleEl = modal.querySelector('.todo-modal-header h3');
 const diffBtns = modal.querySelectorAll('.todo-modal-diff-btn');
 
@@ -28,7 +30,9 @@ function openModal(defaults = {}) {
   const modalTitle = defaults.title || (hasPrefilledText ? '\uC5C5\uBB34 \uC218\uC815' : '\uC5C5\uBB34 \uCD94\uAC00');
   const submitLabel = defaults.submitLabel || (hasPrefilledText ? '\uC800\uC7A5' : '\uCD94\uAC00');
 
+  projectInput.value = defaults.projectName || '';
   textInput.value = defaults.text || '';
+  descriptionInput.value = defaults.description || '';
   setDateInputValue(deadlineInput, defaults.deadline || '');
   titleEl.textContent = modalTitle;
   submitBtn.textContent = submitLabel;
@@ -63,9 +67,11 @@ function submit() {
   }
 
   closeModal({
+    projectName: projectInput.value.trim(),
     text,
     deadline,
     difficulty: selectedDiff,
+    description: descriptionInput.value.trim(),
   });
 }
 
@@ -84,6 +90,13 @@ textInput.addEventListener('keydown', (event) => {
     event.preventDefault();
     submit();
   }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeModal(null);
+  }
+});
+
+descriptionInput.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     event.preventDefault();
     closeModal(null);

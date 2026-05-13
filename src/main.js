@@ -184,7 +184,13 @@ appModeTabs.forEach((tab) => {
 addScheduleTaskBtn?.addEventListener('click', async () => {
   const result = await showScheduleModal();
   if (!result) return;
-  addScheduleTask(result.text, result.deadline, result.difficulty);
+  addScheduleTask(
+    result.text,
+    result.deadline,
+    result.difficulty,
+    result.projectName || '',
+    result.description || '',
+  );
   rerender();
 });
 
@@ -317,19 +323,41 @@ function addTodoFromSelection() {
     alert('에디터에서 할 일로 만들 텍스트를 먼저 선택하세요.');
     return;
   }
+  addTodoFromNoteText(text, {
+    markRange: getCurrentEditorRange(),
+    sourceNoteId: state.selectedNoteId || null,
+  });
+}
+
+function addTodoFromNoteText(text, options = {}) {
   const { deadline, cleanedText } = extractDeadlineFromText(text);
+  const sourceNoteId = options.sourceNoteId || state.selectedNoteId || null;
+  const projectName = getNoteProjectName(sourceNoteId);
   setTodoPanelCollapsed(false);
-  addTodo(cleanedText, state.selectedNoteId || null, '중', deadline);
-  markSelectedTextAsTodoSource();
+  addTodo(cleanedText, sourceNoteId, '중', deadline, projectName);
+  markSelectedTextAsTodoSource(options.markRange);
   rerender();
 }
 
-function markSelectedTextAsTodoSource() {
-  const note = state.notes.find((x) => x.id === state.selectedNoteId);
-  const sel = window.getSelection();
-  if (!note || !sel || !sel.rangeCount) return;
+function getNoteProjectName(noteId) {
+  const note = state.notes.find((item) => item.id === noteId);
+  return (note?.title || '').trim() || '제목 없음';
+}
 
+function getCurrentEditorRange() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
   const range = sel.getRangeAt(0);
+  if (range.collapsed || !isInsideEditor(range.commonAncestorContainer)) return null;
+  return range.cloneRange();
+}
+
+function markSelectedTextAsTodoSource(sourceRange = null) {
+  const note = state.notes.find((x) => x.id === state.selectedNoteId);
+  if (!note) return;
+
+  const range = sourceRange || getCurrentEditorRange();
+  if (!range) return;
   if (range.collapsed || !isInsideEditor(range.commonAncestorContainer)) return;
 
   const marker = document.createElement('span');
@@ -789,6 +817,8 @@ const FONT_SIZE_STEPS = [12, 14, 15, 16, 18, 20, 24, 28, 34];
 const DEFAULT_FONT_SIZE = 15;
 const fontSizeLabel = document.getElementById('font-size-label');
 let lastEditorRange = null;
+const NOTE_SELECTION_TODO_DRAG_TYPE = 'application/x-onenote-todo-selection';
+let draggedTodoSelection = null;
 
 function isInsideEditor(node) {
   return node && (node === contentEl || contentEl.contains(node));
@@ -1308,7 +1338,14 @@ addTodoBtn.addEventListener('click', async () => {
   const result = await showAddTodoModal();
   if (!result) return;
   setTodoPanelCollapsed(false);
-  addTodo(result.text, state.selectedNoteId || null, result.difficulty, result.deadline);
+  addTodo(
+    result.text,
+    state.selectedNoteId || null,
+    result.difficulty,
+    result.deadline,
+    result.projectName || '',
+    result.description || '',
+  );
   rerender();
 });
 extractTodoBtn.addEventListener('click', addTodosFromCurrentNote);
@@ -1457,6 +1494,63 @@ contentEl.addEventListener('keydown', (e) => {
     e.preventDefault();
     addTodoFromSelection();
   }
+});
+
+contentEl.addEventListener('dragstart', (e) => {
+  const text = getSelectedEditorText(contentEl);
+  const range = getCurrentEditorRange();
+  if (!text || !range || !e.dataTransfer) return;
+
+  draggedTodoSelection = {
+    text,
+    range,
+    sourceNoteId: state.selectedNoteId || null,
+  };
+  e.dataTransfer.setData(NOTE_SELECTION_TODO_DRAG_TYPE, text);
+  e.dataTransfer.setData('text/plain', text);
+  e.dataTransfer.effectAllowed = 'copy';
+});
+
+contentEl.addEventListener('dragend', () => {
+  todoPanelEl?.classList.remove('todo-drop-target');
+  draggedTodoSelection = null;
+});
+
+function hasNoteTodoDrag(dataTransfer) {
+  return [...(dataTransfer?.types || [])].includes(NOTE_SELECTION_TODO_DRAG_TYPE);
+}
+
+function clearTodoDropTarget() {
+  todoPanelEl?.classList.remove('todo-drop-target');
+}
+
+todoPanelEl?.addEventListener('dragover', (e) => {
+  if (!hasNoteTodoDrag(e.dataTransfer)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  setTodoPanelCollapsed(false);
+  todoPanelEl.classList.add('todo-drop-target');
+});
+
+todoPanelEl?.addEventListener('dragleave', (e) => {
+  if (!todoPanelEl.contains(e.relatedTarget)) clearTodoDropTarget();
+});
+
+todoPanelEl?.addEventListener('drop', (e) => {
+  if (!hasNoteTodoDrag(e.dataTransfer)) return;
+  e.preventDefault();
+  clearTodoDropTarget();
+
+  const text = e.dataTransfer.getData(NOTE_SELECTION_TODO_DRAG_TYPE)
+    || draggedTodoSelection?.text
+    || '';
+  if (!text.trim()) return;
+
+  addTodoFromNoteText(text, {
+    markRange: draggedTodoSelection?.range || null,
+    sourceNoteId: draggedTodoSelection?.sourceNoteId || state.selectedNoteId || null,
+  });
+  draggedTodoSelection = null;
 });
 
 // Prevent newline in title, move focus to content

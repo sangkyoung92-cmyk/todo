@@ -60,6 +60,8 @@ export function addTask(state, payload, helpers = {}) {
   const todo = {
     id: uid(),
     text: clean,
+    projectName: (payload.projectName || '').trim(),
+    description: (payload.description || '').trim(),
     done: false,
     sourceNoteId: payload.sourceNoteId || null,
     difficulty: payload.difficulty || '중',
@@ -206,6 +208,12 @@ export function editTask(state, todoId, patch, helpers = {}) {
   if (!nextText) return false;
 
   todo.text = nextText;
+  if (Object.prototype.hasOwnProperty.call(patch, 'projectName')) {
+    todo.projectName = (patch.projectName || '').trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'description')) {
+    todo.description = (patch.description || '').trim();
+  }
   todo.difficulty = patch.difficulty || todo.difficulty || '중';
   todo.updatedAt = nowISO();
 

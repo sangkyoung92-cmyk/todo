@@ -239,7 +239,7 @@
             <div class="note-actions">
               <button id="note-record-btn" class="ghost-btn" type="button" title="마이크 음성을 요약용 녹음 내용으로 저장합니다">녹음</button>
               <button id="extract-todo-btn" class="ghost-btn" title="API 키가 있으면 AI로, 없으면 로컬 기준으로 노트에서 할 일을 만듭니다">노트에서 할 일 추가</button>
-              <span class="note-actions-tip">선택 후 Ctrl+Q 또는 툴바 버튼으로도 추가</span>
+              <span class="note-actions-tip">선택 후 Ctrl+Q, 툴바 버튼, 업무 목록 드롭으로 추가</span>
             </div>
             <div id="recording-panel" class="recording-panel" hidden>
               <div class="recording-panel-status">
@@ -294,6 +294,8 @@
         </button>
       </div>
       <div class="todo-modal-body">
+        <label class="settings-label" for="schedule-modal-project">프로젝트명</label>
+        <input id="schedule-modal-project" type="text" class="todo-modal-input settings-input" placeholder="프로젝트명을 입력하세요" />
         <label class="settings-label" for="schedule-modal-text">업무명</label>
         <input id="schedule-modal-text" type="text" class="todo-modal-input settings-input" placeholder="업무를 입력하세요" />
         <div class="todo-modal-row">
@@ -310,6 +312,8 @@
             </div>
           </div>
         </div>
+        <label class="settings-label" for="schedule-modal-description">설명</label>
+        <textarea id="schedule-modal-description" class="todo-modal-textarea settings-input" rows="6" placeholder="업무 설명을 입력하세요"></textarea>
       </div>
       <div class="todo-modal-footer">
         <button id="schedule-modal-submit" class="todo-modal-submit-btn">추가</button>
@@ -326,6 +330,8 @@
         </button>
       </div>
       <div class="todo-modal-body">
+        <label class="settings-label" for="todo-modal-project">프로젝트명</label>
+        <input id="todo-modal-project" type="text" class="todo-modal-input settings-input" placeholder="프로젝트명을 입력하세요" />
         <label class="settings-label" for="todo-modal-text">할 일</label>
         <input id="todo-modal-text" type="text" class="todo-modal-input settings-input" placeholder="할 일을 입력하세요" />
         <div class="todo-modal-row">
@@ -342,6 +348,8 @@
             </div>
           </div>
         </div>
+        <label class="settings-label" for="todo-modal-description">설명</label>
+        <textarea id="todo-modal-description" class="todo-modal-textarea settings-input" rows="6" placeholder="업무 설명을 입력하세요"></textarea>
       </div>
       <div class="todo-modal-footer">
         <button id="todo-modal-submit" class="todo-modal-submit-btn">추가</button>
