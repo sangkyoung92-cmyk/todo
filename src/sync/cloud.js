@@ -85,6 +85,7 @@ function getLocalMaxUpdatedAt() {
   const all = [
     ...state.tabs.map((t) => t.updatedAt || ''),
     ...state.notes.map((n) => n.updatedAt || ''),
+    ...Object.values(state.dateNotes || {}).map((note) => note?.updatedAt || ''),
   ];
   return all.reduce((max, d) => (d > max ? d : max), '');
 }
@@ -146,6 +147,7 @@ export async function loadFromCloud(rerender) {
       state.selectedDeletedNoteId = null;
       state.noteListMode = 'notes';
       state.scheduleEntries = [];
+      state.dateNotes = {};
       save();
       dirtyNoteIds.clear();
       hasDirtyState = false;
@@ -170,6 +172,7 @@ export async function loadFromCloud(rerender) {
     state.noteListMode = 'notes';
     state.notes = cloudNotes;
     state.scheduleEntries = cloudData.scheduleEntries || [];
+    state.dateNotes = cloudData.dateNotes || {};
     if (cloudData.appMode) state.appMode = cloudData.appMode;
     if (cloudData.scheduleView) state.scheduleView = cloudData.scheduleView;
     if (cloudData.scheduleWeekStart) state.scheduleWeekStart = cloudData.scheduleWeekStart;
@@ -219,6 +222,7 @@ export async function syncToCloud() {
       selectedTabId: state.selectedTabId,
       selectedNoteId: state.selectedNoteId,
       scheduleEntries: state.scheduleEntries,
+      dateNotes: state.dateNotes || {},
       appMode: state.appMode,
       scheduleView: state.scheduleView,
       scheduleWeekStart: state.scheduleWeekStart,

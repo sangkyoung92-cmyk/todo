@@ -16,6 +16,23 @@ function getDefaultWeekStart() {
   return toDateKey(sunday);
 }
 
+function normalizeDateNotes(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  return Object.entries(value).reduce((acc, [dateKey, note]) => {
+    if (!DATE_KEY_PATTERN.test(dateKey)) return acc;
+
+    const text = typeof note === 'string' ? note.trim() : String(note?.text || '').trim();
+    if (!text) return acc;
+
+    acc[dateKey] = {
+      text,
+      updatedAt: note?.updatedAt || nowISO(),
+    };
+    return acc;
+  }, {});
+}
+
 export const state = {
   tabs: [],
   notes: [],
@@ -33,6 +50,7 @@ export const state = {
   pendingDeleteNoteIds: [], // tracks note IDs to delete from Firestore (not persisted)
   // Schedule state
   scheduleEntries: [],      // { id, todoId, date, done, completedAt, createdAt, updatedAt }
+  dateNotes: {},            // { [YYYY-MM-DD]: { text, updatedAt } }
   appMode: 'notes',         // 'notes' | 'schedule'
   scheduleView: 'week',     // 'week' | 'month'
   scheduleWeekStart: null,  // 'YYYY-MM-DD'
@@ -114,6 +132,7 @@ export function save() {
     selectedDeletedNoteId: state.selectedDeletedNoteId,
     noteListMode: state.noteListMode,
     scheduleEntries: state.scheduleEntries,
+    dateNotes: normalizeDateNotes(state.dateNotes),
     appMode: state.appMode,
     scheduleView: state.scheduleView,
     scheduleWeekStart: state.scheduleWeekStart,
@@ -141,6 +160,7 @@ export function load() {
     state.selectedNoteId = null;
     state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
+    state.dateNotes = {};
     state.noteListMode = 'notes';
     state.appMode = 'notes';
     state.scheduleView = 'week';
@@ -177,6 +197,7 @@ export function load() {
     pruneDeletedNotes();
 
     state.scheduleEntries = parsed.scheduleEntries || [];
+    state.dateNotes = normalizeDateNotes(parsed.dateNotes);
     state.appMode = parsed.appMode || 'notes';
     state.scheduleView = parsed.scheduleView || 'week';
     state.scheduleWeekStart = DATE_KEY_PATTERN.test(parsed.scheduleWeekStart || '')
@@ -206,6 +227,7 @@ export function load() {
     state.selectedNoteId = null;
     state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
+    state.dateNotes = {};
     state.noteListMode = 'notes';
     state.appMode = 'notes';
     state.scheduleView = 'week';

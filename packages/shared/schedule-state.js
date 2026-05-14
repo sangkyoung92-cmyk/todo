@@ -6,6 +6,7 @@ export function createEmptyScheduleState() {
   return {
     todos: [],
     scheduleEntries: [],
+    dateNotes: {},
     scheduleView: 'week',
     scheduleWeekStart: toDateKey(getSunday(new Date())),
     scheduleMonth: todayKey().slice(0, 7),
@@ -18,6 +19,7 @@ export function mergeScheduleState(docData = {}) {
     ...empty,
     todos: docData.todos || empty.todos,
     scheduleEntries: docData.scheduleEntries || empty.scheduleEntries,
+    dateNotes: docData.dateNotes || empty.dateNotes,
     scheduleView: docData.scheduleView || empty.scheduleView,
     scheduleWeekStart: DATE_KEY_PATTERN.test(docData.scheduleWeekStart || '')
       ? docData.scheduleWeekStart

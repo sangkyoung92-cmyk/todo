@@ -42,7 +42,7 @@ import {
   buildPlannerLocalSuggestions,
   setPlannerSuggestions,
   setPlannerStatus,
-} from './ui/schedule.js';
+} from './ui/schedule.js?v=20260514-daynote-icon';
 import { showScheduleModal } from './ui/schedule-modal.js';
 import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 

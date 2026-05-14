@@ -183,6 +183,7 @@ export function initSchedulePanelResize(workspaceEl) {
 
   const sidebarEl = workspaceEl.querySelector('.schedule-sidebar');
   const calendarEl = workspaceEl.querySelector('.schedule-calendar-area');
+  const dayNotePanelEl = workspaceEl.querySelector('.schedule-day-note-panel');
   if (!sidebarEl || !calendarEl) return;
 
   initPanelResize(workspaceEl, [
@@ -195,6 +196,7 @@ export function initSchedulePanelResize(workspaceEl) {
       minWidth: SCHEDULE_SIDEBAR_WIDTH.min,
       fallbackWidth: SCHEDULE_SIDEBAR_WIDTH.fallback,
       getWidthFromDelta: (startWidth, deltaX) => startWidth + deltaX,
+      getOtherFixedWidth: () => dayNotePanelEl && isVisible(dayNotePanelEl) ? getPanelWidth(dayNotePanelEl, 280) : 0,
       isEnabled: () => true,
     },
   ]);

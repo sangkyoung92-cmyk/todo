@@ -23,6 +23,7 @@ export async function saveScheduleDocument(uid, scheduleState, baseDoc = {}) {
     ...baseDoc,
     todos: scheduleState.todos,
     scheduleEntries: scheduleState.scheduleEntries,
+    dateNotes: scheduleState.dateNotes || {},
     scheduleView: scheduleState.scheduleView,
     scheduleWeekStart: scheduleState.scheduleWeekStart,
     scheduleMonth: scheduleState.scheduleMonth,

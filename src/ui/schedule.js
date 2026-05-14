@@ -2,6 +2,13 @@ import { state, uid, nowISO, save } from '../state/store.js';
 import {
   scheduleTaskListEl,
   scheduleCalendarBodyEl,
+  scheduleDayNoteClearBtn,
+  scheduleDayNoteCloseBtn,
+  scheduleDayNoteInputEl,
+  scheduleDayNotePanelEl,
+  scheduleDayNoteStatusEl,
+  scheduleDayNoteSummaryEl,
+  scheduleDayNoteTitleEl,
   scheduleRangeLabelEl,
   schedulePrevBtn,
   scheduleNextBtn,
@@ -14,7 +21,7 @@ import {
   scheduleGotoTodayBtn,
   scheduleGotoDateInput,
   contentEl,
-} from './dom.js';
+} from './dom.js?v=20260514-daynote-icon';
 import {
   getSunday,
   getWeekDates,
@@ -61,6 +68,9 @@ let onRenderCallback = null;
 let taskFilter = 'active';
 let pendingPlannerSuggestions = [];
 let monthOverflowResizeBound = false;
+let selectedDayNoteDate = null;
+let dayNoteSaveTimer = null;
+let dayNoteEventsBound = false;
 let plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
 
 const SCHEDULE_SECTIONS = [
@@ -80,6 +90,173 @@ function persistAndSync() {
   save();
   markStateDirty();
   scheduleSync();
+}
+
+function ensureDateNotes() {
+  if (!state.dateNotes || typeof state.dateNotes !== 'object' || Array.isArray(state.dateNotes)) {
+    state.dateNotes = {};
+  }
+  return state.dateNotes;
+}
+
+function getDayNoteText(dateKey) {
+  const note = ensureDateNotes()[dateKey];
+  if (!note) return '';
+  return typeof note === 'string' ? note : (note.text || '');
+}
+
+function hasDayNote(dateKey) {
+  return !!getDayNoteText(dateKey).trim();
+}
+
+function dayNoteIconSvg() {
+  return '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
+    + '<path d="M3 2.5A1.5 1.5 0 014.5 1h7A1.5 1.5 0 0113 2.5v6.8c0 .4-.16.78-.44 1.06l-3.2 3.2A1.5 1.5 0 018.3 14H4.5A1.5 1.5 0 013 12.5v-10zM4.5 2a.5.5 0 00-.5.5v10a.5.5 0 00.5.5H8v-2.5A1.5 1.5 0 019.5 9H12V2.5a.5.5 0 00-.5-.5h-7zm4.5 10.3L11.3 10H9.5a.5.5 0 00-.5.5v1.8z"/>'
+    + '</svg>';
+}
+
+function renderDayNoteButton(dateKey) {
+  const hasNote = hasDayNote(dateKey);
+  const label = hasNote ? '하루 메모 편집' : '하루 메모 추가';
+  const cls = hasNote ? 'day-note-btn has-note' : 'day-note-btn';
+  return `<button class="${cls}" data-action="open-day-note" data-date="${dateKey}" type="button" title="${label}" aria-label="${label}">${dayNoteIconSvg()}</button>`;
+}
+
+function formatDayNoteTitle(dateKey) {
+  const date = fromDateKey(dateKey);
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date);
+}
+
+function getDateEntryStats(dateKey) {
+  const entries = state.scheduleEntries.filter((entry) => entry.date === dateKey);
+  return {
+    total: entries.length,
+    done: entries.filter((entry) => entry.done).length,
+  };
+}
+
+function renderDayNotePanel() {
+  if (!scheduleDayNotePanelEl) return;
+
+  if (!selectedDayNoteDate) {
+    scheduleDayNotePanelEl.hidden = true;
+    syncSelectedDayNoteCell();
+    return;
+  }
+
+  const text = getDayNoteText(selectedDayNoteDate);
+  const stats = getDateEntryStats(selectedDayNoteDate);
+  scheduleDayNotePanelEl.hidden = false;
+  scheduleDayNoteTitleEl.textContent = formatDayNoteTitle(selectedDayNoteDate);
+  scheduleDayNoteSummaryEl.textContent = stats.total > 0
+    ? `업무 ${stats.done}/${stats.total} 완료`
+    : '배정된 업무 없음';
+
+  if (document.activeElement !== scheduleDayNoteInputEl) {
+    scheduleDayNoteInputEl.value = text;
+  }
+  scheduleDayNoteStatusEl.textContent = text.trim() ? '저장됨' : '메모 없음';
+  scheduleDayNoteClearBtn.disabled = !text.trim();
+  syncSelectedDayNoteCell();
+}
+
+function syncSelectedDayNoteCell() {
+  if (!scheduleCalendarBodyEl) return;
+  scheduleCalendarBodyEl.querySelectorAll('.week-day-col, .month-day-cell').forEach((cell) => {
+    cell.classList.toggle('selected-day-note', !!selectedDayNoteDate && cell.dataset.date === selectedDayNoteDate);
+  });
+}
+
+function openDayNotePanel(dateKey, options = {}) {
+  if (!DATE_KEY_PATTERN.test(dateKey || '')) return;
+  selectedDayNoteDate = dateKey;
+  renderDayNotePanel();
+  if (options.focus) {
+    window.requestAnimationFrame(() => scheduleDayNoteInputEl?.focus());
+  }
+}
+
+function closeDayNotePanel() {
+  flushDayNoteSave();
+  selectedDayNoteDate = null;
+  renderDayNotePanel();
+}
+
+function commitDayNoteText() {
+  if (!selectedDayNoteDate || !scheduleDayNoteInputEl) return;
+
+  const dateKey = selectedDayNoteDate;
+  const text = scheduleDayNoteInputEl.value.trim();
+  const current = getDayNoteText(dateKey).trim();
+  const notes = ensureDateNotes();
+
+  if (!text) {
+    if (!notes[dateKey]) {
+      renderDayNotePanel();
+      return;
+    }
+    delete notes[dateKey];
+  } else {
+    if (current === text) {
+      renderDayNotePanel();
+      return;
+    }
+    notes[dateKey] = {
+      text,
+      updatedAt: nowISO(),
+    };
+  }
+
+  persistAndSync();
+  rerenderSchedule();
+}
+
+function flushDayNoteSave() {
+  if (!dayNoteSaveTimer) return;
+  clearTimeout(dayNoteSaveTimer);
+  dayNoteSaveTimer = null;
+  commitDayNoteText();
+}
+
+function queueDayNoteSave() {
+  if (!selectedDayNoteDate) return;
+  if (dayNoteSaveTimer) clearTimeout(dayNoteSaveTimer);
+  scheduleDayNoteStatusEl.textContent = '저장 중...';
+  dayNoteSaveTimer = setTimeout(() => {
+    dayNoteSaveTimer = null;
+    commitDayNoteText();
+  }, 350);
+}
+
+function initDayNotePanelEvents() {
+  if (dayNoteEventsBound) return;
+  dayNoteEventsBound = true;
+
+  scheduleDayNoteCloseBtn?.addEventListener('click', closeDayNotePanel);
+  scheduleDayNoteClearBtn?.addEventListener('click', () => {
+    if (!selectedDayNoteDate || !scheduleDayNoteInputEl) return;
+    scheduleDayNoteInputEl.value = '';
+    commitDayNoteText();
+    scheduleDayNoteInputEl.focus();
+  });
+  scheduleDayNoteInputEl?.addEventListener('input', queueDayNoteSave);
+  scheduleDayNoteInputEl?.addEventListener('blur', flushDayNoteSave);
+  scheduleDayNoteInputEl?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDayNotePanel();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      flushDayNoteSave();
+      scheduleDayNoteInputEl.blur();
+    }
+  });
 }
 
 function rerenderSchedule() {
@@ -657,6 +834,7 @@ export function renderWeekView() {
           <div class="week-day-name">${dayNames[index]}</div>
           <div class="week-day-num">${date.getDate()}</div>
           ${holidayName ? `<div class="week-day-holiday-name">${escapeHtml(holidayName)}</div>` : ''}
+          ${renderDayNoteButton(dateKey)}
         </div>
         <div class="week-day-drop-zone" data-date="${dateKey}">
           ${chipsHtml}
@@ -723,6 +901,7 @@ export function renderMonthView() {
 
       html += `
         <div class="month-day-cell ${otherClass} ${todayClass} ${weekendClass} ${holidayClass} ${weekdayClass}" data-date="${dateKey}">
+          ${renderDayNoteButton(dateKey)}
           <div class="month-day-num-wrap">
             <div class="month-day-num ${weekdayClass}">${date.getDate()}</div>
             ${holidayName ? `<span class="month-holiday-name">${escapeHtml(holidayName)}</span>` : ''}
@@ -836,6 +1015,14 @@ function initCalendarEventDelegation() {
   });
 
   scheduleCalendarBodyEl.addEventListener('click', (event) => {
+    const noteBtn = event.target.closest('[data-action="open-day-note"]');
+    if (noteBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      openDayNotePanel(noteBtn.dataset.date, { focus: true });
+      return;
+    }
+
     const removeBtn = event.target.closest('[data-action="remove-entry"]');
     if (!removeBtn) return;
     event.stopPropagation();
@@ -940,6 +1127,8 @@ export function renderSchedule(onRender) {
   const fallbackWeekStart = toDateKey(getSunday(new Date()));
   const fallbackMonth = todayKey().slice(0, 7);
 
+  ensureDateNotes();
+
   if (typeof state.scheduleWeekStart !== 'string' || !DATE_KEY_PATTERN.test(state.scheduleWeekStart)) {
     state.scheduleWeekStart = fallbackWeekStart;
   } else {
@@ -961,6 +1150,8 @@ export function renderSchedule(onRender) {
     renderWeekView();
   }
 
+  renderDayNotePanel();
+
   document.querySelectorAll('.schedule-view-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === state.scheduleView);
   });
@@ -969,6 +1160,7 @@ export function renderSchedule(onRender) {
 export function initScheduleNav(onRender) {
   // 달력 이벤트 위임 초기화 (한 번만 등록)
   initCalendarEventDelegation();
+  initDayNotePanelEvents();
 
   const applyGotoDate = () => {
     const dateStr = readDateInputValue(scheduleGotoDateInput, { allowEmpty: true, report: true });

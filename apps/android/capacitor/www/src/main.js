@@ -144,6 +144,7 @@ async function loadStateDocument(uid) {
     schedule: {
       todos: normalizeTodos(data.todos || []),
       scheduleEntries: data.scheduleEntries || [],
+      dateNotes: data.dateNotes || {},
       scheduleView: data.scheduleView || "week",
       scheduleWeekStart: data.scheduleWeekStart || toDateKey(new Date()),
       scheduleMonth: data.scheduleMonth || todayKey().slice(0, 7),
@@ -207,6 +208,7 @@ async function saveStateDocument(uid) {
     ...appState.rawDoc,
     todos: appState.state.todos,
     scheduleEntries: appState.state.scheduleEntries,
+    dateNotes: appState.state.dateNotes || {},
     scheduleView: appState.state.scheduleView,
     scheduleWeekStart: appState.state.scheduleWeekStart,
     scheduleMonth: appState.state.scheduleMonth,

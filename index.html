@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>정리노트</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='7' y='4' width='18' height='24' rx='3' fill='%23e4f4f1' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M12 4v24' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M16 12h6M16 17h6M16 22h4' stroke='%230b5f59' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260514-daynote-icon" />
   </head>
   <body>
     <!-- Top header -->
@@ -210,6 +210,23 @@
           </div>
           <div id="schedule-calendar-body" class="schedule-calendar-body"></div>
         </div>
+
+        <aside id="schedule-day-note-panel" class="schedule-day-note-panel" hidden aria-label="하루 메모">
+          <div class="schedule-day-note-head">
+            <div>
+              <p class="schedule-day-note-kicker">Day Note</p>
+              <h2 id="schedule-day-note-title">날짜 메모</h2>
+              <p id="schedule-day-note-summary" class="schedule-day-note-summary"></p>
+            </div>
+            <button id="schedule-day-note-close" class="schedule-day-note-close" type="button" title="닫기">×</button>
+          </div>
+          <label class="schedule-day-note-label" for="schedule-day-note-input">하루 메모</label>
+          <textarea id="schedule-day-note-input" class="schedule-day-note-input" rows="8" placeholder="오늘의 흐름이나 총평을 짧게 남겨보세요."></textarea>
+          <div class="schedule-day-note-footer">
+            <span id="schedule-day-note-status" class="schedule-day-note-status"></span>
+            <button id="schedule-day-note-clear" class="schedule-day-note-clear" type="button">비우기</button>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -477,6 +494,6 @@
       <div class="img-resize-handle img-resize-handle-e" data-dir="e"></div>
     </div>
 
-    <script type="module" src="src/main.js?v=20260508d"></script>
+    <script type="module" src="src/main.js?v=20260514-daynote-icon"></script>
   </body>
 </html>
