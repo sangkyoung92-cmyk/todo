@@ -5254,9 +5254,8 @@ textarea:focus-visible,
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid rgba(15, 118, 110, 0.22);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  background: transparent;
   color: var(--accent-strong);
   display: flex;
   align-items: center;
@@ -5264,7 +5263,7 @@ textarea:focus-visible,
   opacity: 0;
   transform: translateY(-2px);
   pointer-events: auto;
-  transition: opacity 0.12s, transform 0.12s, background 0.12s, border-color 0.12s;
+  transition: opacity 0.12s, transform 0.12s, color 0.12s;
 }
 
 .day-note-btn svg {
@@ -5295,20 +5294,15 @@ textarea:focus-visible,
 }
 
 .day-note-btn:hover {
-  background: var(--accent-soft);
-  border-color: rgba(15, 118, 110, 0.34);
+  color: #0b5c55;
 }
 
 .day-note-btn.has-note {
-  border-color: rgba(194, 146, 36, 0.45);
-  background: #fff7d6;
-  color: #8a6400;
-  box-shadow: 0 3px 8px rgba(138, 100, 0, 0.12);
+  color: var(--accent);
 }
 
 .day-note-btn.has-note:hover {
-  background: #fff1b8;
-  border-color: rgba(194, 146, 36, 0.6);
+  color: var(--accent-strong);
 }
 
 .week-day-header {

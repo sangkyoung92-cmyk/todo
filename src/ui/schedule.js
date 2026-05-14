@@ -21,7 +21,7 @@ import {
   scheduleGotoTodayBtn,
   scheduleGotoDateInput,
   contentEl,
-} from './dom.js?v=20260514-daynote-icon';
+} from './dom.js?v=20260514-daynote-close';
 import {
   getSunday,
   getWeekDates,
@@ -243,6 +243,12 @@ function initDayNotePanelEvents() {
     scheduleDayNoteInputEl.value = '';
     commitDayNoteText();
     scheduleDayNoteInputEl.focus();
+  });
+  document.addEventListener('click', (event) => {
+    if (!selectedDayNoteDate) return;
+    if (scheduleDayNotePanelEl?.contains(event.target)) return;
+    if (event.target.closest('[data-action="open-day-note"]')) return;
+    closeDayNotePanel();
   });
   scheduleDayNoteInputEl?.addEventListener('input', queueDayNoteSave);
   scheduleDayNoteInputEl?.addEventListener('blur', flushDayNoteSave);
@@ -1020,6 +1026,18 @@ function initCalendarEventDelegation() {
       event.preventDefault();
       event.stopPropagation();
       openDayNotePanel(noteBtn.dataset.date, { focus: true });
+      return;
+    }
+
+    const noteCell = event.target.closest('.week-day-col, .month-day-cell');
+    if (
+      noteCell
+      && hasDayNote(noteCell.dataset.date)
+      && !event.target.closest('.cal-chip, .month-chip, [data-action]')
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      openDayNotePanel(noteCell.dataset.date);
       return;
     }
 
