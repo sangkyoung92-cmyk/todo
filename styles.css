@@ -4616,6 +4616,138 @@ textarea:focus-visible,
   opacity: 1;
 }
 
+.page-section-divider {
+  margin: 12px 4px 6px;
+  color: var(--text-soft);
+}
+
+.page-section-toggle {
+  min-height: 28px;
+  padding: 0 6px;
+}
+
+.page-section-name,
+.page-section-rename-input {
+  color: var(--text-soft);
+}
+
+.page-section-count {
+  background: var(--surface-muted);
+  color: var(--text-soft);
+}
+
+.page-section-divider.drag-over {
+  background: var(--accent-soft);
+}
+
+.page-section-add-btn {
+  min-height: 30px;
+  padding: 5px 10px;
+}
+
+.page-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 8px 4px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: #605e5c;
+}
+
+.page-section-divider.drag-over {
+  background: rgba(40, 124, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(40, 124, 255, 0.24);
+}
+
+.page-section-toggle {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 5px 4px;
+  text-align: left;
+}
+
+.page-section-arrow {
+  width: 12px;
+  flex: 0 0 12px;
+  color: #8a8886;
+}
+
+.page-section-name,
+.page-section-rename-input {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.page-section-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-section-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f3f2f1;
+  color: #8a8886;
+  font-size: 11px;
+  text-align: center;
+}
+
+.page-section-rename-input {
+  border: 1px solid #c8c6c4;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.page-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.page-section-divider:hover .page-section-actions,
+.page-section-divider:focus-within .page-section-actions {
+  opacity: 1;
+}
+
+.page-section-divider {
+  margin: 12px 4px 6px;
+  color: var(--text-soft);
+}
+
+.page-section-toggle {
+  min-height: 28px;
+  padding: 0 6px;
+}
+
+.page-section-name,
+.page-section-rename-input {
+  color: var(--text-soft);
+}
+
+.page-section-count {
+  background: var(--surface-muted);
+  color: var(--text-soft);
+}
+
+.page-section-divider.drag-over {
+  background: var(--accent-soft);
+}
+
 .trash-tag {
   background: #eef3f6;
   color: #55707e;

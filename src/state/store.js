@@ -35,6 +35,7 @@ function normalizeDateNotes(value) {
 
 export const state = {
   tabs: [],
+  pageSections: [],
   notes: [],
   deletedNotes: [],
   todos: [],
@@ -42,6 +43,7 @@ export const state = {
   behaviorLog: [],
   recordingDrafts: {},
   selectedTabId: null,
+  selectedPageSectionId: null,
   selectedNoteId: null,
   selectedDeletedNoteId: null,
   saveTimer: null,
@@ -63,6 +65,7 @@ export const state = {
     month: false,
     other: false,
   },
+  pageSectionCollapsed: {},
 };
 
 export function uid() {
@@ -77,6 +80,17 @@ export function getCurrentTabNotes() {
   return state.notes
     .filter((note) => note.tabId === state.selectedTabId)
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+}
+
+export function getCurrentTabPageSections() {
+  return state.pageSections
+    .filter((section) => section.tabId === state.selectedTabId)
+    .sort((a, b) => {
+      const aOrder = Number.isFinite(a.order) ? a.order : 0;
+      const bOrder = Number.isFinite(b.order) ? b.order : 0;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return (a.createdAt || '') < (b.createdAt || '') ? -1 : 1;
+    });
 }
 
 export function getNextSectionColor() {
@@ -121,6 +135,7 @@ export function save() {
   pruneDeletedNotes();
   const payload = {
     tabs: state.tabs,
+    pageSections: state.pageSections,
     notes: state.notes,
     deletedNotes: state.deletedNotes,
     todos: state.todos,
@@ -128,6 +143,7 @@ export function save() {
     behaviorLog: state.behaviorLog,
     recordingDrafts: state.recordingDrafts,
     selectedTabId: state.selectedTabId,
+    selectedPageSectionId: state.selectedPageSectionId,
     selectedNoteId: state.selectedNoteId,
     selectedDeletedNoteId: state.selectedDeletedNoteId,
     noteListMode: state.noteListMode,
@@ -140,6 +156,7 @@ export function save() {
     smartPlannerCollapsed: state.smartPlannerCollapsed,
     notePaperMode: state.notePaperMode,
     todoSectionCollapsed: state.todoSectionCollapsed,
+    pageSectionCollapsed: state.pageSectionCollapsed,
   };
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -150,6 +167,7 @@ export function load() {
 
   if (!raw) {
     state.tabs = [];
+    state.pageSections = [];
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
@@ -157,6 +175,7 @@ export function load() {
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
+    state.selectedPageSectionId = null;
     state.selectedNoteId = null;
     state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
@@ -169,12 +188,14 @@ export function load() {
     state.smartPlannerCollapsed = true;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
+    state.pageSectionCollapsed = {};
     return;
   }
 
   try {
     const parsed = JSON.parse(raw);
     state.tabs = parsed.tabs || [];
+    state.pageSections = parsed.pageSections || [];
     state.notes = parsed.notes || [];
     state.deletedNotes = parsed.deletedNotes || [];
     state.todos = parsed.todos || [];
@@ -191,6 +212,7 @@ export function load() {
 
     state.selectedTabId = parsed.selectedTabId || state.tabs[0]?.id || null;
     const tabNotes = getCurrentTabNotes();
+    state.selectedPageSectionId = parsed.selectedPageSectionId || tabNotes[0]?.pageSectionId || null;
     state.selectedNoteId = parsed.selectedNoteId || tabNotes[0]?.id || null;
     state.selectedDeletedNoteId = parsed.selectedDeletedNoteId || state.deletedNotes[0]?.id || null;
     state.noteListMode = parsed.noteListMode === 'trash' ? 'trash' : 'notes';
@@ -214,9 +236,11 @@ export function load() {
       month: parsed.todoSectionCollapsed?.month ?? false,
       other: parsed.todoSectionCollapsed?.other ?? false,
     };
+    state.pageSectionCollapsed = parsed.pageSectionCollapsed || {};
   } catch (error) {
     console.error('Failed to parse storage:', error);
     state.tabs = [];
+    state.pageSections = [];
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
@@ -224,6 +248,7 @@ export function load() {
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
+    state.selectedPageSectionId = null;
     state.selectedNoteId = null;
     state.selectedDeletedNoteId = null;
     state.scheduleEntries = [];
@@ -236,5 +261,6 @@ export function load() {
     state.smartPlannerCollapsed = true;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
+    state.pageSectionCollapsed = {};
   }
 }

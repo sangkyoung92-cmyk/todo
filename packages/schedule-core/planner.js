@@ -181,6 +181,7 @@ export function applyPlannerSuggestions(state, suggestions, helpers = {}) {
       if (!text || (state.todos || []).some((todo) => todo.text === text)) return;
       const todoId = addTask(state, {
         text,
+        projectName: item.projectName || '',
         sourceNoteId: item.sourceNoteId || null,
         difficulty: item.difficulty || '중',
         deadline: item.deadline || item.date || null,
@@ -227,6 +228,7 @@ export function createInboxItem(payload, helpers = {}) {
   return {
     id: uid(),
     text,
+    projectName: (payload.projectName || '').trim(),
     sourceNoteId: payload.sourceNoteId || null,
     difficulty: payload.difficulty || '중',
     deadline: payload.deadline || null,

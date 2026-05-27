@@ -1,6 +1,7 @@
 import {
   state,
   getCurrentTabNotes,
+  getCurrentTabPageSections,
   nowISO,
   save,
   TRASH_RETENTION_DAYS,
@@ -24,6 +25,7 @@ import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { renderTodos } from './todo.js';
 
 let editingTabId = null;
+let editingPageSectionId = null;
 let draggedSectionId = null;
 let draggedNoteId = null;
 let suppressDragClick = false;
@@ -31,7 +33,7 @@ let lastRenderedNoteKey = null;
 
 function clearDragClasses() {
   document
-    .querySelectorAll('.section-tab.dragging, .section-tab.drag-over, .section-tab.drop-before, .section-tab.drop-after, .page-item.dragging')
+    .querySelectorAll('.section-tab.dragging, .section-tab.drag-over, .section-tab.drop-before, .section-tab.drop-after, .page-item.dragging, .page-section-divider.drag-over')
     .forEach((el) => {
       el.classList.remove('dragging', 'drag-over', 'drop-before', 'drop-after');
     });
@@ -93,6 +95,7 @@ function moveNoteToSection(noteId, targetTabId) {
 
   const now = nowISO();
   note.tabId = targetTabId;
+  note.pageSectionId = null;
   note.updatedAt = now;
   tab.updatedAt = now;
   state.noteListMode = 'notes';
@@ -103,6 +106,50 @@ function moveNoteToSection(noteId, targetTabId) {
 
   save();
   markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
+
+function moveNoteToPageSection(noteId, pageSectionId = null) {
+  const note = state.notes.find((item) => item.id === noteId);
+  const pageSection = pageSectionId
+    ? state.pageSections.find((item) => item.id === pageSectionId)
+    : null;
+  if (!note || (pageSectionId && !pageSection)) return false;
+  if (pageSection && note.tabId !== pageSection.tabId) return false;
+  if ((note.pageSectionId || null) === (pageSectionId || null)) return false;
+
+  const now = nowISO();
+  note.pageSectionId = pageSectionId || null;
+  note.updatedAt = now;
+  if (pageSection) pageSection.updatedAt = now;
+  state.selectedPageSectionId = pageSectionId || null;
+  state.selectedNoteId = note.id;
+
+  save();
+  markDirty(note.id);
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
+
+function deletePageSection(pageSectionId) {
+  const pageSection = state.pageSections.find((item) => item.id === pageSectionId);
+  if (!pageSection) return false;
+
+  const now = nowISO();
+  state.notes.forEach((note) => {
+    if (note.pageSectionId !== pageSectionId) return;
+    note.pageSectionId = null;
+    note.updatedAt = now;
+    markDirty(note.id);
+  });
+  state.pageSections = state.pageSections.filter((item) => item.id !== pageSectionId);
+  delete state.pageSectionCollapsed[pageSectionId];
+  if (state.selectedPageSectionId === pageSectionId) state.selectedPageSectionId = null;
+
+  save();
   markStateDirty();
   scheduleSync();
   return true;
@@ -144,6 +191,9 @@ function restoreDeletedNote(noteId, onRender) {
   const restoredNote = {
     ...deletedNote,
     tabId: restoreTabId,
+    pageSectionId: state.pageSections.some((section) => section.id === deletedNote.pageSectionId)
+      ? deletedNote.pageSectionId
+      : null,
     updatedAt: nowISO(),
   };
   delete restoredNote.deletedAt;
@@ -154,6 +204,7 @@ function restoreDeletedNote(noteId, onRender) {
   state.noteListMode = 'notes';
   state.selectedDeletedNoteId = null;
   state.selectedTabId = restoreTabId;
+  state.selectedPageSectionId = restoredNote.pageSectionId || null;
   state.selectedNoteId = restoredNote.id;
   save();
   markDirty(restoredNote.id);
@@ -249,6 +300,7 @@ export function renderTabs(onRender) {
       clearSearchUI();
       state.selectedTabId = tab.id;
       state.selectedNoteId = getCurrentTabNotes()[0]?.id || null;
+      state.selectedPageSectionId = state.notes.find((note) => note.id === state.selectedNoteId)?.pageSectionId || null;
       save();
       markStateDirty();
       scheduleSync();
@@ -398,12 +450,14 @@ export function renderTabs(onRender) {
         .forEach((note) => moveNoteToTrash(note));
 
       state.tabs = state.tabs.filter((item) => item.id !== tab.id);
+      state.pageSections = state.pageSections.filter((item) => item.tabId !== tab.id);
       if (state.selectedTabId === tab.id) {
         state.selectedTabId = state.tabs[0]?.id || null;
       }
       state.noteListMode = 'notes';
       state.selectedDeletedNoteId = null;
       state.selectedNoteId = getCurrentTabNotes()[0]?.id || null;
+      state.selectedPageSectionId = state.notes.find((note) => note.id === state.selectedNoteId)?.pageSectionId || null;
       save();
       markStateDirty();
       scheduleSync();
@@ -452,7 +506,9 @@ export function renderNotes(onRender) {
     notes = getCurrentTabNotes();
   }
 
-  if (notes.length === 0) {
+  const pageSections = !trashMode && !isSearch ? getCurrentTabPageSections() : [];
+
+  if (notes.length === 0 && pageSections.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'empty-state';
     if (trashMode) {
@@ -466,7 +522,124 @@ export function renderNotes(onRender) {
     return;
   }
 
-  notes.forEach((note) => {
+  const appendPageSectionHeader = (pageSection, count) => {
+    const collapsed = state.pageSectionCollapsed?.[pageSection.id] ?? false;
+    const isEditing = editingPageSectionId === pageSection.id;
+    const li = document.createElement('li');
+    li.className = 'page-section-divider';
+    li.dataset.pageSectionId = pageSection.id;
+    li.innerHTML = `
+      <button class="page-section-toggle" data-action="toggle-page-section" type="button" aria-expanded="${String(!collapsed)}">
+        <span class="page-section-arrow">${collapsed ? '&#9656;' : '&#9662;'}</span>
+        ${isEditing
+    ? `<input class="page-section-rename-input" type="text" value="${escapeHtml(pageSection.name)}" aria-label="페이지 구역 이름 수정" />`
+    : `<span class="page-section-name">${escapeHtml(pageSection.name || '구역')}</span>`}
+        <span class="page-section-count">${count}</span>
+      </button>
+      <div class="page-section-actions">
+        <button class="icon-btn" data-action="rename-page-section" title="구역 이름 수정" type="button">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.146 1.854a.5.5 0 01.708 0l1.292 1.292a.5.5 0 010 .708l-8.5 8.5a.5.5 0 01-.224.13l-3 1a.5.5 0 01-.632-.632l1-3a.5.5 0 01.13-.224l8.5-8.5zM11.5 3.207L3.73 10.977l-.53 1.59 1.59-.53L12.56 4.268 11.5 3.207z"/></svg>
+        </button>
+        <button class="icon-btn" data-action="delete-page-section" title="구역 삭제" type="button">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+    `;
+
+    li.addEventListener('click', (e) => {
+      if (e.target.closest('.icon-btn, input')) return;
+      state.selectedPageSectionId = pageSection.id;
+      state.pageSectionCollapsed[pageSection.id] = !collapsed;
+      save();
+      markStateDirty();
+      scheduleSync();
+      onRender();
+    });
+
+    li.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.icon-btn')) return;
+      editingPageSectionId = pageSection.id;
+      onRender();
+    });
+
+    li.addEventListener('dragover', (e) => {
+      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
+      if (!noteId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      li.classList.add('drag-over');
+    });
+
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('drop', (e) => {
+      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
+      if (!noteId) return;
+      e.preventDefault();
+      li.classList.remove('drag-over');
+      if (moveNoteToPageSection(noteId, pageSection.id)) onRender();
+    });
+
+    li.querySelector('[data-action="rename-page-section"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      editingPageSectionId = pageSection.id;
+      onRender();
+    });
+
+    li.querySelector('[data-action="delete-page-section"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm(`'${pageSection.name}' 구역을 삭제할까요? 페이지는 삭제되지 않습니다.`)) return;
+      if (deletePageSection(pageSection.id)) onRender();
+    });
+
+    if (isEditing) {
+      const input = li.querySelector('.page-section-rename-input');
+      const finishRename = ({ commit }) => {
+        if (!commit) {
+          editingPageSectionId = null;
+          onRender();
+          return;
+        }
+
+        const nextName = input.value.trim();
+        if (!nextName) {
+          input.focus();
+          input.select();
+          return;
+        }
+
+        if (nextName !== pageSection.name) {
+          pageSection.name = nextName;
+          pageSection.updatedAt = nowISO();
+          save();
+          markStateDirty();
+          scheduleSync();
+        }
+        editingPageSectionId = null;
+        onRender();
+      };
+
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishRename({ commit: true });
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          finishRename({ commit: false });
+        }
+      });
+      input.addEventListener('blur', () => finishRename({ commit: true }));
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    }
+
+    noteListEl.appendChild(li);
+  };
+
+  const appendNoteItem = (note) => {
     const tab = state.tabs.find((item) => item.id === note.tabId || item.id === note.deletedFromTabId);
     const isActive = trashMode
       ? note.id === state.selectedDeletedNoteId
@@ -524,6 +697,7 @@ export function renderNotes(onRender) {
       }
       state.noteListMode = 'notes';
       state.selectedDeletedNoteId = null;
+      state.selectedPageSectionId = note.pageSectionId || null;
       state.selectedNoteId = note.id;
       save();
       markStateDirty();
@@ -574,7 +748,33 @@ export function renderNotes(onRender) {
     }
 
     noteListEl.appendChild(li);
-  });
+  };
+
+  if (pageSections.length > 0) {
+    const notesByPageSection = new Map();
+    pageSections.forEach((pageSection) => notesByPageSection.set(pageSection.id, []));
+    const unsectionedNotes = [];
+    notes.forEach((note) => {
+      if (note.pageSectionId && notesByPageSection.has(note.pageSectionId)) {
+        notesByPageSection.get(note.pageSectionId).push(note);
+      } else {
+        unsectionedNotes.push(note);
+      }
+    });
+
+    pageSections.forEach((pageSection) => {
+      const sectionNotes = notesByPageSection.get(pageSection.id) || [];
+      appendPageSectionHeader(pageSection, sectionNotes.length);
+      if (!state.pageSectionCollapsed?.[pageSection.id]) {
+        sectionNotes.forEach(appendNoteItem);
+      }
+    });
+
+    unsectionedNotes.forEach(appendNoteItem);
+    return;
+  }
+
+  notes.forEach(appendNoteItem);
 }
 
 export function renderEditor() {

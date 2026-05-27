@@ -335,6 +335,7 @@ function getVisiblePlannerSuggestions() {
     source: 'inbox',
     inboxId: item.id,
     text: item.text,
+    projectName: item.projectName || '',
     sourceNoteId: item.sourceNoteId || null,
     difficulty: item.difficulty || '중',
     deadline: item.deadline || null,

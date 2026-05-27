@@ -84,6 +84,7 @@ export function scheduleSync() {
 function getLocalMaxUpdatedAt() {
   const all = [
     ...state.tabs.map((t) => t.updatedAt || ''),
+    ...state.pageSections.map((section) => section.updatedAt || ''),
     ...state.notes.map((n) => n.updatedAt || ''),
     ...Object.values(state.dateNotes || {}).map((note) => note?.updatedAt || ''),
   ];
@@ -137,12 +138,14 @@ export async function loadFromCloud(rerender) {
     if (!stateSnap.exists()) {
       // This account has no cloud state yet: start from empty account workspace.
       state.tabs = [];
+      state.pageSections = [];
       state.notes = [];
       state.deletedNotes = [];
       state.todos = [];
       state.todoInbox = [];
       state.behaviorLog = [];
       state.selectedTabId = null;
+      state.selectedPageSectionId = null;
       state.selectedNoteId = null;
       state.selectedDeletedNoteId = null;
       state.noteListMode = 'notes';
@@ -162,17 +165,20 @@ export async function loadFromCloud(rerender) {
     const cloudNotes = notesSnap.docs.map((d) => d.data());
 
     state.tabs = cloudData.tabs || [];
+    state.pageSections = cloudData.pageSections || [];
     state.todos = cloudData.todos || [];
     state.todoInbox = cloudData.todoInbox || [];
     state.behaviorLog = cloudData.behaviorLog || [];
     state.deletedNotes = cloudData.deletedNotes || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
+    state.selectedPageSectionId = cloudData.selectedPageSectionId || null;
     state.selectedNoteId = cloudData.selectedNoteId || null;
     state.selectedDeletedNoteId = null;
     state.noteListMode = 'notes';
     state.notes = cloudNotes;
     state.scheduleEntries = cloudData.scheduleEntries || [];
     state.dateNotes = cloudData.dateNotes || {};
+    state.pageSectionCollapsed = cloudData.pageSectionCollapsed || {};
     if (cloudData.appMode) state.appMode = cloudData.appMode;
     if (cloudData.scheduleView) state.scheduleView = cloudData.scheduleView;
     if (cloudData.scheduleWeekStart) state.scheduleWeekStart = cloudData.scheduleWeekStart;
@@ -215,11 +221,13 @@ export async function syncToCloud() {
     const stateRef = doc(db, 'users', currentUid, 'data', 'state');
     batch.set(stateRef, {
       tabs: state.tabs,
+      pageSections: state.pageSections,
       deletedNotes: state.deletedNotes,
       todos: state.todos,
       todoInbox: state.todoInbox,
       behaviorLog: state.behaviorLog,
       selectedTabId: state.selectedTabId,
+      selectedPageSectionId: state.selectedPageSectionId,
       selectedNoteId: state.selectedNoteId,
       scheduleEntries: state.scheduleEntries,
       dateNotes: state.dateNotes || {},
@@ -228,6 +236,7 @@ export async function syncToCloud() {
       scheduleWeekStart: state.scheduleWeekStart,
       scheduleMonth: state.scheduleMonth,
       smartPlannerCollapsed: state.smartPlannerCollapsed,
+      pageSectionCollapsed: state.pageSectionCollapsed || {},
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),
     });
 

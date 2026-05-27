@@ -34,8 +34,8 @@ function setDifficulty(diff) {
   });
 }
 
-function open() {
-  projectInput.value = '';
+function open(defaults = {}) {
+  projectInput.value = defaults.projectName || '';
   textInput.value = '';
   descriptionInput.value = '';
   setDateInputValue(deadlineInput, '');
@@ -112,9 +112,9 @@ modalEl.addEventListener('keydown', (event) => {
   }
 });
 
-export function showAddTodoModal() {
+export function showAddTodoModal(defaults = {}) {
   return new Promise((resolve) => {
     resolvePromise = resolve;
-    open();
+    open(defaults);
   });
 }

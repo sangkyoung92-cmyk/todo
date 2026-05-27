@@ -1,6 +1,15 @@
-import { load, nowISO, save, state, uid, getNextSectionColor, pruneDeletedNotes } from './state/store.js';
 import {
-  addNoteBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
+  load,
+  nowISO,
+  save,
+  state,
+  uid,
+  getNextSectionColor,
+  getCurrentTabPageSections,
+  pruneDeletedNotes,
+} from './state/store.js';
+import {
+  addNoteBtn, addPageSectionBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
   noteRecordBtn,
   recordingPanelEl,
@@ -16,7 +25,7 @@ import {
   plannerTopbarToggleBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260508d';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260527-page-sections';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -31,7 +40,7 @@ import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/su
 import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
-import { showAddTodoModal } from './ui/todo-modal.js';
+import { showAddTodoModal } from './ui/todo-modal.js?v=20260527-page-sections';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import {
@@ -42,7 +51,7 @@ import {
   buildPlannerLocalSuggestions,
   setPlannerSuggestions,
   setPlannerStatus,
-} from './ui/schedule.js?v=20260514-daynote-close';
+} from './ui/schedule.js?v=20260527-page-sections';
 import { showScheduleModal } from './ui/schedule-modal.js';
 import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 
@@ -73,6 +82,7 @@ function setNoteListMode(mode, options = {}) {
 
   if (state.noteListMode === 'trash') {
     state.selectedDeletedNoteId = options.selectedDeletedNoteId || state.deletedNotes[0]?.id || null;
+    state.selectedPageSectionId = null;
     state.selectedNoteId = null;
   } else {
     state.selectedDeletedNoteId = null;
@@ -80,6 +90,8 @@ function setNoteListMode(mode, options = {}) {
     state.selectedNoteId = options.selectedNoteId
       || state.notes.find((note) => note.tabId === state.selectedTabId)?.id
       || null;
+    const selectedNote = state.notes.find((note) => note.id === state.selectedNoteId);
+    state.selectedPageSectionId = selectedNote?.pageSectionId || null;
   }
 
   save();
@@ -277,9 +289,38 @@ function addTab() {
   state.noteListMode = 'notes';
   state.selectedDeletedNoteId = null;
   state.selectedTabId = tab.id;
+  state.selectedPageSectionId = null;
   state.selectedNoteId = null;
   save();
   markStateDirty(); scheduleSync();
+  rerender();
+}
+
+function addPageSection() {
+  if (!state.selectedTabId) {
+    alert('먼저 섹션을 선택하세요.');
+    return;
+  }
+
+  const now = nowISO();
+  const pageSection = {
+    id: uid(),
+    tabId: state.selectedTabId,
+    name: '새 구역',
+    order: getCurrentTabPageSections().length,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  state.pageSections.push(pageSection);
+  state.pageSectionCollapsed[pageSection.id] = false;
+  state.selectedPageSectionId = pageSection.id;
+  state.noteListMode = 'notes';
+  state.selectedDeletedNoteId = null;
+
+  save();
+  markStateDirty();
+  scheduleSync();
   rerender();
 }
 
@@ -289,10 +330,14 @@ function addNote() {
     return;
   }
 
+  const selectedPageSection = state.pageSections.find(
+    (item) => item.id === state.selectedPageSectionId && item.tabId === state.selectedTabId,
+  );
   const now = nowISO();
   const note = {
     id: uid(),
     tabId: state.selectedTabId,
+    pageSectionId: selectedPageSection?.id || null,
     title: '',
     content: '',
     createdAt: now,
@@ -341,6 +386,10 @@ function addTodoFromNoteText(text, options = {}) {
 
 function getNoteProjectName(noteId) {
   const note = state.notes.find((item) => item.id === noteId);
+  const pageSection = note?.pageSectionId
+    ? state.pageSections.find((item) => item.id === note.pageSectionId)
+    : null;
+  if (pageSection?.name?.trim()) return pageSection.name.trim();
   return (note?.title || '').trim() || '제목 없음';
 }
 
@@ -391,6 +440,7 @@ function addTodosToInbox(todoItems, sourceNoteId) {
     const inboxItem = createInboxItem({
       text: todoText,
       sourceNoteId,
+      projectName: getNoteProjectName(sourceNoteId),
       difficulty: todoItem.difficulty || '중',
       deadline: todoItem.deadline || null,
     }, { nowISO, uid });
@@ -1330,13 +1380,16 @@ const speechRecorder = createSpeechRecorder({
 });
 
 addTabBtn.addEventListener('click', addTab);
+addPageSectionBtn?.addEventListener('click', addPageSection);
 addNoteBtn.addEventListener('click', addNote);
 toggleTodoPanelBtn?.addEventListener('click', () => {
   const isCollapsed = todoPanelEl?.classList.contains('collapsed') || false;
   setTodoPanelCollapsed(!isCollapsed);
 });
 addTodoBtn.addEventListener('click', async () => {
-  const result = await showAddTodoModal();
+  const result = await showAddTodoModal({
+    projectName: getNoteProjectName(state.selectedNoteId),
+  });
   if (!result) return;
   setTodoPanelCollapsed(false);
   addTodo(
@@ -1344,7 +1397,7 @@ addTodoBtn.addEventListener('click', async () => {
     state.selectedNoteId || null,
     result.difficulty,
     result.deadline,
-    result.projectName || '',
+    result.projectName || getNoteProjectName(state.selectedNoteId),
     result.description || '',
   );
   rerender();
