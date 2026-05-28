@@ -4640,6 +4640,41 @@ textarea:focus-visible,
   background: var(--accent-soft);
 }
 
+.page-item.in-page-section {
+  margin-left: 18px;
+  width: calc(100% - 22px);
+  border-left-color: rgba(15, 118, 110, 0.38);
+  background: rgba(15, 118, 110, 0.035);
+}
+
+.page-item.in-page-section:hover {
+  background: rgba(15, 118, 110, 0.075);
+}
+
+.page-item.in-page-section.active {
+  background: rgba(15, 118, 110, 0.13);
+}
+
+.page-item.unsectioned-page {
+  border-left-color: rgba(85, 112, 126, 0.18);
+}
+
+.page-section-divider--unsectioned {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.page-section-divider--unsectioned .page-section-name {
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.page-section-divider--unsectioned.drag-over {
+  border-top-color: rgba(15, 118, 110, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.22);
+}
+
 .page-section-add-btn {
   min-height: 30px;
   padding: 5px 10px;

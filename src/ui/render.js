@@ -639,13 +639,52 @@ export function renderNotes(onRender) {
     noteListEl.appendChild(li);
   };
 
-  const appendNoteItem = (note) => {
+  const appendUnsectionedHeader = (count) => {
+    const li = document.createElement('li');
+    li.className = 'page-section-divider page-section-divider--unsectioned';
+    li.innerHTML = `
+      <button class="page-section-toggle" type="button">
+        <span class="page-section-arrow"></span>
+        <span class="page-section-name">구역 밖</span>
+        <span class="page-section-count">${count}</span>
+      </button>
+    `;
+
+    li.addEventListener('click', () => {
+      state.selectedPageSectionId = null;
+      save();
+      markStateDirty();
+      scheduleSync();
+      onRender();
+    });
+
+    li.addEventListener('dragover', (e) => {
+      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
+      if (!noteId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      li.classList.add('drag-over');
+    });
+
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('drop', (e) => {
+      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
+      if (!noteId) return;
+      e.preventDefault();
+      li.classList.remove('drag-over');
+      if (moveNoteToPageSection(noteId, null)) onRender();
+    });
+
+    noteListEl.appendChild(li);
+  };
+
+  const appendNoteItem = (note, options = {}) => {
     const tab = state.tabs.find((item) => item.id === note.tabId || item.id === note.deletedFromTabId);
     const isActive = trashMode
       ? note.id === state.selectedDeletedNoteId
       : note.id === state.selectedNoteId;
     const li = document.createElement('li');
-    li.className = `page-item ${isActive ? 'active' : ''}${trashMode ? ' trashed' : ''}`;
+    li.className = `page-item ${isActive ? 'active' : ''}${trashMode ? ' trashed' : ''}${options.inPageSection ? ' in-page-section' : ''}${options.unsectioned ? ' unsectioned-page' : ''}`;
     li.draggable = !trashMode;
     li.dataset.noteId = note.id;
 
@@ -766,11 +805,12 @@ export function renderNotes(onRender) {
       const sectionNotes = notesByPageSection.get(pageSection.id) || [];
       appendPageSectionHeader(pageSection, sectionNotes.length);
       if (!state.pageSectionCollapsed?.[pageSection.id]) {
-        sectionNotes.forEach(appendNoteItem);
+        sectionNotes.forEach((note) => appendNoteItem(note, { inPageSection: true }));
       }
     });
 
-    unsectionedNotes.forEach(appendNoteItem);
+    appendUnsectionedHeader(unsectionedNotes.length);
+    unsectionedNotes.forEach((note) => appendNoteItem(note, { unsectioned: true }));
     return;
   }
 
