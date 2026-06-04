@@ -25,7 +25,7 @@ import {
   plannerTopbarToggleBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260528-section-drop';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260604-section-bulk';
 import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -324,14 +324,14 @@ function addPageSection() {
   rerender();
 }
 
-function addNote() {
+function addNote(pageSectionId = state.selectedPageSectionId) {
   if (!state.selectedTabId) {
     alert('먼저 섹션을 선택하세요.');
     return;
   }
 
   const selectedPageSection = state.pageSections.find(
-    (item) => item.id === state.selectedPageSectionId && item.tabId === state.selectedTabId,
+    (item) => item.id === pageSectionId && item.tabId === state.selectedTabId,
   );
   const now = nowISO();
   const note = {
@@ -1381,7 +1381,8 @@ const speechRecorder = createSpeechRecorder({
 
 addTabBtn.addEventListener('click', addTab);
 addPageSectionBtn?.addEventListener('click', addPageSection);
-addNoteBtn.addEventListener('click', addNote);
+addNoteBtn.addEventListener('click', () => addNote());
+document.addEventListener('add-note-to-page-section', (event) => addNote(event.detail?.pageSectionId));
 toggleTodoPanelBtn?.addEventListener('click', () => {
   const isCollapsed = todoPanelEl?.classList.contains('collapsed') || false;
   setTodoPanelCollapsed(!isCollapsed);

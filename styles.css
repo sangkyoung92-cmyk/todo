@@ -5763,3 +5763,10 @@ textarea:focus-visible,
     flex: 1;
   }
 }
+
+.page-item.multi-selected {
+  border-color: rgba(40, 124, 255, 0.52);
+  border-left-color: var(--accent);
+  background: rgba(40, 124, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(40, 124, 255, 0.16);
+}
