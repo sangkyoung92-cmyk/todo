@@ -23,17 +23,27 @@ import {
 } from './dom.js';
 import { markDirty, markStateDirty, scheduleSync } from '../sync/cloud.js';
 import { renderTodos } from './todo.js';
+import {
+  clearNoteSelection,
+  getDraggedNoteIds,
+  isNoteSelected,
+  registerVisibleNote,
+  resetVisibleNotes,
+  selectNote,
+} from './note-selection.js';
 
 let editingTabId = null;
 let editingPageSectionId = null;
 let draggedSectionId = null;
+let draggedPageSectionId = null;
 let draggedNoteId = null;
+let draggedNoteIds = [];
 let suppressDragClick = false;
 let lastRenderedNoteKey = null;
 
 function clearDragClasses() {
   document
-    .querySelectorAll('.section-tab.dragging, .section-tab.drag-over, .section-tab.drop-before, .section-tab.drop-after, .page-item.dragging, .page-item.drag-over, .page-section-divider.drag-over')
+    .querySelectorAll('.section-tab.dragging, .section-tab.drag-over, .section-tab.drop-before, .section-tab.drop-after, .page-item.dragging, .page-item.drag-over, .page-section-divider.dragging, .page-section-divider.drag-over, .page-section-divider.drop-before, .page-section-divider.drop-after')
     .forEach((el) => {
       el.classList.remove('dragging', 'drag-over', 'drop-before', 'drop-after');
     });
@@ -88,50 +98,102 @@ function reorderSection(sourceTabId, targetTabId, insertAfter) {
   return true;
 }
 
-function moveNoteToSection(noteId, targetTabId) {
-  const note = state.notes.find((item) => item.id === noteId);
-  const tab = state.tabs.find((item) => item.id === targetTabId);
-  if (!note || !tab || note.tabId === targetTabId) return false;
 
+function reorderPageSection(sourcePageSectionId, targetPageSectionId = null, insertAfter = true) {
+  if (!sourcePageSectionId || sourcePageSectionId === targetPageSectionId) return false;
+
+  const currentSections = getCurrentTabPageSections();
+  const fromIndex = currentSections.findIndex((section) => section.id === sourcePageSectionId);
+  if (fromIndex < 0) return false;
+
+  const [pageSection] = currentSections.splice(fromIndex, 1);
+  let nextIndex = currentSections.length;
+  if (targetPageSectionId) {
+    const targetIndex = currentSections.findIndex((section) => section.id === targetPageSectionId);
+    if (targetIndex < 0) return false;
+    nextIndex = targetIndex + (insertAfter ? 1 : 0);
+  }
+
+  currentSections.splice(nextIndex, 0, pageSection);
   const now = nowISO();
-  note.tabId = targetTabId;
-  note.pageSectionId = null;
-  note.updatedAt = now;
-  tab.updatedAt = now;
-  state.noteListMode = 'notes';
-  state.selectedDeletedNoteId = null;
-  state.selectedTabId = targetTabId;
-  state.selectedNoteId = note.id;
-  clearSearchUI();
+  currentSections.forEach((section, index) => {
+    section.order = index;
+    section.updatedAt = now;
+  });
+  state.selectedPageSectionId = sourcePageSectionId;
 
   save();
-  markDirty(note.id);
   markStateDirty();
   scheduleSync();
   return true;
 }
 
-function moveNoteToPageSection(noteId, pageSectionId = null) {
-  const note = state.notes.find((item) => item.id === noteId);
-  const pageSection = pageSectionId
-    ? state.pageSections.find((item) => item.id === pageSectionId)
-    : null;
-  if (!note || (pageSectionId && !pageSection)) return false;
-  if (pageSection && note.tabId !== pageSection.tabId) return false;
-  if ((note.pageSectionId || null) === (pageSectionId || null)) return false;
+function moveNotesToSection(noteIds, targetTabId) {
+  const tab = state.tabs.find((item) => item.id === targetTabId);
+  const notes = state.notes.filter((note) => noteIds.includes(note.id) && note.tabId !== targetTabId);
+  if (!tab || notes.length === 0) return false;
 
   const now = nowISO();
-  note.pageSectionId = pageSectionId || null;
-  note.updatedAt = now;
-  if (pageSection) pageSection.updatedAt = now;
-  state.selectedPageSectionId = pageSectionId || null;
-  state.selectedNoteId = note.id;
+  notes.forEach((note) => {
+    note.tabId = targetTabId;
+    note.pageSectionId = null;
+    note.updatedAt = now;
+    markDirty(note.id);
+  });
+  tab.updatedAt = now;
+  state.noteListMode = 'notes';
+  state.selectedDeletedNoteId = null;
+  state.selectedTabId = targetTabId;
+  state.selectedPageSectionId = null;
+  state.selectedNoteId = notes[0].id;
+  clearSearchUI();
 
   save();
-  markDirty(note.id);
   markStateDirty();
   scheduleSync();
   return true;
+}
+
+function moveNotesToPageSection(noteIds, pageSectionId = null) {
+  const notes = state.notes.filter((note) => noteIds.includes(note.id));
+  const pageSection = pageSectionId
+    ? state.pageSections.find((item) => item.id === pageSectionId)
+    : null;
+  if (notes.length === 0 || (pageSectionId && !pageSection)) return false;
+  const movableNotes = notes.filter((note) => {
+    if (pageSection && note.tabId !== pageSection.tabId) return false;
+    return (note.pageSectionId || null) !== (pageSectionId || null);
+  });
+  if (movableNotes.length === 0) return false;
+
+  const now = nowISO();
+  movableNotes.forEach((note) => {
+    note.pageSectionId = pageSectionId || null;
+    note.updatedAt = now;
+    markDirty(note.id);
+  });
+  if (pageSection) pageSection.updatedAt = now;
+  state.selectedPageSectionId = pageSectionId || null;
+  state.selectedNoteId = movableNotes[0].id;
+
+  save();
+  markStateDirty();
+  scheduleSync();
+  return true;
+}
+
+function getDroppedNoteIds(dataTransfer) {
+  if (draggedNoteIds.length > 0) return draggedNoteIds;
+  const serializedIds = dataTransfer.getData('application/x-onenote-note-ids');
+  if (serializedIds) {
+    try {
+      return JSON.parse(serializedIds);
+    } catch {
+      return [];
+    }
+  }
+  const noteId = dataTransfer.getData('application/x-onenote-note-id');
+  return noteId ? [noteId] : [];
 }
 
 function deletePageSection(pageSectionId) {
@@ -297,6 +359,7 @@ export function renderTabs(onRender) {
       }
       state.noteListMode = 'notes';
       state.selectedDeletedNoteId = null;
+      clearNoteSelection();
       clearSearchUI();
       state.selectedTabId = tab.id;
       state.selectedNoteId = getCurrentTabNotes()[0]?.id || null;
@@ -351,18 +414,19 @@ export function renderTabs(onRender) {
 
     li.addEventListener('drop', (e) => {
       const sectionId = draggedSectionId || e.dataTransfer.getData('application/x-onenote-section-id');
-      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-      if (!sectionId && !noteId) return;
+      const noteIds = getDroppedNoteIds(e.dataTransfer);
+      if (!sectionId && noteIds.length === 0) return;
 
       e.preventDefault();
       const rect = li.getBoundingClientRect();
       const insertAfter = e.clientX > rect.left + rect.width / 2;
       const changed = sectionId
         ? reorderSection(sectionId, tab.id, insertAfter)
-        : moveNoteToSection(noteId, tab.id);
+        : moveNotesToSection(noteIds, tab.id);
 
       draggedSectionId = null;
       draggedNoteId = null;
+      draggedNoteIds = [];
       clearDragClasses();
       if (changed) onRender();
     });
@@ -470,6 +534,7 @@ export function renderTabs(onRender) {
 
 export function renderNotes(onRender) {
   noteListEl.innerHTML = '';
+  resetVisibleNotes();
   syncNotesPanelHead();
 
   const trashMode = state.noteListMode === 'trash';
@@ -527,6 +592,7 @@ export function renderNotes(onRender) {
     const isEditing = editingPageSectionId === pageSection.id;
     const li = document.createElement('li');
     li.className = 'page-section-divider';
+    li.draggable = !isEditing;
     li.dataset.pageSectionId = pageSection.id;
     li.innerHTML = `
       <button class="page-section-toggle" data-action="toggle-page-section" type="button" aria-expanded="${String(!collapsed)}">
@@ -537,8 +603,8 @@ export function renderNotes(onRender) {
         <span class="page-section-count">${count}</span>
       </button>
       <div class="page-section-actions">
-        <button class="icon-btn" data-action="rename-page-section" title="구역 이름 수정" type="button">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.146 1.854a.5.5 0 01.708 0l1.292 1.292a.5.5 0 010 .708l-8.5 8.5a.5.5 0 01-.224.13l-3 1a.5.5 0 01-.632-.632l1-3a.5.5 0 01.13-.224l8.5-8.5zM11.5 3.207L3.73 10.977l-.53 1.59 1.59-.53L12.56 4.268 11.5 3.207z"/></svg>
+        <button class="icon-btn" data-action="add-note-to-page-section" title="구역 안에 페이지 추가" type="button">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a1 1 0 011 1v4h4a1 1 0 110 2H9v4a1 1 0 11-2 0V9H3a1 1 0 110-2h4V3a1 1 0 011-1z"/></svg>
         </button>
         <button class="icon-btn" data-action="delete-page-section" title="구역 삭제" type="button">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clip-rule="evenodd"/></svg>
@@ -548,6 +614,10 @@ export function renderNotes(onRender) {
 
     li.addEventListener('click', (e) => {
       if (e.target.closest('.icon-btn, input')) return;
+      if (suppressDragClick || li.classList.contains('dragging')) {
+        suppressDragClick = false;
+        return;
+      }
       state.selectedPageSectionId = pageSection.id;
       state.pageSectionCollapsed[pageSection.id] = !collapsed;
       save();
@@ -562,27 +632,67 @@ export function renderNotes(onRender) {
       onRender();
     });
 
+    li.addEventListener('dragstart', (e) => {
+      if (isEditing || e.target.closest('.icon-btn, input')) {
+        e.preventDefault();
+        return;
+      }
+      draggedPageSectionId = pageSection.id;
+      suppressDragClick = true;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('application/x-onenote-page-section-id', pageSection.id);
+      setTimeout(() => li.classList.add('dragging'), 0);
+    });
+
     li.addEventListener('dragover', (e) => {
-      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-      if (!noteId) return;
+      const pageSectionId = hasDragType(e.dataTransfer, 'application/x-onenote-page-section-id')
+        ? draggedPageSectionId || e.dataTransfer.getData('application/x-onenote-page-section-id')
+        : '';
+      const noteIds = getDroppedNoteIds(e.dataTransfer);
+      if (!pageSectionId && noteIds.length === 0) return;
+
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      li.classList.add('drag-over');
+      li.classList.toggle('drag-over', !pageSectionId && noteIds.length > 0);
+      li.classList.remove('drop-before', 'drop-after');
+
+      if (pageSectionId && pageSectionId !== pageSection.id) {
+        const rect = li.getBoundingClientRect();
+        li.classList.add(e.clientY > rect.top + rect.height / 2 ? 'drop-after' : 'drop-before');
+      }
     });
 
-    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over', 'drop-before', 'drop-after'));
     li.addEventListener('drop', (e) => {
-      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-      if (!noteId) return;
+      const pageSectionId = draggedPageSectionId || e.dataTransfer.getData('application/x-onenote-page-section-id');
+      const noteIds = getDroppedNoteIds(e.dataTransfer);
+      if (!pageSectionId && noteIds.length === 0) return;
+
       e.preventDefault();
-      li.classList.remove('drag-over');
-      if (moveNoteToPageSection(noteId, pageSection.id)) onRender();
+      const rect = li.getBoundingClientRect();
+      const insertAfter = e.clientY > rect.top + rect.height / 2;
+      const changed = pageSectionId
+        ? reorderPageSection(pageSectionId, pageSection.id, insertAfter)
+        : moveNotesToPageSection(noteIds, pageSection.id);
+
+      draggedPageSectionId = null;
+      li.classList.remove('drag-over', 'drop-before', 'drop-after');
+      clearDragClasses();
+      if (changed) onRender();
     });
 
-    li.querySelector('[data-action="rename-page-section"]').addEventListener('click', (e) => {
+    li.addEventListener('dragend', () => {
+      draggedPageSectionId = null;
+      clearDragClasses();
+      setTimeout(() => {
+        suppressDragClick = false;
+      }, 0);
+    });
+
+    li.querySelector('[data-action="add-note-to-page-section"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      editingPageSectionId = pageSection.id;
-      onRender();
+      state.pageSectionCollapsed[pageSection.id] = false;
+      document.dispatchEvent(new CustomEvent('add-note-to-page-section', { detail: { pageSectionId: pageSection.id } }));
     });
 
     li.querySelector('[data-action="delete-page-section"]').addEventListener('click', (e) => {
@@ -659,20 +769,30 @@ export function renderNotes(onRender) {
     });
 
     li.addEventListener('dragover', (e) => {
-      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-      if (!noteId) return;
+      const pageSectionId = hasDragType(e.dataTransfer, 'application/x-onenote-page-section-id')
+        ? draggedPageSectionId || e.dataTransfer.getData('application/x-onenote-page-section-id')
+        : '';
+      const noteIds = getDroppedNoteIds(e.dataTransfer);
+      if (!pageSectionId && noteIds.length === 0) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      li.classList.add('drag-over');
+      li.classList.toggle('drag-over', !pageSectionId && noteIds.length > 0);
+      li.classList.toggle('drop-after', !!pageSectionId);
     });
 
-    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over', 'drop-after'));
     li.addEventListener('drop', (e) => {
-      const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-      if (!noteId) return;
+      const pageSectionId = draggedPageSectionId || e.dataTransfer.getData('application/x-onenote-page-section-id');
+      const noteIds = getDroppedNoteIds(e.dataTransfer);
+      if (!pageSectionId && noteIds.length === 0) return;
       e.preventDefault();
-      li.classList.remove('drag-over');
-      if (moveNoteToPageSection(noteId, null)) onRender();
+      const changed = pageSectionId
+        ? reorderPageSection(pageSectionId)
+        : moveNotesToPageSection(noteIds, null);
+      draggedPageSectionId = null;
+      li.classList.remove('drag-over', 'drop-after');
+      clearDragClasses();
+      if (changed) onRender();
     });
 
     noteListEl.appendChild(li);
@@ -686,7 +806,9 @@ export function renderNotes(onRender) {
       ? note.id === state.selectedDeletedNoteId
       : note.id === state.selectedNoteId;
     const li = document.createElement('li');
-    li.className = `page-item ${isActive ? 'active' : ''}${trashMode ? ' trashed' : ''}${options.inPageSection ? ' in-page-section' : ''}${options.unsectioned ? ' unsectioned-page' : ''}`;
+    registerVisibleNote(note.id);
+    const isSelected = isNoteSelected(note.id);
+    li.className = `page-item ${isActive ? 'active' : ''}${isSelected ? ' multi-selected' : ''}${trashMode ? ' trashed' : ''}${options.inPageSection ? ' in-page-section' : ''}${options.unsectioned ? ' unsectioned-page' : ''}`;
     li.draggable = !trashMode;
     li.dataset.noteId = note.id;
 
@@ -736,6 +858,7 @@ export function renderNotes(onRender) {
         state.selectedTabId = note.tabId;
         clearSearchUI();
       }
+      selectNote(note.id, { toggle: e.ctrlKey || e.metaKey, range: e.shiftKey });
       state.noteListMode = 'notes';
       state.selectedDeletedNoteId = null;
       state.selectedPageSectionId = note.pageSectionId || null;
@@ -754,14 +877,17 @@ export function renderNotes(onRender) {
         return;
       }
       draggedNoteId = note.id;
+      draggedNoteIds = getDraggedNoteIds(note.id);
       suppressDragClick = true;
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('application/x-onenote-note-id', note.id);
+      e.dataTransfer.setData('application/x-onenote-note-ids', JSON.stringify(draggedNoteIds));
       setTimeout(() => li.classList.add('dragging'), 0);
     });
 
     li.addEventListener('dragend', () => {
       draggedNoteId = null;
+      draggedNoteIds = [];
       clearDragClasses();
       setTimeout(() => {
         suppressDragClick = false;
@@ -770,8 +896,8 @@ export function renderNotes(onRender) {
 
     if (!trashMode && hasDropTarget) {
       li.addEventListener('dragover', (e) => {
-        const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-        if (!noteId) return;
+        const noteIds = getDroppedNoteIds(e.dataTransfer);
+        if (noteIds.length === 0) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         li.classList.add('drag-over');
@@ -779,11 +905,11 @@ export function renderNotes(onRender) {
 
       li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
       li.addEventListener('drop', (e) => {
-        const noteId = draggedNoteId || e.dataTransfer.getData('application/x-onenote-note-id');
-        if (!noteId) return;
+        const noteIds = getDroppedNoteIds(e.dataTransfer);
+        if (noteIds.length === 0) return;
         e.preventDefault();
         li.classList.remove('drag-over');
-        if (moveNoteToPageSection(noteId, dropPageSectionId)) onRender();
+        if (moveNotesToPageSection(noteIds, dropPageSectionId)) onRender();
       });
     }
 
