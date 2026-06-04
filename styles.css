@@ -5770,3 +5770,33 @@ textarea:focus-visible,
   background: rgba(40, 124, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(40, 124, 255, 0.16);
 }
+
+
+.page-section-divider.dragging {
+  opacity: 0.48;
+}
+
+.page-section-divider.drop-before,
+.page-section-divider.drop-after {
+  position: relative;
+}
+
+.page-section-divider.drop-before::before,
+.page-section-divider.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.74);
+}
+
+.page-section-divider.drop-before::before {
+  top: -3px;
+}
+
+.page-section-divider.drop-after::after {
+  bottom: -3px;
+}
