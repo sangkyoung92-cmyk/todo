@@ -39,7 +39,6 @@ export const state = {
   notes: [],
   deletedNotes: [],
   todos: [],
-  behaviorLog: [],
   recordingDrafts: {},
   selectedTabId: null,
   selectedPageSectionId: null,
@@ -137,7 +136,6 @@ export function save() {
     notes: state.notes,
     deletedNotes: state.deletedNotes,
     todos: state.todos,
-    behaviorLog: state.behaviorLog,
     recordingDrafts: state.recordingDrafts,
     selectedTabId: state.selectedTabId,
     selectedPageSectionId: state.selectedPageSectionId,
@@ -167,7 +165,6 @@ export function load() {
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
-    state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedPageSectionId = null;
@@ -193,7 +190,6 @@ export function load() {
     state.notes = parsed.notes || [];
     state.deletedNotes = parsed.deletedNotes || [];
     state.todos = parsed.todos || [];
-    state.behaviorLog = parsed.behaviorLog || [];
     state.recordingDrafts = parsed.recordingDrafts || {};
 
     // Ensure all tabs have a color
@@ -236,7 +232,6 @@ export function load() {
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
-    state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
     state.selectedPageSectionId = null;

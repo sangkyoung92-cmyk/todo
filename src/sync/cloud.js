@@ -142,7 +142,6 @@ export async function loadFromCloud(rerender) {
       state.notes = [];
       state.deletedNotes = [];
       state.todos = [];
-      state.behaviorLog = [];
       state.selectedTabId = null;
       state.selectedPageSectionId = null;
       state.selectedNoteId = null;
@@ -166,7 +165,6 @@ export async function loadFromCloud(rerender) {
     state.tabs = cloudData.tabs || [];
     state.pageSections = cloudData.pageSections || [];
     state.todos = cloudData.todos || [];
-    state.behaviorLog = cloudData.behaviorLog || [];
     state.deletedNotes = cloudData.deletedNotes || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
     state.selectedPageSectionId = cloudData.selectedPageSectionId || null;
@@ -221,7 +219,6 @@ export async function syncToCloud() {
       pageSections: state.pageSections,
       deletedNotes: state.deletedNotes,
       todos: state.todos,
-      behaviorLog: state.behaviorLog,
       selectedTabId: state.selectedTabId,
       selectedPageSectionId: state.selectedPageSectionId,
       selectedNoteId: state.selectedNoteId,

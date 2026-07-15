@@ -23,7 +23,7 @@ import {
   addScheduleTaskBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-korean-text-fix1';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-remove-ai-ref-settings1';
 import { signIn, signInRedirect, signOutUser, onAuthChange, signUpWithEmail, signInWithEmail, sendPasswordReset } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -32,13 +32,11 @@ import {
 import { addTodo } from './ui/todo.js';
 import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
 import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
-import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { summarizeRecordingWithAI } from './ai/summary.js';
 import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/summary-settings.js';
 import { createSpeechRecorder } from './audio/speech-recorder.js';
-import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
-import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-korean-text-fix1';
+import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-remove-ai-ref-settings1';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import { initAuthLanding } from './ui/auth-landing.js';
@@ -47,7 +45,7 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-} from './ui/schedule.js?v=20260715-korean-text-fix1';
+} from './ui/schedule.js?v=20260715-remove-ai-ref-settings1';
 import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
@@ -414,10 +412,7 @@ async function addTodosFromCurrentNote() {
     let sourceLabel = '로컬';
 
     if (apiKey) {
-      const prefs = getScheduleAIPreferences();
-      const existingTodos = prefs.useDeadlineDistribution || prefs.useExistingTodoTexts ? state.todos : [];
-      const behaviorSummary = prefs.useBehaviorSummary ? buildBehaviorSummary() : '';
-      todos = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
+      todos = await extractTodosWithAI(note.content, note.createdAt);
       sourceLabel = 'AI';
     } else {
       todos = extractLocalTodosFromNote(note.content);
@@ -468,8 +463,7 @@ async function extractTodosFromCurrentNote() {
   extractTodoBtn.textContent = 'AI 분석 중...';
 
   try {
-    const behaviorSummary = buildBehaviorSummary();
-    const todos = await extractTodosWithAI(note.content, state.todos, behaviorSummary, note.createdAt);
+    const todos = await extractTodosWithAI(note.content, note.createdAt);
 
     if (!todos.length) {
       alert('노트에서 추출할 할 일이 없습니다.');
@@ -1265,11 +1259,6 @@ const geminiKeyToggle = document.getElementById('gemini-key-toggle');
 const geminiKeySave = document.getElementById('gemini-key-save');
 const geminiKeyClear = document.getElementById('gemini-key-clear');
 const geminiKeyStatus = document.getElementById('gemini-key-status');
-const scheduleAIPrefBehavior = document.getElementById('schedule-ai-pref-behavior');
-const scheduleAIPrefDeadline = document.getElementById('schedule-ai-pref-deadline');
-const scheduleAIPrefExisting = document.getElementById('schedule-ai-pref-existing');
-const scheduleAIPrefSave = document.getElementById('schedule-ai-pref-save');
-const scheduleAIPrefStatus = document.getElementById('schedule-ai-pref-status');
 const summaryPromptInput = document.getElementById('summary-prompt-input');
 const summaryPromptSave = document.getElementById('summary-prompt-save');
 const summaryPromptReset = document.getElementById('summary-prompt-reset');
@@ -1277,11 +1266,6 @@ const summaryPromptStatus = document.getElementById('summary-prompt-status');
 
 function openSettingsDrawer() {
   geminiKeyInput.value = getApiKey();
-  const prefs = getScheduleAIPreferences();
-  scheduleAIPrefBehavior.checked = !!prefs.useBehaviorSummary;
-  scheduleAIPrefDeadline.checked = !!prefs.useDeadlineDistribution;
-  scheduleAIPrefExisting.checked = !!prefs.useExistingTodoTexts;
-  scheduleAIPrefStatus.textContent = '';
   summaryPromptInput.value = getSummaryPrompt();
   summaryPromptStatus.textContent = '';
   updateKeyStatus();
@@ -1329,16 +1313,6 @@ geminiKeyClear.addEventListener('click', () => {
   geminiKeyInput.value = '';
   saveApiKey('');
   updateKeyStatus();
-});
-
-scheduleAIPrefSave.addEventListener('click', () => {
-  saveScheduleAIPreferences({
-    useBehaviorSummary: scheduleAIPrefBehavior.checked,
-    useDeadlineDistribution: scheduleAIPrefDeadline.checked,
-    useExistingTodoTexts: scheduleAIPrefExisting.checked,
-  });
-  scheduleAIPrefStatus.textContent = '저장됨';
-  scheduleAIPrefStatus.dataset.state = 'saved';
 });
 
 summaryPromptSave.addEventListener('click', () => {

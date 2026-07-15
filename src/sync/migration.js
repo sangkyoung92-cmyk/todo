@@ -30,7 +30,6 @@ export function hasMeaningfulLocalData(snapshot) {
     snapshot.notes,
     snapshot.deletedNotes,
     snapshot.todos,
-    snapshot.behaviorLog,
     snapshot.scheduleEntries,
   ].some((items) => Array.isArray(items) && items.length > 0)
     || Object.keys(snapshot.dateNotes || {}).length > 0
@@ -119,7 +118,6 @@ export function mergeSnapshots(localSnapshot, cloudSnapshot = {}) {
     notes: mergeByUpdatedAt(localSnapshot.notes, cloudSnapshot.notes),
     deletedNotes: mergeByUpdatedAt(localSnapshot.deletedNotes, cloudSnapshot.deletedNotes),
     todos: mergeByUpdatedAt(localSnapshot.todos, cloudSnapshot.todos),
-    behaviorLog: [...(cloudSnapshot.behaviorLog || []), ...(localSnapshot.behaviorLog || [])],
     scheduleEntries: mergeByUpdatedAt(localSnapshot.scheduleEntries, cloudSnapshot.scheduleEntries),
     dateNotes: mergeDateNotes(localSnapshot.dateNotes, cloudSnapshot.dateNotes),
     recordingDrafts: { ...(cloudSnapshot.recordingDrafts || {}), ...(localSnapshot.recordingDrafts || {}) },
@@ -147,7 +145,6 @@ export function applySnapshotToState(snapshot = {}) {
   state.notes = snapshot.notes || [];
   state.deletedNotes = snapshot.deletedNotes || [];
   state.todos = snapshot.todos || [];
-  state.behaviorLog = snapshot.behaviorLog || [];
   state.recordingDrafts = snapshot.recordingDrafts || {};
   state.selectedTabId = snapshot.selectedTabId || state.tabs[0]?.id || null;
   state.selectedPageSectionId = snapshot.selectedPageSectionId || null;
@@ -174,7 +171,6 @@ export async function writeSnapshotToCloud(uid, snapshot) {
     pageSections: snapshot.pageSections || [],
     deletedNotes: snapshot.deletedNotes || [],
     todos: snapshot.todos || [],
-    behaviorLog: snapshot.behaviorLog || [],
     selectedTabId: snapshot.selectedTabId || null,
     selectedPageSectionId: snapshot.selectedPageSectionId || null,
     selectedNoteId: snapshot.selectedNoteId || null,

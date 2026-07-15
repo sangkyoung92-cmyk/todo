@@ -29,9 +29,7 @@ src/state/store.js          ← 단일 전역 state, localStorage 자동 저장
 src/ui/                     ← 렌더링 (render.js, todo.js, schedule.js, 모달들)
 src/sync/cloud.js           ← Firebase Firestore 동기화 (2초 debounce)
 src/auth.js                 ← Google OAuth 로그인/로그아웃
-src/ai/                     ← Gemini API 연동 (extract.js, deadline.js, schedule-preferences.js)
 src/todo/                   ← 노트 텍스트 → 할 일 추출
-src/tracking/behavior.js    ← AI 개인화용 사용자 행동 로그
 src/utils/                  ← date-utils, format, holiday-utils, parse-date-kr, todo-buckets
 src/main.js                 ← 진입점, 이벤트 위임, 앱 조율
 packages/shared/            ← 웹/Android 공용 유틸 (firebase-config, schedule-repository 등)
@@ -56,7 +54,6 @@ apps/android/capacitor/     ← Android 앱 (Capacitor 기반, www/ 는 웹 에�
 | 할 일 목록 | `src/ui/todo.js`, `src/ui/todo-modal.js`, `src/utils/todo-buckets.js` |
 | 스케줄(주·월간) | `src/ui/schedule.js`, `packages/schedule-core/` |
 | 클라우드 동기화 | `src/sync/cloud.js`, `packages/shared/firebase-config.js` |
-| AI 개인화 | `src/tracking/behavior.js`, `src/ai/deadline.js`, `docs/ai-personalization.md` |
 
 ### 스케줄 특이사항
 

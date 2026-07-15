@@ -49,5 +49,4 @@ Relevant fields for the companion app:
 ## Sync Rules
 
 - The mobile app only reads and writes schedule-related fields.
-- Other state fields such as `tabs`, `notes`, and `behaviorLog` are preserved when the mobile app saves updates.
 - Notes remain web-only in this iteration.
