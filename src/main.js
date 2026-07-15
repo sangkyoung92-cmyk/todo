@@ -26,7 +26,7 @@ import {
   topbarTrashBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260604-section-reorder';
-import { signIn, signInRedirect, signOutUser, onAuthChange } from './auth.js';
+import { signIn, signInRedirect, signOutUser, onAuthChange, signUpWithEmail, signInWithEmail, sendPasswordReset } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
   loadFromCloud, setSyncStatusCallback,
@@ -43,6 +43,8 @@ import { extractDeadlineFromText } from './utils/parse-date-kr.js';
 import { showAddTodoModal } from './ui/todo-modal.js?v=20260527-page-sections';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
+import { initAuthLanding } from './ui/auth-landing.js';
+import { migrateLocalData } from './sync/migration.js';
 import {
   renderSchedule,
   initScheduleNav,
@@ -1665,6 +1667,63 @@ syncStatusEl.addEventListener('click', () => {
 });
 
 // ── Auth ─────────────────────────────────────────────
+let currentAuthUser = null;
+let authLanding = null;
+let pendingLandingMigration = false;
+
+function describeMigrationResult(result) {
+  if (!result) return '기존 데이터 확인이 끝났어요.';
+  if (result.status === 'uploaded') return '기존 로컬 데이터를 가입한 계정으로 안전하게 옮겼어요.';
+  if (result.status === 'merged') return '기존 로컬 데이터와 계정 데이터를 안전하게 합쳤어요.';
+  if (result.status === 'already-migrated') return '이미 이 계정으로 기존 데이터 연동이 완료되어 있어요.';
+  if (result.status === 'no-local') return '연동할 기존 로컬 데이터가 없어요.';
+  return '기존 데이터 확인이 끝났어요.';
+}
+
+async function signInWithGoogleFlow() {
+  try {
+    await signIn();
+  } catch (err) {
+    const code = err?.code || '';
+
+    if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+      await signInRedirect();
+      return;
+    }
+
+    if (code === 'auth/unauthorized-domain') {
+      throw new Error(
+        'Firebase 인증 도메인 설정이 필요합니다. Firebase Console > Authentication > Settings > Authorized domains에 sangkyoung92-cmyk.github.io 를 추가해주세요.',
+      );
+    }
+
+    if (code !== 'auth/popup-closed-by-user') {
+      throw new Error(`로그인 실패: ${err.message || code || '알 수 없는 오류'}`);
+    }
+  }
+}
+
+async function migrateForCurrentUser(mode = 'auto') {
+  if (!currentAuthUser) throw new Error('먼저 로그인해주세요.');
+  const result = await migrateLocalData(currentAuthUser.uid, { mode });
+  rerender();
+  return describeMigrationResult(result);
+}
+
+
+async function handleSignOut() {
+  authLanding?.show();
+  authLanding?.setStatus('로그아웃하는 중이에요...');
+  try {
+    await signOutUser();
+    currentAuthUser = null;
+    renderAuthArea(null);
+    authLanding?.setStatus('로그아웃됐어요. 다시 로그인하면 기존 데이터를 확인할게요.');
+  } catch (error) {
+    authLanding?.setStatus(error.message || '로그아웃에 실패했어요.', true);
+  }
+}
+
 function renderAuthArea(user) {
   if (user) {
     authAreaEl.innerHTML = `
@@ -1677,59 +1736,47 @@ function renderAuthArea(user) {
       </span>
       <button id="logout-btn" class="logout-btn">로그아웃</button>
     `;
-    document.getElementById('logout-btn').addEventListener('click', () => signOutUser());
+    document.getElementById('logout-btn').addEventListener('click', handleSignOut);
   } else {
-    authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">Google 로그인</button>`;
-    document.getElementById('login-btn').addEventListener('click', async () => {
-      if (hasPotentialLocalDraft()) {
-        const ok = window.confirm(
-          '로그인 시 클라우드 데이터가 로컬 데이터를 덮어쓸 수 있어요.\n'
-          + '현재 이 브라우저에서 작성한 내용이 사라질 수 있습니다.\n'
-          + '계속 로그인할까요?',
-        );
-        if (!ok) return;
-      }
-      try {
-        await signIn();
-      } catch (err) {
-        const code = err?.code || '';
-
-        if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
-          await signInRedirect();
-          return;
-        }
-
-        if (code === 'auth/unauthorized-domain') {
-          alert(
-            'Firebase 인증 도메인 설정이 필요합니다.\n'
-            + 'Firebase Console > Authentication > Settings > Authorized domains에\n'
-            + 'sangkyoung92-cmyk.github.io 를 추가해주세요.',
-          );
-          return;
-        }
-
-        if (code !== 'auth/popup-closed-by-user') {
-          alert(`로그인 실패: ${err.message || code || '알 수 없는 오류'}`);
-        }
-      }
-    });
+    authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">로그인</button>`;
+    document.getElementById('login-btn').addEventListener('click', () => authLanding?.show());
     clearSyncStatusDisplay();
   }
 }
 
-function hasPotentialLocalDraft() {
-  if (state.tabs.length > 0) return true;
-  if (state.todoInbox.length > 0) return true;
-  return state.notes.some((note) => (note.title || '').trim() || (note.content || '').trim());
-}
-
-onAuthChange((user) => {
+load();
+authLanding = initAuthLanding({
+  onGoogle: signInWithGoogleFlow,
+  onEmailLogin: ({ email, password }) => signInWithEmail(email, password),
+  onEmailSignup: ({ email, password }) => signUpWithEmail(email, password),
+  onResetPassword: (email) => sendPasswordReset(email),
+  onManualMigration: async () => {
+    pendingLandingMigration = true;
+    if (!currentAuthUser) return '연동할 계정을 먼저 로그인/가입해주세요. 로그인 직후 이 브라우저의 로컬 데이터나 자동 백업 데이터를 계정에 업로드할게요.';
+    pendingLandingMigration = false;
+    return migrateForCurrentUser('manual');
+  },
+});
+authLanding.show();
+onAuthChange(async (user) => {
+  currentAuthUser = user;
   renderAuthArea(user);
   if (user) {
+    authLanding?.setStatus('계정 데이터를 불러오기 전에 기존 로컬 데이터를 안전하게 확인하는 중이에요...');
     setCurrentUser(user.uid);
-    loadFromCloud(rerender);
+    try {
+      const message = await migrateForCurrentUser(pendingLandingMigration ? 'manual' : 'auto');
+      pendingLandingMigration = false;
+      authLanding?.setStatus(message);
+    } catch (error) {
+      console.error('Local migration failed:', error);
+      authLanding?.setStatus(error.message || '기존 데이터 연동에 실패했어요. 계정 데이터를 불러옵니다.', true);
+    }
+    await loadFromCloud(rerender);
+    authLanding?.hide();
   } else {
     setCurrentUser(null);
+    authLanding?.show();
     clearSyncStatusDisplay();
   }
 });

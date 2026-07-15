@@ -5,9 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>정리노트</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='7' y='4' width='18' height='24' rx='3' fill='%23e4f4f1' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M12 4v24' stroke='%230f766e' stroke-width='2'/%3E%3Cpath d='M16 12h6M16 17h6M16 22h4' stroke='%230b5f59' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="styles.css?v=20260604-section-reorder" />
+    <link rel="stylesheet" href="styles.css?v=20260715-required-login-link" />
   </head>
-  <body>
+  <body class="auth-required">
+    <section id="landing-page" class="landing-page" aria-live="polite">
+      <div class="landing-card">
+        <p class="landing-kicker">정리노트 로그인 안내</p>
+        <h1>오늘부터 로그인이 필수에요</h1>
+        <p class="landing-copy">AI 기능 사용과 데이터 동기화를 위해 로그인 후 이용할 수 있어요.</p>
+        <p class="landing-copy">구글 계정 로그인이 부담스러우면 임의 이메일/비밀번호로 가입할 수 있어요. 개인정보 기입은 불필요하지만, 비밀번호 재설정 메일이 가입한 이메일로 가니까 이메일은 아무거나 적으면 안 돼요.</p>
+        <div class="landing-actions">
+          <button id="landing-google-btn" class="landing-primary-btn" type="button">Google로 로그인</button>
+        </div>
+        <form id="email-auth-form" class="email-auth-form">
+          <label for="landing-email">이메일</label>
+          <input id="landing-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          <label for="landing-password">비밀번호</label>
+          <input id="landing-password" type="password" autocomplete="current-password" minlength="6" placeholder="6자 이상" required />
+          <div class="email-auth-buttons">
+            <button id="email-login-btn" type="submit">이메일 로그인</button>
+            <button id="email-signup-btn" type="button">이메일 가입</button>
+          </div>
+          <button id="password-reset-btn" class="link-button" type="button">비밀번호 재설정 메일 보내기</button>
+        </form>
+        <button id="manual-migration-btn" class="landing-secondary-btn" type="button">기존 로그인 없이 사용하던 데이터 연동하기</button>
+        <p id="landing-status" class="landing-status"></p>
+      </div>
+    </section>
+
     <!-- Top header -->
     <header class="topbar">
       <div class="topbar-left">
@@ -497,6 +522,6 @@
       <div class="img-resize-handle img-resize-handle-e" data-dir="e"></div>
     </div>
 
-    <script type="module" src="src/main.js?v=20260604-section-reorder"></script>
+    <script type="module" src="src/main.js?v=20260715-required-login-link"></script>
   </body>
 </html>
