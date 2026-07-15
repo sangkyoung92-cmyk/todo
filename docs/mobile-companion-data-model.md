@@ -50,5 +50,4 @@ Relevant fields for the companion app:
 
 - The mobile app only reads and writes schedule-related fields.
 - Other state fields such as `tabs`, `notes`, and `behaviorLog` are preserved when the mobile app saves updates.
-- Web-only planner fields such as `todoInbox` are also preserved and are not edited by the mobile app.
 - Notes remain web-only in this iteration.

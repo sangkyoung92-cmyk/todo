@@ -16,7 +16,6 @@ import {
   noteDateEl,
   noteListEl,
   noteRecordBtn,
-  saveStatusEl,
   tabListEl,
   titleEl,
   topbarTrashBtn,
@@ -994,7 +993,6 @@ export function renderEditor() {
       ? '휴지통에서 페이지를 선택하면 여기에서 내용을 미리 볼 수 있습니다.'
       : '';
     lastRenderedNoteKey = null;
-    saveStatusEl.textContent = trashMode ? '읽기 전용' : '선택된 페이지 없음';
     return;
   }
 
@@ -1008,7 +1006,6 @@ export function renderEditor() {
   noteDateEl.textContent = trashMode
     ? `휴지통 이동: ${formatDate(note.deletedAt || note.updatedAt)}`
     : `최종 수정: ${formatDate(note.updatedAt)}`;
-  saveStatusEl.textContent = trashMode ? '읽기 전용' : '저장됨';
   lastRenderedNoteKey = noteKey;
 }
 

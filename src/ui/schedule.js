@@ -12,12 +12,6 @@ import {
   scheduleRangeLabelEl,
   schedulePrevBtn,
   scheduleNextBtn,
-  plannerInboxListEl,
-  plannerApplyBtn,
-  plannerClearBtn,
-  plannerToggleBtn,
-  plannerTopbarToggleBtn,
-  plannerAiAdviceEl,
   scheduleGotoTodayBtn,
   scheduleGotoDateInput,
   contentEl,
@@ -54,10 +48,6 @@ import {
   toggleEntryDone as toggleCoreEntryDone,
   toggleTaskSectionDone,
 } from '../../packages/schedule-core/tasks.js';
-import {
-  applyPlannerSuggestions as applyCorePlannerSuggestions,
-  buildLocalPlannerSuggestions,
-} from '../../packages/schedule-core/planner.js';
 import { showScheduleModal } from './schedule-modal.js';
 import {
   configureDateTextInput,
@@ -66,12 +56,10 @@ import {
 
 let onRenderCallback = null;
 let taskFilter = 'active';
-let pendingPlannerSuggestions = [];
 let monthOverflowResizeBound = false;
 let selectedDayNoteDate = null;
 let dayNoteSaveTimer = null;
 let dayNoteEventsBound = false;
-let plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
 
 const SCHEDULE_SECTIONS = [
   { key: 'today', label: '오늘 일정' },
@@ -275,84 +263,6 @@ function syncFilterButtons() {
   });
 }
 
-function renderPlanner() {
-  renderPlannerShell();
-  renderPlannerStatus();
-  renderPlannerSuggestions();
-}
-
-function renderPlannerShell() {
-  const plannerEl = document.querySelector('.smart-planner');
-  if (!plannerEl) return;
-  const collapsed = !!state.smartPlannerCollapsed;
-  plannerEl.classList.toggle('is-collapsed', collapsed);
-  if (plannerToggleBtn) {
-    plannerToggleBtn.textContent = collapsed ? '펼치기' : '접기';
-    plannerToggleBtn.setAttribute('aria-expanded', String(!collapsed));
-  }
-  if (plannerTopbarToggleBtn) {
-    plannerTopbarToggleBtn.classList.toggle('active', !collapsed);
-    plannerTopbarToggleBtn.textContent = collapsed ? '업무 제안' : '업무 제안 닫기';
-    plannerTopbarToggleBtn.setAttribute('aria-expanded', String(!collapsed));
-  }
-}
-
-function renderPlannerStatus() {
-  if (!plannerAiAdviceEl) return;
-  plannerAiAdviceEl.hidden = !plannerStatusText;
-  plannerAiAdviceEl.textContent = plannerStatusText;
-}
-
-function renderPlannerSuggestions() {
-  if (!plannerInboxListEl) return;
-  const items = getVisiblePlannerSuggestions();
-  if (plannerApplyBtn) plannerApplyBtn.disabled = items.length === 0;
-
-  if (!items.length) {
-    plannerInboxListEl.innerHTML = '<li class="planner-empty">업무 제안을 누르면 노트 후보와 일정 재배치 제안이 여기에 표시됩니다.</li>';
-    return;
-  }
-
-  plannerInboxListEl.innerHTML = items.map((item) => `
-    <li class="planner-item planner-suggestion-item">
-      <div class="planner-suggestion-row">
-        <span class="planner-suggestion-kind">${escapeHtml(getSuggestionKindLabel(item))}</span>
-        <span class="planner-suggestion-name">${escapeHtml(item.text)}</span>
-        <span class="planner-suggestion-date">${escapeHtml(formatSuggestionDate(item))}</span>
-        <span class="planner-suggestion-difficulty">${escapeHtml(item.difficulty || '중')}</span>
-        <span class="planner-suggestion-arrow">-&gt;</span>
-        <span class="planner-suggestion-reason">${escapeHtml(item.reason || '업무 흐름을 보고 제안했습니다')}</span>
-        <button class="planner-suggestion-delete" data-action="delete-suggestion" data-suggestion-id="${escapeHtml(item.id)}" data-inbox-id="${escapeHtml(item.inboxId || '')}" title="이 제안 삭제" type="button">✕</button>
-      </div>
-    </li>
-  `).join('');
-}
-
-function getVisiblePlannerSuggestions() {
-  const inboxItems = (state.todoInbox || []).map((item) => ({
-    id: `inbox-${item.id}`,
-    type: 'task',
-    source: 'inbox',
-    inboxId: item.id,
-    text: item.text,
-    projectName: item.projectName || '',
-    sourceNoteId: item.sourceNoteId || null,
-    difficulty: item.difficulty || '중',
-    deadline: item.deadline || null,
-    date: item.deadline || null,
-    reason: '노트에서 추출한 업무 후보입니다',
-  }));
-
-  const merged = [...inboxItems, ...pendingPlannerSuggestions];
-  const seen = new Set();
-  return merged.filter((item) => {
-    const key = `${item.type}-${item.todoId || item.text}-${item.date || item.deadline || ''}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 export function addScheduleTask(text, deadline, difficulty, projectName = '', description = '') {
   const todoId = addCoreTask(state, {
     text,
@@ -365,54 +275,6 @@ export function addScheduleTask(text, deadline, difficulty, projectName = '', de
   if (!todoId) return null;
   persistAndSync();
   return todoId;
-}
-
-export function renderSmartPlanner() {
-  renderPlanner();
-}
-
-export function clearPlannerSuggestions() {
-  pendingPlannerSuggestions = [];
-  state.todoInbox = [];
-  plannerStatusText = '업무 제안을 만들면 여기에 함께 표시됩니다.';
-  save();
-  renderPlanner();
-}
-
-export function deletePlannerSuggestion(suggestionId, inboxId) {
-  if (inboxId) {
-    state.todoInbox = (state.todoInbox || []).filter((item) => item.id !== inboxId);
-    save();
-  } else {
-    pendingPlannerSuggestions = pendingPlannerSuggestions.filter((item) => item.id !== suggestionId);
-  }
-  renderPlanner();
-}
-
-export function buildPlannerLocalSuggestions() {
-  return buildLocalPlannerSuggestions(state);
-}
-
-export function setPlannerSuggestions(suggestions, statusText = '') {
-  pendingPlannerSuggestions = suggestions || [];
-  plannerStatusText = statusText || '제안 결과를 확인하고 적용하기를 눌러주세요.';
-  renderPlanner();
-}
-
-export function setPlannerStatus(statusText) {
-  plannerStatusText = statusText || '';
-  renderPlannerStatus();
-}
-
-export function applyPlannerSuggestionList() {
-  const applied = applyCorePlannerSuggestions(state, getVisiblePlannerSuggestions(), taskHelpers);
-  pendingPlannerSuggestions = [];
-  plannerStatusText = applied > 0
-    ? `제안 ${applied}개를 적용했습니다.`
-    : '적용할 제안이 없습니다.';
-  if (applied > 0) persistAndSync();
-  rerenderSchedule();
-  return applied;
 }
 
 export function assignTodoToDate(todoId, dateKey) {
@@ -1161,7 +1023,6 @@ export function renderSchedule(onRender) {
   }
 
   renderTaskList();
-  renderPlanner();
 
   if (state.scheduleView === 'month') {
     renderMonthView();
@@ -1243,45 +1104,6 @@ export function initScheduleNav(onRender) {
     });
   });
 
-  plannerApplyBtn?.addEventListener('click', () => {
-    const applied = applyPlannerSuggestionList();
-    if (applied === 0) alert('적용할 제안이 없습니다.');
-    else alert(`제안 ${applied}개를 적용했습니다.`);
-  });
-
-  plannerClearBtn?.addEventListener('click', () => {
-    clearPlannerSuggestions();
-  });
-
-  plannerInboxListEl?.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-action="delete-suggestion"]');
-    if (!btn) return;
-    deletePlannerSuggestion(btn.dataset.suggestionId, btn.dataset.inboxId);
-  });
-
-  plannerToggleBtn?.addEventListener('click', () => {
-    state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
-    save();
-    markStateDirty();
-    scheduleSync();
-    renderPlannerShell();
-  });
-}
-
-function formatShortDate(dateKey) {
-  if (!dateKey) return '날짜 없음';
-  const [, month, day] = dateKey.split('-');
-  return `${parseInt(month, 10)}/${parseInt(day, 10)}`;
-}
-
-function formatSuggestionDate(item) {
-  const target = item.date ? formatShortDate(item.date) : '날짜 없음';
-  const deadline = item.deadline ? formatShortDate(item.deadline) : '없음';
-  return `${target}(${deadline})`;
-}
-
-function getSuggestionKindLabel(item) {
-  return item.type === 'task' ? '추가' : '수정';
 }
 
 function escapeHtml(str) {

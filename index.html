@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -58,11 +58,7 @@
           </svg>
           <input id="search-input" type="text" placeholder="노트 검색..." autocomplete="off" />
         </div>
-        <span id="save-status" class="save-status">저장됨</span>
         <span id="sync-status" class="sync-status"></span>
-        <button id="planner-topbar-toggle-btn" class="topbar-action-btn planner-topbar-toggle" type="button" hidden aria-expanded="false">
-          업무 제안
-        </button>
         <button id="topbar-trash-btn" class="topbar-icon-btn" title="휴지통" type="button" aria-pressed="false">
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path d="M7 3a1 1 0 011-1h4a1 1 0 011 1v1h3a1 1 0 110 2h-1v9a2 2 0 01-2 2H7a2 2 0 01-2-2V6H4a1 1 0 010-2h3V3zm2 1h2V4H9v0zm-2 2v9h6V6H7zm1 2a1 1 0 112 0v4a1 1 0 11-2 0V8zm3 0a1 1 0 112 0v4a1 1 0 11-2 0V8z"/>
@@ -175,31 +171,6 @@
 
     <!-- Schedule view (스케줄 탭 전용) -->
     <div id="schedule-view" class="schedule-view" style="display:none">
-      <section class="smart-planner" aria-label="스마트 플래너">
-        <div class="smart-planner-head">
-          <div>
-            <p class="smart-planner-kicker">Smart Planner</p>
-            <h2>오늘의 업무 흐름</h2>
-          </div>
-          <div class="smart-planner-actions">
-            <button id="planner-extract-btn" class="ghost-btn">업무 제안</button>
-            <button id="planner-clear-btn" class="ghost-btn">전체 초기화</button>
-            <button id="planner-apply-btn" class="add-btn" disabled>적용하기</button>
-            <button id="planner-toggle-btn" class="ghost-btn" aria-expanded="true">접기</button>
-          </div>
-        </div>
-        <div id="planner-ai-advice" class="planner-ai-advice" hidden></div>
-        <div class="smart-planner-grid">
-          <section class="smart-planner-card">
-            <div class="smart-planner-card-head">
-              <h3>할 일 제안</h3>
-              <span class="smart-planner-card-copy">구분 / 업무이름 / 적용일자(기한) / 난이도 -> 제안 사유</span>
-            </div>
-            <ul id="planner-inbox-list" class="planner-list"></ul>
-          </section>
-        </div>
-      </section>
-
       <div class="schedule-workspace">
         <aside class="schedule-sidebar">
           <div class="schedule-sidebar-head">

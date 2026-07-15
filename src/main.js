@@ -9,7 +9,7 @@ import {
   pruneDeletedNotes,
 } from './state/store.js';
 import {
-  addNoteBtn, addPageSectionBtn, addTabBtn, contentEl, saveStatusEl, titleEl,
+  addNoteBtn, addPageSectionBtn, addTabBtn, contentEl, titleEl,
   searchInput, toolbarEl, syncStatusEl, authAreaEl, addTodoBtn, extractTodoBtn,
   noteRecordBtn,
   recordingPanelEl,
@@ -19,10 +19,7 @@ import {
   recordingStopBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
-  scheduleWorkspaceEl,
   addScheduleTaskBtn,
-  plannerExtractBtn,
-  plannerTopbarToggleBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
 import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260604-section-reorder';
@@ -33,7 +30,7 @@ import {
 } from './sync/cloud.js';
 import { addTodo } from './ui/todo.js';
 import { extractTodoCandidatesFromHtml, getSelectedEditorText } from './todo/extract.js';
-import { extractTodosWithAI, getApiKey, getPlannerSuggestionsWithAI, saveApiKey } from './ai/extract.js';
+import { extractTodosWithAI, getApiKey, saveApiKey } from './ai/extract.js';
 import { getScheduleAIPreferences, saveScheduleAIPreferences } from './ai/schedule-preferences.js';
 import { summarizeRecordingWithAI } from './ai/summary.js';
 import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/summary-settings.js';
@@ -49,13 +46,8 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-  renderSmartPlanner,
-  buildPlannerLocalSuggestions,
-  setPlannerSuggestions,
-  setPlannerStatus,
 } from './ui/schedule.js?v=20260527-page-sections';
 import { showScheduleModal } from './ui/schedule-modal.js';
-import { createInboxItem, getPlannerSnapshot } from '../packages/schedule-core/planner.js';
 
 function rerender() {
   pruneExpiredTrash();
@@ -76,6 +68,7 @@ function pruneExpiredTrash() {
   scheduleSync();
   return true;
 }
+
 
 function setNoteListMode(mode, options = {}) {
   state.noteListMode = mode === 'trash' ? 'trash' : 'notes';
@@ -150,27 +143,25 @@ function syncEditorVirtualScrollSpace() {
   }
 }
 
-// ── 앱 모드 전환 (노트 / 스케줄) ─────────────────
+// ?? ??紐⑤뱶 ?꾪솚 (?명듃 / ?ㅼ?以? ?????????????????
 function applyAppMode(mode) {
   state.appMode = mode;
-  if (mode === 'schedule') state.smartPlannerCollapsed = true;
   save();
 
   const isSchedule = mode === 'schedule';
 
-  // 뷰 전환
+  // 酉??꾪솚
   if (notesViewEl) notesViewEl.style.display = isSchedule ? 'none' : '';
   if (scheduleViewEl) scheduleViewEl.style.display = isSchedule ? 'flex' : 'none';
   if (sectionTabsBarEl) sectionTabsBarEl.style.display = isSchedule ? 'none' : '';
   if (toolbarEl) toolbarEl.style.display = isSchedule ? 'none' : '';
-  if (plannerTopbarToggleBtn) plannerTopbarToggleBtn.hidden = !isSchedule;
   if (topbarTrashBtn) {
     const trashActive = !isSchedule && state.noteListMode === 'trash';
     topbarTrashBtn.classList.toggle('active', trashActive);
     topbarTrashBtn.setAttribute('aria-pressed', String(trashActive));
   }
 
-  // 탭 버튼 active 상태
+  // ??踰꾪듉 active ?곹깭
   appModeTabs.forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.mode === mode);
   });
@@ -182,19 +173,19 @@ function setTodoPanelCollapsed(isCollapsed) {
   todoPanelEl?.classList.toggle('collapsed', isCollapsed);
   notesLayoutEl?.classList.toggle('todo-panel-collapsed', isCollapsed);
   if (toggleTodoPanelBtn) {
-    toggleTodoPanelBtn.textContent = isCollapsed ? '‹' : '접기';
-    toggleTodoPanelBtn.setAttribute('aria-label', isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기');
-    toggleTodoPanelBtn.title = isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기';
+    toggleTodoPanelBtn.textContent = isCollapsed ? '?? : '?묎린';
+    toggleTodoPanelBtn.setAttribute('aria-label', isCollapsed ? '?낅Т 紐⑸줉 ?쇱튂湲? : '?낅Т 紐⑸줉 ?묎린');
+    toggleTodoPanelBtn.title = isCollapsed ? '?낅Т 紐⑸줉 ?쇱튂湲? : '?낅Т 紐⑸줉 ?묎린';
     toggleTodoPanelBtn.setAttribute('aria-expanded', String(!isCollapsed));
   }
 }
 
-// 앱 모드 탭 클릭 이벤트
+// ??紐⑤뱶 ???대┃ ?대깽??
 appModeTabs.forEach((tab) => {
   tab.addEventListener('click', () => applyAppMode(tab.dataset.mode));
 });
 
-// 스케줄 업무 추가 버튼
+// ?ㅼ?以??낅Т 異붽? 踰꾪듉
 addScheduleTaskBtn?.addEventListener('click', async () => {
   const result = await showScheduleModal();
   if (!result) return;
@@ -212,14 +203,14 @@ addScheduleTaskBtn?.addEventListener('click', async () => {
 async function addAiScheduleTasks() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note || !note.content?.trim()) {
-    alert('AI 일정 추가를 위해 내용이 있는 페이지를 먼저 선택하세요.');
+    alert('AI ?쇱젙 異붽?瑜??꾪빐 ?댁슜???덈뒗 ?섏씠吏瑜?癒쇱? ?좏깮?섏꽭??');
     return;
   }
 
   const apiKey = getApiKey();
   if (!apiKey) {
     openSettingsDrawer();
-    alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+    alert('Gemini API ?ㅻ? 癒쇱? ?ㅼ젙?댁＜?몄슂. (?ㅼ젙 > AI ?ㅼ젙)');
     return;
   }
 
@@ -233,12 +224,12 @@ async function addAiScheduleTasks() {
 
   addAiScheduleTaskBtn.disabled = true;
   const prevLabel = addAiScheduleTaskBtn.textContent;
-  addAiScheduleTaskBtn.textContent = 'AI 추가 중...';
+  addAiScheduleTaskBtn.textContent = 'AI 異붽? 以?..';
 
   try {
     const todos = await extractTodosWithAI(note.content, existingTodos, behaviorSummary, note.createdAt);
     if (!todos.length) {
-      alert('AI가 추가할 일정을 찾지 못했습니다.');
+      alert('AI媛 異붽????쇱젙??李얠? 紐삵뻽?듬땲??');
       return;
     }
 
@@ -251,7 +242,7 @@ async function addAiScheduleTasks() {
       const todoId = addScheduleTask(
         todoItem.text,
         todoItem.deadline || null,
-        todoItem.difficulty || '중',
+        todoItem.difficulty || '以?,
       );
       if (todoItem.deadline) {
         assignTodoToDate(todoId, todoItem.deadline);
@@ -260,16 +251,16 @@ async function addAiScheduleTasks() {
     });
 
     if (added === 0) {
-      alert('새로 추가할 일정이 없습니다. (중복 제외)');
+      alert('?덈줈 異붽????쇱젙???놁뒿?덈떎. (以묐났 ?쒖쇅)');
       return;
     }
     rerender();
-    alert(`AI 일정 ${added}개를 추가했습니다.`);
+    alert(`AI ?쇱젙 ${added}媛쒕? 異붽??덉뒿?덈떎.`);
   } catch (err) {
     if (err.message === 'API_KEY_MISSING' || err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
     }
-    alert(`AI 일정 추가 실패: ${err.message}`);
+    alert(`AI ?쇱젙 異붽? ?ㅽ뙣: ${err.message}`);
   } finally {
     addAiScheduleTaskBtn.disabled = false;
     addAiScheduleTaskBtn.textContent = prevLabel;
@@ -281,7 +272,7 @@ function addTab() {
   const now = nowISO();
   const tab = {
     id: uid(),
-    name: '새 섹션',
+    name: '???뱀뀡',
     color: getNextSectionColor(),
     createdAt: now,
     updatedAt: now,
@@ -300,7 +291,7 @@ function addTab() {
 
 function addPageSection() {
   if (!state.selectedTabId) {
-    alert('먼저 섹션을 선택하세요.');
+    alert('癒쇱? ?뱀뀡???좏깮?섏꽭??');
     return;
   }
 
@@ -308,7 +299,7 @@ function addPageSection() {
   const pageSection = {
     id: uid(),
     tabId: state.selectedTabId,
-    name: '새 구역',
+    name: '??援ъ뿭',
     order: getCurrentTabPageSections().length,
     createdAt: now,
     updatedAt: now,
@@ -328,7 +319,7 @@ function addPageSection() {
 
 function addNote(pageSectionId = state.selectedPageSectionId) {
   if (!state.selectedTabId) {
-    alert('먼저 섹션을 선택하세요.');
+    alert('癒쇱? ?뱀뀡???좏깮?섏꽭??');
     return;
   }
 
@@ -367,7 +358,7 @@ function addNote(pageSectionId = state.selectedPageSectionId) {
 function addTodoFromSelection() {
   const text = getSelectedEditorText(contentEl);
   if (!text) {
-    alert('에디터에서 할 일로 만들 텍스트를 먼저 선택하세요.');
+    alert('?먮뵒?곗뿉?????쇰줈 留뚮뱾 ?띿뒪?몃? 癒쇱? ?좏깮?섏꽭??');
     return;
   }
   addTodoFromNoteText(text, {
@@ -381,7 +372,7 @@ function addTodoFromNoteText(text, options = {}) {
   const sourceNoteId = options.sourceNoteId || state.selectedNoteId || null;
   const projectName = getNoteProjectName(sourceNoteId);
   setTodoPanelCollapsed(false);
-  const todoId = addTodo(cleanedText, sourceNoteId, '중', deadline, projectName);
+  const todoId = addTodo(cleanedText, sourceNoteId, '以?, deadline, projectName);
   markSelectedTextAsTodoSource(options.markRange, todoId);
   rerender();
 }
@@ -392,7 +383,7 @@ function getNoteProjectName(noteId) {
     ? state.pageSections.find((item) => item.id === note.pageSectionId)
     : null;
   if (pageSection?.name?.trim()) return pageSection.name.trim();
-  return (note?.title || '').trim() || '제목 없음';
+  return (note?.title || '').trim() || '?쒕ぉ ?놁쓬';
 }
 
 function getCurrentEditorRange() {
@@ -431,31 +422,25 @@ function markSelectedTextAsTodoSource(sourceRange = null, todoId = null) {
   scheduleSync();
 }
 
-function addTodosToInbox(todoItems, sourceNoteId) {
+function addExtractedTodos(todoItems, sourceNoteId) {
   let addedCount = 0;
   todoItems.forEach((todoItem) => {
     const todoText = (todoItem.text || '').trim();
-    const isDup = state.todos.some((t) => t.text === todoText)
-      || state.todoInbox.some((t) => t.text === todoText);
+    const isDup = state.todos.some((t) => t.text === todoText);
     if (!todoText || isDup) return;
 
-    const inboxItem = createInboxItem({
-      text: todoText,
+    addTodo(
+      todoText,
       sourceNoteId,
-      projectName: getNoteProjectName(sourceNoteId),
-      difficulty: todoItem.difficulty || '중',
-      deadline: todoItem.deadline || null,
-    }, { nowISO, uid });
-    if (!inboxItem) return;
-    state.todoInbox.push(inboxItem);
+      todoItem.difficulty || '以?,
+      todoItem.deadline || null,
+      getNoteProjectName(sourceNoteId),
+    );
     addedCount += 1;
   });
 
   if (addedCount > 0) {
-    save();
-    markStateDirty();
-    scheduleSync();
-    renderSmartPlanner();
+    setTodoPanelCollapsed(false);
   }
 
   return addedCount;
@@ -467,7 +452,7 @@ function extractLocalTodosFromNote(noteHtml) {
       const { deadline, cleanedText } = extractDeadlineFromText(line);
       return {
         text: cleanedText,
-        difficulty: '중',
+        difficulty: '以?,
         deadline,
       };
     })
@@ -477,23 +462,23 @@ function extractLocalTodosFromNote(noteHtml) {
 async function addTodosFromCurrentNote() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
-    alert('먼저 페이지를 선택하세요.');
+    alert('癒쇱? ?섏씠吏瑜??좏깮?섏꽭??');
     return;
   }
 
   if (!note.content?.trim()) {
-    alert('할 일로 만들 노트 내용이 없습니다.');
+    alert('???쇰줈 留뚮뱾 ?명듃 ?댁슜???놁뒿?덈떎.');
     return;
   }
 
   const apiKey = getApiKey();
   const previousLabel = extractTodoBtn.textContent;
   extractTodoBtn.disabled = true;
-  extractTodoBtn.textContent = apiKey ? 'AI 분석 중...' : '로컬 추출 중...';
+  extractTodoBtn.textContent = apiKey ? 'AI 遺꾩꽍 以?..' : '濡쒖뺄 異붿텧 以?..';
 
   try {
     let todos = [];
-    let sourceLabel = '로컬';
+    let sourceLabel = '濡쒖뺄';
 
     if (apiKey) {
       const prefs = getScheduleAIPreferences();
@@ -506,32 +491,32 @@ async function addTodosFromCurrentNote() {
     }
 
     if (!todos.length) {
-      alert('노트에서 추가할 할 일을 찾지 못했습니다.');
+      alert('?명듃?먯꽌 異붽??????쇱쓣 李얠? 紐삵뻽?듬땲??');
       return;
     }
 
-    const addedCount = addTodosToInbox(todos, note.id);
+    const addedCount = addExtractedTodos(todos, note.id);
     if (addedCount === 0) {
-      alert('새로 추가할 후보가 없습니다. 이미 업무 목록이나 인박스에 있는 항목은 제외했습니다.');
+      alert('?덈줈 異붽????꾨낫媛 ?놁뒿?덈떎. ?대? ?낅Т 紐⑸줉?대굹 ?몃컯?ㅼ뿉 ?덈뒗 ??ぉ? ?쒖쇅?덉뒿?덈떎.');
       return;
     }
 
-    alert(`${sourceLabel}로 할 일 후보 ${addedCount}개를 추가했습니다. 업무 제안에서 적용할 수 있습니다.`);
+    alert(`${sourceLabel}濡??????꾨낫 ${addedCount}媛쒕? 異붽??덉뒿?덈떎. ?낅Т ?쒖븞?먯꽌 ?곸슜?????덉뒿?덈떎.`);
     rerender();
   } catch (err) {
     if (err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
-      alert('API 키가 유효하지 않습니다. 설정에서 확인해주세요.');
+      alert('API ?ㅺ? ?좏슚?섏? ?딆뒿?덈떎. ?ㅼ젙?먯꽌 ?뺤씤?댁＜?몄슂.');
       return;
     }
 
     const fallbackTodos = extractLocalTodosFromNote(note.content);
-    const addedCount = addTodosToInbox(fallbackTodos, note.id);
+    const addedCount = addExtractedTodos(fallbackTodos, note.id);
     if (addedCount > 0) {
-      alert(`AI 추출에 실패해서 로컬 기준으로 ${addedCount}개를 추가했습니다.`);
+      alert(`AI 異붿텧???ㅽ뙣?댁꽌 濡쒖뺄 湲곗??쇰줈 ${addedCount}媛쒕? 異붽??덉뒿?덈떎.`);
       rerender();
     } else {
-      alert(`할 일 추출 실패: ${err.message}`);
+      alert(`????異붿텧 ?ㅽ뙣: ${err.message}`);
     }
   } finally {
     extractTodoBtn.disabled = false;
@@ -542,136 +527,49 @@ async function addTodosFromCurrentNote() {
 async function extractTodosFromCurrentNote() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) {
-    alert('먼저 페이지를 선택하세요.');
+    alert('癒쇱? ?섏씠吏瑜??좏깮?섏꽭??');
     return;
   }
 
   extractTodoBtn.disabled = true;
-  extractTodoBtn.textContent = 'AI 분석 중...';
+  extractTodoBtn.textContent = 'AI 遺꾩꽍 以?..';
 
   try {
     const behaviorSummary = buildBehaviorSummary();
     const todos = await extractTodosWithAI(note.content, state.todos, behaviorSummary, note.createdAt);
 
     if (!todos.length) {
-      alert('노트에서 추출할 할 일이 없습니다.');
+      alert('?명듃?먯꽌 異붿텧?????쇱씠 ?놁뒿?덈떎.');
       return;
     }
 
-    const addedCount = addTodosToInbox(todos, note.id);
+    const addedCount = addExtractedTodos(todos, note.id);
 
     if (addedCount === 0) {
-      alert('추출할 새로운 후보가 없습니다. (이미 업무 목록 또는 인박스에 있음)');
+      alert('異붿텧???덈줈???꾨낫媛 ?놁뒿?덈떎. (?대? ?낅Т 紐⑸줉 ?먮뒗 ?몃컯?ㅼ뿉 ?덉쓬)');
     } else {
-      alert(`할 일 제안에 후보 ${addedCount}개를 추가했습니다. 스케줄 탭에서 적용해주세요.`);
+      alert(`?????쒖븞???꾨낫 ${addedCount}媛쒕? 異붽??덉뒿?덈떎. ?ㅼ?以???뿉???곸슜?댁＜?몄슂.`);
       rerender();
     }
   } catch (err) {
     if (err.message === 'API_KEY_MISSING') {
       openSettingsDrawer();
-      alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+      alert('Gemini API ?ㅻ? 癒쇱? ?ㅼ젙?댁＜?몄슂. (?ㅼ젙 > AI ?ㅼ젙)');
     } else if (err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
-      alert('API 키가 유효하지 않습니다. 설정에서 올바른 키를 입력해주세요.');
+      alert('API ?ㅺ? ?좏슚?섏? ?딆뒿?덈떎. ?ㅼ젙?먯꽌 ?щ컮瑜??ㅻ? ?낅젰?댁＜?몄슂.');
     } else {
-      alert(`오류: ${err.message}`);
+      alert(`?ㅻ쪟: ${err.message}`);
     }
   } finally {
     extractTodoBtn.disabled = false;
-    extractTodoBtn.textContent = '노트에서 할 일 추출';
+    extractTodoBtn.textContent = '?명듃?먯꽌 ????異붿텧';
   }
-}
-
-async function suggestPlannerWork() {
-  if (!plannerExtractBtn) return;
-
-  const note = state.notes.find((x) => x.id === state.selectedNoteId);
-  const localSuggestions = buildPlannerLocalSuggestions();
-  const apiKey = getApiKey();
-  const prevLabel = plannerExtractBtn.textContent;
-
-  plannerExtractBtn.disabled = true;
-  plannerExtractBtn.textContent = apiKey ? 'AI 제안 중...' : '제안 계산 중...';
-  setPlannerStatus(apiKey
-    ? 'AI가 현재 노트와 업무 과중도를 보고 있습니다...'
-    : '로컬 기준으로 업무 과중도를 계산하고 있습니다...');
-
-  try {
-    if (!apiKey) {
-      setPlannerSuggestions(
-        localSuggestions,
-        localSuggestions.length
-          ? `로컬 제안 ${localSuggestions.length}개를 찾았습니다.`
-          : '로컬 기준으로는 옮길 업무가 없습니다.',
-      );
-      return;
-    }
-
-    const aiSuggestions = (await getPlannerSuggestionsWithAI(
-      getPlannerSnapshot(state),
-      localSuggestions,
-      {
-        noteHtml: note?.content || '',
-        noteCreatedAt: note?.createdAt || '',
-      },
-    )).map((item) => (item.type === 'task'
-      ? { ...item, sourceNoteId: note?.id || null }
-      : item));
-    const suggestions = mergePlannerSuggestions(localSuggestions, aiSuggestions);
-    setPlannerSuggestions(
-      suggestions,
-      suggestions.length
-        ? `로컬 기준과 AI 제안 ${suggestions.length}개를 찾았습니다.`
-        : 'AI와 로컬 기준 모두 새 제안을 찾지 못했습니다.',
-    );
-  } catch (err) {
-    if (err.message === 'API_KEY_MISSING' || err.message === 'API_KEY_INVALID') {
-      openSettingsDrawer();
-    }
-    setPlannerSuggestions(
-      localSuggestions,
-      localSuggestions.length
-        ? `AI 제안 실패: ${err.message}. 로컬 제안만 표시합니다.`
-        : `AI 제안 실패: ${err.message}`,
-    );
-  } finally {
-    plannerExtractBtn.disabled = false;
-    plannerExtractBtn.textContent = prevLabel;
-  }
-}
-
-function mergePlannerSuggestions(localSuggestions, aiSuggestions) {
-  const merged = [];
-  const seen = new Map();
-
-  [...(localSuggestions || []), ...(aiSuggestions || [])].forEach((item) => {
-    const key = `${item.type}-${item.todoId || item.text}-${item.date || item.deadline || ''}`;
-    const existingIndex = seen.get(key);
-    if (existingIndex === undefined) {
-      seen.set(key, merged.length);
-      merged.push(item);
-      return;
-    }
-
-    const existing = merged[existingIndex];
-    merged[existingIndex] = {
-      ...existing,
-      ...item,
-      action: item.action || existing.action,
-      entryId: item.entryId || existing.entryId || null,
-      source: existing.source === item.source ? existing.source : 'local+ai',
-      reason: item.reason || existing.reason,
-    };
-  });
-
-  return merged;
 }
 
 function scheduleAutoSave() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) return;
-
-  saveStatusEl.textContent = '저장 중...';
 
   if (state.saveTimer) clearTimeout(state.saveTimer);
 
@@ -688,11 +586,10 @@ function scheduleAutoSave() {
     markDirty(note.id); scheduleSync();
     renderNotes(rerender);
     renderTabs(rerender);
-    saveStatusEl.textContent = '저장됨';
   }, 800);
 }
 
-// ── Toolbar ──────────────────────────────────────────
+// ?? Toolbar ??????????????????????????????????????????
 function persistCurrentNoteImmediately() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) return false;
@@ -713,7 +610,6 @@ function persistCurrentNoteImmediately() {
   scheduleSync();
   renderNotes(rerender);
   renderTabs(rerender);
-  saveStatusEl.textContent = '저장됨';
   return true;
 }
 
@@ -744,7 +640,6 @@ function appendHtmlToNote(note, html) {
   scheduleSync();
   renderNotes(rerender);
   renderTabs(rerender);
-  saveStatusEl.textContent = '녹음 추가됨';
   return true;
 }
 
@@ -779,7 +674,7 @@ function formatSummaryHtml(summary) {
 
   return `
     <hr>
-    <h2>AI 요약</h2>
+    <h2>AI ?붿빟</h2>
     <ul>${items}</ul>
   `;
 }
@@ -792,13 +687,13 @@ function formatRecordingHtml(recordingText) {
     .filter(Boolean);
 
   return lines
-    .map((line, index) => `<p><strong>발화자 ${speakers[index % speakers.length]}:</strong> ${escapeText(line)}</p>`)
+    .map((line, index) => `<p><strong>諛쒗솕??${speakers[index % speakers.length]}:</strong> ${escapeText(line)}</p>`)
     .join('');
 }
 
 function appendTranscript(transcript, { replace = false } = {}) {
   if (!activeRecordingNoteId) {
-    alert('먼저 페이지를 선택하세요.');
+    alert('癒쇱? ?섏씠吏瑜??좏깮?섏꽭??');
     return;
   }
   const previous = replace ? '' : getRecordingDraft(activeRecordingNoteId);
@@ -806,7 +701,6 @@ function appendTranscript(transcript, { replace = false } = {}) {
     activeRecordingNoteId,
     [previous, transcript.trim()].filter(Boolean).join('\n'),
   );
-  saveStatusEl.textContent = '녹음 저장됨';
 }
 
 const recordingPanel = createRecordingPanel({
@@ -820,18 +714,18 @@ const recordingPanel = createRecordingPanel({
 async function addRecordingToNote(noteId, { summarize }) {
   const note = state.notes.find((x) => x.id === noteId);
   if (!note) {
-    alert('먼저 페이지를 선택하세요.');
+    alert('癒쇱? ?섏씠吏瑜??좏깮?섏꽭??');
     return;
   }
 
   const recordingText = getRecordingDraft(note.id);
   if (!recordingText) {
-    alert('요약할 녹음 내용이 없습니다. 먼저 녹음 버튼으로 음성을 텍스트로 저장해주세요.');
+    alert('?붿빟???뱀쓬 ?댁슜???놁뒿?덈떎. 癒쇱? ?뱀쓬 踰꾪듉?쇰줈 ?뚯꽦???띿뒪?몃줈 ??ν빐二쇱꽭??');
     return;
   }
 
   noteRecordBtn.disabled = true;
-  noteRecordBtn.textContent = summarize ? '요약 중...' : '추가 중...';
+  noteRecordBtn.textContent = summarize ? '?붿빟 以?..' : '異붽? 以?..';
 
   try {
     if (summarize) {
@@ -845,22 +739,22 @@ async function addRecordingToNote(noteId, { summarize }) {
   } catch (err) {
     if (err.message === 'API_KEY_MISSING') {
       openSettingsDrawer();
-      alert('Gemini API 키를 먼저 설정해주세요. (설정 > AI 설정)');
+      alert('Gemini API ?ㅻ? 癒쇱? ?ㅼ젙?댁＜?몄슂. (?ㅼ젙 > AI ?ㅼ젙)');
       return;
     }
     if (err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
-      alert('API 키가 유효하지 않습니다. 설정에서 확인해주세요.');
+      alert('API ?ㅺ? ?좏슚?섏? ?딆뒿?덈떎. ?ㅼ젙?먯꽌 ?뺤씤?댁＜?몄슂.');
       return;
     }
     if (err.message === 'API_OVERLOADED') {
-      alert('Gemini 서버가 현재 혼잡합니다. 잠시 후 다시 AI 요약을 눌러주세요.');
+      alert('Gemini ?쒕쾭媛 ?꾩옱 ?쇱옟?⑸땲?? ?좎떆 ???ㅼ떆 AI ?붿빟???뚮윭二쇱꽭??');
       return;
     }
-    alert(`AI 요약 실패: ${err.message}`);
+    alert(`AI ?붿빟 ?ㅽ뙣: ${err.message}`);
   } finally {
     noteRecordBtn.disabled = false;
-    noteRecordBtn.textContent = '녹음';
+    noteRecordBtn.textContent = '?뱀쓬';
     activeRecordingNoteId = null;
     recordingPanel.reset();
   }
@@ -900,13 +794,13 @@ toolbarEl.addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tbtn');
   if (!btn) return;
 
-  // Ignore color-btn — handled separately
+  // Ignore color-btn ??handled separately
   if (btn.id === 'color-btn') return;
 
   e.preventDefault(); // keep focus in editor
   restoreEditorSelection();
 
-  // 할 일 추가 버튼
+  // ????異붽? 踰꾪듉
   if (btn.dataset.action === 'add-todo') {
     addTodoFromSelection();
     return;
@@ -1050,7 +944,7 @@ document.addEventListener('selectionchange', () => {
   }
 });
 
-// ── Text Color Picker ────────────────────────────────
+// ?? Text Color Picker ????????????????????????????????
 const colorBtn = document.getElementById('color-btn');
 const colorPalette = document.getElementById('color-palette');
 const colorBtnBar = document.getElementById('color-btn-bar');
@@ -1061,7 +955,7 @@ colorBtn.addEventListener('mousedown', (e) => {
   colorPalette.classList.toggle('open');
 });
 
-// ── Tab Color Popup (body-level) ─────────────────────
+// ?? Tab Color Popup (body-level) ?????????????????????
 const tabColorPopup = document.getElementById('tab-color-popup');
 const TAB_COLORS = [
   '#5B8DEF', '#6E9AF7', '#8A7CF6', '#A77CF0',
@@ -1110,7 +1004,7 @@ colorPalette.addEventListener('mousedown', (e) => {
   colorPalette.classList.remove('open');
 });
 
-// ── Image Paste / Drop ───────────────────────────────
+// ?? Image Paste / Drop ???????????????????????????????
 function insertImageFromFile(file) {
   if (!file || !file.type.startsWith('image/')) return false;
   const reader = new FileReader();
@@ -1167,7 +1061,7 @@ contentEl.addEventListener('drop', (e) => {
   }
 });
 
-// ── Image Resize ──────────────────────────────────────
+// ?? Image Resize ??????????????????????????????????????
 const imgOverlay = document.getElementById('img-resize-overlay');
 let selectedImg = null;
 let resizing = false;
@@ -1257,7 +1151,7 @@ document.addEventListener('mousedown', (e) => {
   }
 });
 
-// ── Search ───────────────────────────────────────────
+// ?? Search ???????????????????????????????????????????
 searchInput.addEventListener('input', () => {
   state.searchQuery = searchInput.value;
   renderNotes(rerender);
@@ -1308,7 +1202,7 @@ async function confirmStoppedRecording() {
   const note = state.notes.find((x) => x.id === activeRecordingNoteId);
   const recordingText = note ? getRecordingDraft(note.id) : '';
   if (!recordingText) {
-    alert('녹음된 내용이 없습니다.');
+    alert('?뱀쓬???댁슜???놁뒿?덈떎.');
     activeRecordingNoteId = null;
     return;
   }
@@ -1321,14 +1215,14 @@ async function confirmStoppedRecording() {
   await addRecordingToNote(note.id, result);
 }
 
-// ── Event listeners ──────────────────────────────────
+// ?? Event listeners ??????????????????????????????????
 const speechRecorder = createSpeechRecorder({
   onTranscript: appendTranscript,
   onStopComplete: confirmStoppedRecording,
   onMeter: (meter) => recordingPanel.updateMeter(meter),
   onStateChange: (isRecording) => {
     if (!noteRecordBtn) return;
-    noteRecordBtn.textContent = isRecording ? '정지' : '녹음';
+    noteRecordBtn.textContent = isRecording ? '?뺤?' : '?뱀쓬';
     noteRecordBtn.classList.toggle('recording', isRecording);
     noteRecordBtn.setAttribute('aria-pressed', String(isRecording));
     recordingPanel.setRecording(isRecording);
@@ -1337,47 +1231,42 @@ const speechRecorder = createSpeechRecorder({
     if (!noteRecordBtn) return;
     noteRecordBtn.disabled = isProcessing;
     if (isProcessing) {
-      noteRecordBtn.textContent = '정리 중...';
-      recordingPanel.setBusy('녹음 텍스트 변환 중');
+      noteRecordBtn.textContent = '?뺣━ 以?..';
+      recordingPanel.setBusy('?뱀쓬 ?띿뒪??蹂??以?);
     } else if (!speechRecorder.isRecording()) {
-      noteRecordBtn.textContent = '녹음';
+      noteRecordBtn.textContent = '?뱀쓬';
     }
   },
   onError: (err) => {
     if (err.message === 'AUDIO_RECORDING_UNSUPPORTED') {
-      alert('이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+      alert('??釉뚮씪?곗???留덉씠???뱀쓬??吏?먰븯吏 ?딆뒿?덈떎. Chrome ?먮뒗 Edge?먯꽌 ?ъ슜?댁＜?몄슂.');
       return;
     }
     if (err.message === 'SPEECH_RECOGNITION_UNSUPPORTED') {
-      alert('이 브라우저는 실시간 음성 인식을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+      alert('??釉뚮씪?곗????ㅼ떆媛??뚯꽦 ?몄떇??吏?먰븯吏 ?딆뒿?덈떎. Chrome ?먮뒗 Edge?먯꽌 ?ъ슜?댁＜?몄슂.');
       return;
     }
     if (err.message === 'no-speech') {
-      saveStatusEl.textContent = '말소리가 감지되지 않았습니다';
       return;
     }
     if (err.message === 'aborted') {
-      saveStatusEl.textContent = '녹음이 취소되었습니다';
       return;
     }
     if (err.message === 'API_KEY_MISSING') {
-      saveStatusEl.textContent = '실시간 텍스트만 저장되었습니다';
       return;
     }
     if (err.message === 'API_KEY_INVALID') {
       openSettingsDrawer();
-      alert('Gemini API 키가 유효하지 않아 전체 녹음을 텍스트로 변환하지 못했습니다.');
+      alert('Gemini API ?ㅺ? ?좏슚?섏? ?딆븘 ?꾩껜 ?뱀쓬???띿뒪?몃줈 蹂?섑븯吏 紐삵뻽?듬땲??');
       return;
     }
     if (err.message === 'API_OVERLOADED') {
-      saveStatusEl.textContent = '음성 변환이 지연되었습니다. 잠시 후 다시 시도해주세요';
       return;
     }
     if (err.message === 'TRANSCRIPT_EMPTY') {
-      saveStatusEl.textContent = '음성 변환 결과가 비어 있습니다';
       return;
     }
-    alert(`녹음 오류: ${err.message}`);
+    alert(`?뱀쓬 ?ㅻ쪟: ${err.message}`);
   },
 });
 
@@ -1409,39 +1298,31 @@ extractTodoBtn.addEventListener('click', addTodosFromCurrentNote);
 noteRecordBtn?.addEventListener('click', () => {
   if (speechRecorder.isBusy()) return;
   if (!speechRecorder.isSupported) {
-    alert('이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 사용해주세요.');
+    alert('??釉뚮씪?곗???留덉씠???뱀쓬??吏?먰븯吏 ?딆뒿?덈떎. Chrome ?먮뒗 Edge?먯꽌 ?ъ슜?댁＜?몄슂.');
     return;
   }
   if (speechRecorder.isRecording()) {
     speechRecorder.stop();
   } else {
     if (!state.selectedNoteId) {
-      alert('먼저 페이지를 선택하세요.');
+      alert('癒쇱? ?섏씠吏瑜??좏깮?섏꽭??');
       return;
     }
     activeRecordingNoteId = state.selectedNoteId;
     setRecordingDraft(activeRecordingNoteId, '');
-    recordingPanel.setBusy('마이크 준비 중');
+    recordingPanel.setBusy('留덉씠??以鍮?以?);
     speechRecorder.start();
   }
 });
 recordingPanel.onStop(() => speechRecorder.stop());
-plannerExtractBtn?.addEventListener('click', suggestPlannerWork);
 topbarTrashBtn?.addEventListener('click', () => {
   if (state.appMode !== 'notes') {
     applyAppMode('notes');
   }
   setNoteListMode(state.noteListMode === 'trash' ? 'notes' : 'trash');
 });
-plannerTopbarToggleBtn?.addEventListener('click', () => {
-  state.smartPlannerCollapsed = !state.smartPlannerCollapsed;
-  save();
-  markStateDirty();
-  scheduleSync();
-  rerender();
-});
 
-// ── Settings Drawer ──────────────────────────────────
+// ?? Settings Drawer ??????????????????????????????????
 const settingsBtn = document.getElementById('settings-btn');
 const settingsDrawer = document.getElementById('settings-drawer');
 const settingsOverlay = document.getElementById('settings-overlay');
@@ -1483,10 +1364,10 @@ function closeSettingsDrawer() {
 function updateKeyStatus() {
   const key = getApiKey();
   if (key) {
-    geminiKeyStatus.textContent = '✓ 저장됨';
+    geminiKeyStatus.textContent = '????λ맖';
     geminiKeyStatus.dataset.state = 'saved';
   } else {
-    geminiKeyStatus.textContent = '미설정';
+    geminiKeyStatus.textContent = '誘몄꽕??;
     geminiKeyStatus.dataset.state = 'empty';
   }
 }
@@ -1503,7 +1384,7 @@ geminiKeyToggle.addEventListener('click', () => {
 geminiKeySave.addEventListener('click', () => {
   const key = geminiKeyInput.value.trim();
   if (!key) {
-    geminiKeyStatus.textContent = '키를 입력해주세요';
+    geminiKeyStatus.textContent = '?ㅻ? ?낅젰?댁＜?몄슂';
     geminiKeyStatus.dataset.state = 'error';
     return;
   }
@@ -1523,19 +1404,19 @@ scheduleAIPrefSave.addEventListener('click', () => {
     useDeadlineDistribution: scheduleAIPrefDeadline.checked,
     useExistingTodoTexts: scheduleAIPrefExisting.checked,
   });
-  scheduleAIPrefStatus.textContent = '✓ 저장됨';
+  scheduleAIPrefStatus.textContent = '????λ맖';
   scheduleAIPrefStatus.dataset.state = 'saved';
 });
 
 summaryPromptSave.addEventListener('click', () => {
   summaryPromptInput.value = saveSummaryPrompt(summaryPromptInput.value);
-  summaryPromptStatus.textContent = '저장됨';
+  summaryPromptStatus.textContent = '??λ맖';
   summaryPromptStatus.dataset.state = 'saved';
 });
 
 summaryPromptReset.addEventListener('click', () => {
   summaryPromptInput.value = resetSummaryPrompt();
-  summaryPromptStatus.textContent = '기본값 적용됨';
+  summaryPromptStatus.textContent = '湲곕낯媛??곸슜??;
   summaryPromptStatus.dataset.state = 'saved';
 });
 
@@ -1618,18 +1499,18 @@ titleEl.addEventListener('keydown', (e) => {
   }
 });
 
-// ── Cloud Sync Status ────────────────────────────────
+// ?? Cloud Sync Status ????????????????????????????????
 const SYNC_LABELS = {
-  syncing: '☁ 동기화 중...',
-  synced: '☁ 동기화됨',
-  error: '☁ 오류',
+  syncing: '???숆린??以?..',
+  synced: '???숆린?붾맖',
+  error: '???ㅻ쪟',
 };
 
 function buildSyncErrorMessage(error) {
   if (!error) return '';
   const lines = [error.summary];
-  if (error.code) lines.push(`코드: ${error.code}`);
-  if (error.rawMessage) lines.push(`원본: ${error.rawMessage}`);
+  if (error.code) lines.push(`肄붾뱶: ${error.code}`);
+  if (error.rawMessage) lines.push(`?먮낯: ${error.rawMessage}`);
   return lines.join('\n');
 }
 
@@ -1666,18 +1547,18 @@ syncStatusEl.addEventListener('click', () => {
   alert(message);
 });
 
-// ── Auth ─────────────────────────────────────────────
+// ?? Auth ?????????????????????????????????????????????
 let currentAuthUser = null;
 let authLanding = null;
 let pendingLandingMigration = false;
 
 function describeMigrationResult(result) {
-  if (!result) return '기존 데이터 확인이 끝났어요.';
-  if (result.status === 'uploaded') return '기존 로컬 데이터를 가입한 계정으로 안전하게 옮겼어요.';
-  if (result.status === 'merged') return '기존 로컬 데이터와 계정 데이터를 안전하게 합쳤어요.';
-  if (result.status === 'already-migrated') return '이미 이 계정으로 기존 데이터 연동이 완료되어 있어요.';
-  if (result.status === 'no-local') return '연동할 기존 로컬 데이터가 없어요.';
-  return '기존 데이터 확인이 끝났어요.';
+  if (!result) return '湲곗〈 ?곗씠???뺤씤???앸궗?댁슂.';
+  if (result.status === 'uploaded') return '湲곗〈 濡쒖뺄 ?곗씠?곕? 媛?낇븳 怨꾩젙?쇰줈 ?덉쟾?섍쾶 ??꼈?댁슂.';
+  if (result.status === 'merged') return '湲곗〈 濡쒖뺄 ?곗씠?곗? 怨꾩젙 ?곗씠?곕? ?덉쟾?섍쾶 ?⑹낀?댁슂.';
+  if (result.status === 'already-migrated') return '?대? ??怨꾩젙?쇰줈 湲곗〈 ?곗씠???곕룞???꾨즺?섏뼱 ?덉뼱??';
+  if (result.status === 'no-local') return '?곕룞??湲곗〈 濡쒖뺄 ?곗씠?곌? ?놁뼱??';
+  return '湲곗〈 ?곗씠???뺤씤???앸궗?댁슂.';
 }
 
 async function signInWithGoogleFlow() {
@@ -1693,18 +1574,18 @@ async function signInWithGoogleFlow() {
 
     if (code === 'auth/unauthorized-domain') {
       throw new Error(
-        'Firebase 인증 도메인 설정이 필요합니다. Firebase Console > Authentication > Settings > Authorized domains에 sangkyoung92-cmyk.github.io 를 추가해주세요.',
+        'Firebase ?몄쬆 ?꾨찓???ㅼ젙???꾩슂?⑸땲?? Firebase Console > Authentication > Settings > Authorized domains??sangkyoung92-cmyk.github.io 瑜?異붽??댁＜?몄슂.',
       );
     }
 
     if (code !== 'auth/popup-closed-by-user') {
-      throw new Error(`로그인 실패: ${err.message || code || '알 수 없는 오류'}`);
+      throw new Error(`濡쒓렇???ㅽ뙣: ${err.message || code || '?????녿뒗 ?ㅻ쪟'}`);
     }
   }
 }
 
 async function migrateForCurrentUser(mode = 'auto') {
-  if (!currentAuthUser) throw new Error('먼저 로그인해주세요.');
+  if (!currentAuthUser) throw new Error('癒쇱? 濡쒓렇?명빐二쇱꽭??');
   const result = await migrateLocalData(currentAuthUser.uid, { mode });
   rerender();
   return describeMigrationResult(result);
@@ -1713,14 +1594,14 @@ async function migrateForCurrentUser(mode = 'auto') {
 
 async function handleSignOut() {
   authLanding?.show();
-  authLanding?.setStatus('로그아웃하는 중이에요...');
+  authLanding?.setStatus('濡쒓렇?꾩썐?섎뒗 以묒씠?먯슂...');
   try {
     await signOutUser();
     currentAuthUser = null;
     renderAuthArea(null);
-    authLanding?.setStatus('로그아웃됐어요. 다시 로그인하면 기존 데이터를 확인할게요.');
+    authLanding?.setStatus('濡쒓렇?꾩썐?먯뼱?? ?ㅼ떆 濡쒓렇?명븯硫?湲곗〈 ?곗씠?곕? ?뺤씤?좉쾶??');
   } catch (error) {
-    authLanding?.setStatus(error.message || '로그아웃에 실패했어요.', true);
+    authLanding?.setStatus(error.message || '濡쒓렇?꾩썐???ㅽ뙣?덉뼱??', true);
   }
 }
 
@@ -1734,11 +1615,11 @@ function renderAuthArea(user) {
         }
         <span class="user-name">${user.displayName || user.email || ''}</span>
       </span>
-      <button id="logout-btn" class="logout-btn">로그아웃</button>
+      <button id="logout-btn" class="logout-btn">濡쒓렇?꾩썐</button>
     `;
     document.getElementById('logout-btn').addEventListener('click', handleSignOut);
   } else {
-    authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">로그인</button>`;
+    authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">濡쒓렇??/button>`;
     document.getElementById('login-btn').addEventListener('click', () => authLanding?.show());
     clearSyncStatusDisplay();
   }
@@ -1752,7 +1633,7 @@ authLanding = initAuthLanding({
   onResetPassword: (email) => sendPasswordReset(email),
   onManualMigration: async () => {
     pendingLandingMigration = true;
-    if (!currentAuthUser) return '연동할 계정을 먼저 로그인/가입해주세요. 로그인 직후 이 브라우저의 로컬 데이터나 자동 백업 데이터를 계정에 업로드할게요.';
+    if (!currentAuthUser) return '?곕룞??怨꾩젙??癒쇱? 濡쒓렇??媛?낇빐二쇱꽭?? 濡쒓렇??吏곹썑 ??釉뚮씪?곗???濡쒖뺄 ?곗씠?곕굹 ?먮룞 諛깆뾽 ?곗씠?곕? 怨꾩젙???낅줈?쒗븷寃뚯슂.';
     pendingLandingMigration = false;
     return migrateForCurrentUser('manual');
   },
@@ -1762,7 +1643,7 @@ onAuthChange(async (user) => {
   currentAuthUser = user;
   renderAuthArea(user);
   if (user) {
-    authLanding?.setStatus('계정 데이터를 불러오기 전에 기존 로컬 데이터를 안전하게 확인하는 중이에요...');
+    authLanding?.setStatus('怨꾩젙 ?곗씠?곕? 遺덈윭?ㅺ린 ?꾩뿉 湲곗〈 濡쒖뺄 ?곗씠?곕? ?덉쟾?섍쾶 ?뺤씤?섎뒗 以묒씠?먯슂...');
     setCurrentUser(user.uid);
     try {
       const message = await migrateForCurrentUser(pendingLandingMigration ? 'manual' : 'auto');
@@ -1770,7 +1651,7 @@ onAuthChange(async (user) => {
       authLanding?.setStatus(message);
     } catch (error) {
       console.error('Local migration failed:', error);
-      authLanding?.setStatus(error.message || '기존 데이터 연동에 실패했어요. 계정 데이터를 불러옵니다.', true);
+      authLanding?.setStatus(error.message || '湲곗〈 ?곗씠???곕룞???ㅽ뙣?덉뼱?? 怨꾩젙 ?곗씠?곕? 遺덈윭?듬땲??', true);
     }
     await loadFromCloud(rerender);
     authLanding?.hide();
@@ -1786,7 +1667,7 @@ pruneExpiredTrash();
 initNotesPanelResize(notesLayoutEl);
 initSchedulePanelResize(scheduleWorkspaceEl);
 initScheduleNav(rerender);
-// 저장된 모드로 초기 UI 적용
+// ??λ맂 紐⑤뱶濡?珥덇린 UI ?곸슜
 applyAppMode(state.appMode || 'notes');
 window.setInterval(() => {
   if (pruneExpiredTrash()) rerender();

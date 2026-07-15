@@ -142,7 +142,6 @@ export async function loadFromCloud(rerender) {
       state.notes = [];
       state.deletedNotes = [];
       state.todos = [];
-      state.todoInbox = [];
       state.behaviorLog = [];
       state.selectedTabId = null;
       state.selectedPageSectionId = null;
@@ -167,7 +166,6 @@ export async function loadFromCloud(rerender) {
     state.tabs = cloudData.tabs || [];
     state.pageSections = cloudData.pageSections || [];
     state.todos = cloudData.todos || [];
-    state.todoInbox = cloudData.todoInbox || [];
     state.behaviorLog = cloudData.behaviorLog || [];
     state.deletedNotes = cloudData.deletedNotes || [];
     state.selectedTabId = cloudData.selectedTabId || state.tabs[0]?.id || null;
@@ -183,7 +181,6 @@ export async function loadFromCloud(rerender) {
     if (cloudData.scheduleView) state.scheduleView = cloudData.scheduleView;
     if (cloudData.scheduleWeekStart) state.scheduleWeekStart = cloudData.scheduleWeekStart;
     if (cloudData.scheduleMonth) state.scheduleMonth = cloudData.scheduleMonth;
-    state.smartPlannerCollapsed = cloudData.smartPlannerCollapsed || false;
     const prunedExpiredTrash = pruneDeletedNotes();
 
     // Persist to localStorage and clear pending local sync queue
@@ -224,7 +221,6 @@ export async function syncToCloud() {
       pageSections: state.pageSections,
       deletedNotes: state.deletedNotes,
       todos: state.todos,
-      todoInbox: state.todoInbox,
       behaviorLog: state.behaviorLog,
       selectedTabId: state.selectedTabId,
       selectedPageSectionId: state.selectedPageSectionId,
@@ -235,7 +231,6 @@ export async function syncToCloud() {
       scheduleView: state.scheduleView,
       scheduleWeekStart: state.scheduleWeekStart,
       scheduleMonth: state.scheduleMonth,
-      smartPlannerCollapsed: state.smartPlannerCollapsed,
       pageSectionCollapsed: state.pageSectionCollapsed || {},
       updatedAt: getLocalMaxUpdatedAt() || nowISO(),
     });

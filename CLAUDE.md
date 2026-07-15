@@ -35,7 +35,7 @@ src/tracking/behavior.js    ← AI 개인화용 사용자 행동 로그
 src/utils/                  ← date-utils, format, holiday-utils, parse-date-kr, todo-buckets
 src/main.js                 ← 진입점, 이벤트 위임, 앱 조율
 packages/shared/            ← 웹/Android 공용 유틸 (firebase-config, schedule-repository 등)
-packages/schedule-core/     ← 스케줄 핵심 로직 (planner.js, overview.js, sections.js, tasks.js)
+packages/schedule-core/     ← 스케줄 핵심 로직 (overview.js, sections.js, tasks.js)
 apps/web/                   ← 웹 앱 bootstrap
 apps/android/capacitor/     ← Android 앱 (Capacitor 기반, www/ 는 웹 에셋 미러)
 ```
@@ -55,7 +55,6 @@ apps/android/capacitor/     ← Android 앱 (Capacitor 기반, www/ 는 웹 에�
 | 탭·노트 관리 | `src/state/store.js`, `src/ui/render.js` |
 | 할 일 목록 | `src/ui/todo.js`, `src/ui/todo-modal.js`, `src/utils/todo-buckets.js` |
 | 스케줄(주·월간) | `src/ui/schedule.js`, `packages/schedule-core/` |
-| 스마트 플래너 | `packages/schedule-core/planner.js`, `src/ai/extract.js` |
 | 클라우드 동기화 | `src/sync/cloud.js`, `packages/shared/firebase-config.js` |
 | AI 개인화 | `src/tracking/behavior.js`, `src/ai/deadline.js`, `docs/ai-personalization.md` |
 

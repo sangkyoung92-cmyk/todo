@@ -39,7 +39,6 @@ export const state = {
   notes: [],
   deletedNotes: [],
   todos: [],
-  todoInbox: [],
   behaviorLog: [],
   recordingDrafts: {},
   selectedTabId: null,
@@ -57,7 +56,6 @@ export const state = {
   scheduleView: 'week',     // 'week' | 'month'
   scheduleWeekStart: null,  // 'YYYY-MM-DD'
   scheduleMonth: null,      // 'YYYY-MM'
-  smartPlannerCollapsed: true,
   notePaperMode: 'ruled',
   todoSectionCollapsed: {
     today: false,
@@ -139,7 +137,6 @@ export function save() {
     notes: state.notes,
     deletedNotes: state.deletedNotes,
     todos: state.todos,
-    todoInbox: state.todoInbox,
     behaviorLog: state.behaviorLog,
     recordingDrafts: state.recordingDrafts,
     selectedTabId: state.selectedTabId,
@@ -153,7 +150,6 @@ export function save() {
     scheduleView: state.scheduleView,
     scheduleWeekStart: state.scheduleWeekStart,
     scheduleMonth: state.scheduleMonth,
-    smartPlannerCollapsed: state.smartPlannerCollapsed,
     notePaperMode: state.notePaperMode,
     todoSectionCollapsed: state.todoSectionCollapsed,
     pageSectionCollapsed: state.pageSectionCollapsed,
@@ -171,7 +167,6 @@ export function load() {
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
-    state.todoInbox = [];
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
@@ -185,7 +180,6 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
-    state.smartPlannerCollapsed = true;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
     state.pageSectionCollapsed = {};
@@ -199,7 +193,6 @@ export function load() {
     state.notes = parsed.notes || [];
     state.deletedNotes = parsed.deletedNotes || [];
     state.todos = parsed.todos || [];
-    state.todoInbox = parsed.todoInbox || [];
     state.behaviorLog = parsed.behaviorLog || [];
     state.recordingDrafts = parsed.recordingDrafts || {};
 
@@ -228,7 +221,6 @@ export function load() {
     state.scheduleMonth = MONTH_KEY_PATTERN.test(parsed.scheduleMonth || '')
       ? parsed.scheduleMonth
       : todayKey().slice(0, 7);
-    state.smartPlannerCollapsed = parsed.smartPlannerCollapsed ?? true;
     state.notePaperMode = parsed.notePaperMode || 'ruled';
     state.todoSectionCollapsed = {
       today: parsed.todoSectionCollapsed?.today ?? false,
@@ -244,7 +236,6 @@ export function load() {
     state.notes = [];
     state.deletedNotes = [];
     state.todos = [];
-    state.todoInbox = [];
     state.behaviorLog = [];
     state.recordingDrafts = {};
     state.selectedTabId = null;
@@ -258,7 +249,6 @@ export function load() {
     state.scheduleView = 'week';
     state.scheduleWeekStart = getDefaultWeekStart();
     state.scheduleMonth = todayKey().slice(0, 7);
-    state.smartPlannerCollapsed = true;
     state.notePaperMode = 'ruled';
     state.todoSectionCollapsed = { today: false, week: false, month: false, other: false };
     state.pageSectionCollapsed = {};

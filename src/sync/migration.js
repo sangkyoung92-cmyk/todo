@@ -30,7 +30,6 @@ export function hasMeaningfulLocalData(snapshot) {
     snapshot.notes,
     snapshot.deletedNotes,
     snapshot.todos,
-    snapshot.todoInbox,
     snapshot.behaviorLog,
     snapshot.scheduleEntries,
   ].some((items) => Array.isArray(items) && items.length > 0)
@@ -120,7 +119,6 @@ export function mergeSnapshots(localSnapshot, cloudSnapshot = {}) {
     notes: mergeByUpdatedAt(localSnapshot.notes, cloudSnapshot.notes),
     deletedNotes: mergeByUpdatedAt(localSnapshot.deletedNotes, cloudSnapshot.deletedNotes),
     todos: mergeByUpdatedAt(localSnapshot.todos, cloudSnapshot.todos),
-    todoInbox: mergeByUpdatedAt(localSnapshot.todoInbox, cloudSnapshot.todoInbox),
     behaviorLog: [...(cloudSnapshot.behaviorLog || []), ...(localSnapshot.behaviorLog || [])],
     scheduleEntries: mergeByUpdatedAt(localSnapshot.scheduleEntries, cloudSnapshot.scheduleEntries),
     dateNotes: mergeDateNotes(localSnapshot.dateNotes, cloudSnapshot.dateNotes),
@@ -129,7 +127,6 @@ export function mergeSnapshots(localSnapshot, cloudSnapshot = {}) {
     scheduleView: localSnapshot.scheduleView || cloudSnapshot.scheduleView || 'week',
     scheduleWeekStart: localSnapshot.scheduleWeekStart || cloudSnapshot.scheduleWeekStart || null,
     scheduleMonth: localSnapshot.scheduleMonth || cloudSnapshot.scheduleMonth || null,
-    smartPlannerCollapsed: localSnapshot.smartPlannerCollapsed ?? cloudSnapshot.smartPlannerCollapsed ?? true,
     notePaperMode: localSnapshot.notePaperMode || cloudSnapshot.notePaperMode || 'ruled',
     todoSectionCollapsed: localSnapshot.todoSectionCollapsed || cloudSnapshot.todoSectionCollapsed || {},
     pageSectionCollapsed: { ...(cloudSnapshot.pageSectionCollapsed || {}), ...(localSnapshot.pageSectionCollapsed || {}) },
@@ -150,7 +147,6 @@ export function applySnapshotToState(snapshot = {}) {
   state.notes = snapshot.notes || [];
   state.deletedNotes = snapshot.deletedNotes || [];
   state.todos = snapshot.todos || [];
-  state.todoInbox = snapshot.todoInbox || [];
   state.behaviorLog = snapshot.behaviorLog || [];
   state.recordingDrafts = snapshot.recordingDrafts || {};
   state.selectedTabId = snapshot.selectedTabId || state.tabs[0]?.id || null;
@@ -164,7 +160,6 @@ export function applySnapshotToState(snapshot = {}) {
   state.scheduleView = snapshot.scheduleView || 'week';
   state.scheduleWeekStart = snapshot.scheduleWeekStart || state.scheduleWeekStart;
   state.scheduleMonth = snapshot.scheduleMonth || state.scheduleMonth;
-  state.smartPlannerCollapsed = snapshot.smartPlannerCollapsed ?? true;
   state.notePaperMode = snapshot.notePaperMode || 'ruled';
   state.todoSectionCollapsed = snapshot.todoSectionCollapsed || { today: false, week: false, month: false, other: false };
   state.pageSectionCollapsed = snapshot.pageSectionCollapsed || {};
@@ -179,7 +174,6 @@ export async function writeSnapshotToCloud(uid, snapshot) {
     pageSections: snapshot.pageSections || [],
     deletedNotes: snapshot.deletedNotes || [],
     todos: snapshot.todos || [],
-    todoInbox: snapshot.todoInbox || [],
     behaviorLog: snapshot.behaviorLog || [],
     selectedTabId: snapshot.selectedTabId || null,
     selectedPageSectionId: snapshot.selectedPageSectionId || null,
@@ -190,7 +184,6 @@ export async function writeSnapshotToCloud(uid, snapshot) {
     scheduleView: snapshot.scheduleView || 'week',
     scheduleWeekStart: snapshot.scheduleWeekStart || null,
     scheduleMonth: snapshot.scheduleMonth || null,
-    smartPlannerCollapsed: snapshot.smartPlannerCollapsed ?? true,
     pageSectionCollapsed: snapshot.pageSectionCollapsed || {},
     updatedAt: nowISO(),
   });

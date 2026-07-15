@@ -6,7 +6,6 @@ const addTabBtn = document.getElementById('add-tab-btn');
 const addNoteBtn = document.getElementById('add-note-btn');
 const titleEl = document.getElementById('note-title');
 const contentEl = document.getElementById('note-content');
-const saveStatusEl = document.getElementById('save-status');
 
 const state = {
   tabs: [],
@@ -194,13 +193,11 @@ function renderEditor() {
   if (disabled) {
     titleEl.value = '';
     contentEl.value = '';
-    saveStatusEl.textContent = '선택된 노트 없음';
     return;
   }
 
   titleEl.value = note.title;
   contentEl.value = note.content;
-  saveStatusEl.textContent = '저장됨';
 }
 
 function render() {
@@ -258,8 +255,6 @@ function scheduleAutoSave() {
   const note = state.notes.find((x) => x.id === state.selectedNoteId);
   if (!note) return;
 
-  saveStatusEl.textContent = '저장 중...';
-
   if (state.saveTimer) {
     clearTimeout(state.saveTimer);
   }
@@ -275,7 +270,6 @@ function scheduleAutoSave() {
 
     save();
     renderNotes();
-    saveStatusEl.textContent = '저장됨';
   }, 1000);
 }
 
