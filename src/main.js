@@ -23,7 +23,7 @@ import {
   addScheduleTaskBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260604-section-reorder';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-remove-planner-fix2';
 import { signIn, signInRedirect, signOutUser, onAuthChange, signUpWithEmail, signInWithEmail, sendPasswordReset } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -38,7 +38,7 @@ import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/su
 import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
-import { showAddTodoModal } from './ui/todo-modal.js?v=20260527-page-sections';
+import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-remove-planner-fix2';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import { initAuthLanding } from './ui/auth-landing.js';
@@ -47,7 +47,7 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-} from './ui/schedule.js?v=20260527-page-sections';
+} from './ui/schedule.js?v=20260715-remove-planner-fix2';
 import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
