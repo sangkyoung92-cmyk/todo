@@ -1734,7 +1734,6 @@ function renderAuthArea(user) {
         }
         <span class="user-name">${user.displayName || user.email || ''}</span>
       </span>
-      <button id="link-local-data-btn" class="login-btn">기존 데이터 연동</button>
       <button id="logout-btn" class="logout-btn">로그아웃</button>
     `;
     document.getElementById('logout-btn').addEventListener('click', handleSignOut);
