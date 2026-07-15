@@ -58,10 +58,10 @@ export function initAuthLanding({ onGoogle, onEmailLogin, onEmailSignup, onReset
   });
 
   manualBtn?.addEventListener('click', async () => {
-    setStatus('기존 로컬 데이터를 계정에 연동하는 중이에요...');
+    setStatus('기존 데이터를 연동할 계정을 준비하는 중이에요...');
     try {
       const result = await onManualMigration?.();
-      setStatus(result || '연동이 완료됐어요.');
+      setStatus(result || '로그인 후 기존 데이터를 계정에 연동할게요.');
     } catch (error) {
       setStatus(error.message || '기존 데이터 연동에 실패했어요.', true);
     }

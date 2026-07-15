@@ -38,6 +38,23 @@ export function hasMeaningfulLocalData(snapshot) {
     || Object.keys(snapshot.recordingDrafts || {}).length > 0;
 }
 
+
+export function readLatestBackupSnapshot() {
+  const backupKeys = Object.keys(localStorage)
+    .filter((key) => key.startsWith(BACKUP_PREFIX))
+    .sort()
+    .reverse();
+  for (const key of backupKeys) {
+    try {
+      const snapshot = JSON.parse(localStorage.getItem(key) || 'null');
+      if (hasMeaningfulLocalData(snapshot)) return { key, snapshot };
+    } catch (error) {
+      console.error('Failed to read local backup snapshot:', error);
+    }
+  }
+  return null;
+}
+
 export function getMigrationMeta() {
   try {
     return JSON.parse(localStorage.getItem(MIGRATION_META_KEY) || '{}');
@@ -185,12 +202,16 @@ export async function writeSnapshotToCloud(uid, snapshot) {
 
 export async function migrateLocalData(uid, { mode = 'auto' } = {}) {
   const localSnapshot = readLocalSnapshot();
-  if (!hasMeaningfulLocalData(localSnapshot)) return { status: 'no-local' };
+  const backupCandidate = mode === 'manual' && !hasMeaningfulLocalData(localSnapshot)
+    ? readLatestBackupSnapshot()
+    : null;
+  const sourceSnapshot = hasMeaningfulLocalData(localSnapshot) ? localSnapshot : backupCandidate?.snapshot;
+  if (!hasMeaningfulLocalData(sourceSnapshot)) return { status: 'no-local' };
   if (mode === 'auto' && hasMigratedForUid(uid)) return { status: 'already-migrated' };
 
-  const backupKey = backupLocalSnapshot(localSnapshot);
+  const backupKey = backupCandidate?.key || backupLocalSnapshot(sourceSnapshot);
   const cloudSnapshot = await fetchCloudSnapshot(uid);
-  const nextSnapshot = cloudSnapshot ? mergeSnapshots(localSnapshot, cloudSnapshot) : localSnapshot;
+  const nextSnapshot = cloudSnapshot ? mergeSnapshots(sourceSnapshot, cloudSnapshot) : sourceSnapshot;
   await writeSnapshotToCloud(uid, nextSnapshot);
   applySnapshotToState(nextSnapshot);
   markMigrationComplete(uid, backupKey);

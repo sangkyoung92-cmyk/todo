@@ -1669,6 +1669,7 @@ syncStatusEl.addEventListener('click', () => {
 // ── Auth ─────────────────────────────────────────────
 let currentAuthUser = null;
 let authLanding = null;
+let pendingLandingMigration = false;
 
 function describeMigrationResult(result) {
   if (!result) return '기존 데이터 확인이 끝났어요.';
@@ -1737,15 +1738,6 @@ function renderAuthArea(user) {
       <button id="logout-btn" class="logout-btn">로그아웃</button>
     `;
     document.getElementById('logout-btn').addEventListener('click', handleSignOut);
-    document.getElementById('link-local-data-btn').addEventListener('click', async () => {
-      const ok = window.confirm(
-        '이 브라우저에 남아있는 로그인 전 데이터를 현재 계정에 합칠게요.\n'
-        + '연동 전에 백업을 자동으로 만들어 안전하게 진행합니다.\n'
-        + '계속할까요?',
-      );
-      if (!ok) return;
-      alert(await migrateForCurrentUser('manual'));
-    });
   } else {
     authAreaEl.innerHTML = `<button id="login-btn" class="login-btn">로그인</button>`;
     document.getElementById('login-btn').addEventListener('click', () => authLanding?.show());
@@ -1759,7 +1751,12 @@ authLanding = initAuthLanding({
   onEmailLogin: ({ email, password }) => signInWithEmail(email, password),
   onEmailSignup: ({ email, password }) => signUpWithEmail(email, password),
   onResetPassword: (email) => sendPasswordReset(email),
-  onManualMigration: () => migrateForCurrentUser('manual'),
+  onManualMigration: async () => {
+    pendingLandingMigration = true;
+    if (!currentAuthUser) return '연동할 계정을 먼저 로그인/가입해주세요. 로그인 직후 이 브라우저의 로컬 데이터나 자동 백업 데이터를 계정에 업로드할게요.';
+    pendingLandingMigration = false;
+    return migrateForCurrentUser('manual');
+  },
 });
 authLanding.show();
 onAuthChange(async (user) => {
@@ -1769,7 +1766,8 @@ onAuthChange(async (user) => {
     authLanding?.setStatus('계정 데이터를 불러오기 전에 기존 로컬 데이터를 안전하게 확인하는 중이에요...');
     setCurrentUser(user.uid);
     try {
-      const message = await migrateForCurrentUser('auto');
+      const message = await migrateForCurrentUser(pendingLandingMigration ? 'manual' : 'auto');
+      pendingLandingMigration = false;
       authLanding?.setStatus(message);
     } catch (error) {
       console.error('Local migration failed:', error);
