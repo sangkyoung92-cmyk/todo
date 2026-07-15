@@ -23,7 +23,7 @@ import {
   addScheduleTaskBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-remove-planner-fix4';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-sync-label-fix1';
 import { signIn, signInRedirect, signOutUser, onAuthChange, signUpWithEmail, signInWithEmail, sendPasswordReset } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -38,7 +38,7 @@ import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/su
 import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
-import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-remove-planner-fix4';
+import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-sync-label-fix1';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import { initAuthLanding } from './ui/auth-landing.js';
@@ -47,7 +47,7 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-} from './ui/schedule.js?v=20260715-remove-planner-fix4';
+} from './ui/schedule.js?v=20260715-sync-label-fix1';
 import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
@@ -1502,16 +1502,16 @@ titleEl.addEventListener('keydown', (e) => {
 
 // ?? Cloud Sync Status ????????????????????????????????
 const SYNC_LABELS = {
-  syncing: '???숆린??以?..',
-  synced: '???숆린?붾맖',
-  error: '???ㅻ쪟',
+  syncing: '동기화 중...',
+  synced: '동기화 완료',
+  error: '동기화 오류',
 };
 
 function buildSyncErrorMessage(error) {
   if (!error) return '';
   const lines = [error.summary];
-  if (error.code) lines.push(`肄붾뱶: ${error.code}`);
-  if (error.rawMessage) lines.push(`?먮낯: ${error.rawMessage}`);
+  if (error.code) lines.push(`코드: ${error.code}`);
+  if (error.rawMessage) lines.push(`원문: ${error.rawMessage}`);
   return lines.join('\n');
 }
 

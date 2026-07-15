@@ -3907,6 +3907,27 @@ textarea:focus-visible,
   display: none;
 }
 
+.sync-status[data-status="synced"] {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #e7f5f1;
+  color: #075e54;
+  font-weight: 800;
+}
+
+.sync-status[data-status="syncing"] {
+  border-color: rgba(40, 124, 255, 0.24);
+  background: #eef6ff;
+  color: #1f4f8f;
+  font-weight: 800;
+}
+
+.sync-status[data-status="error"] {
+  border-color: rgba(192, 57, 43, 0.28);
+  background: #fff0f2;
+  color: #a3262a;
+  font-weight: 800;
+}
+
 .login-btn,
 .logout-btn,
 .topbar-icon-btn {
