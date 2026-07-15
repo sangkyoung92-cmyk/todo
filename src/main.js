@@ -19,6 +19,7 @@ import {
   recordingStopBtn,
   toggleTodoPanelBtn, todoPanelEl, notesLayoutEl,
   appModeTabs, notesViewEl, scheduleViewEl, sectionTabsBarEl,
+  scheduleWorkspaceEl,
   addScheduleTaskBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
