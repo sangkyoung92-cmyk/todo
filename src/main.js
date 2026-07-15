@@ -23,7 +23,7 @@ import {
   addScheduleTaskBtn,
   topbarTrashBtn,
 } from './ui/dom.js';
-import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-remove-planner-fix2';
+import { renderAll, renderNotes, renderTabs, renderEditor } from './ui/render.js?v=20260715-remove-planner-fix4';
 import { signIn, signInRedirect, signOutUser, onAuthChange, signUpWithEmail, signInWithEmail, sendPasswordReset } from './auth.js';
 import {
   setCurrentUser, markDirty, markStateDirty, scheduleSync,
@@ -38,7 +38,7 @@ import { getSummaryPrompt, resetSummaryPrompt, saveSummaryPrompt } from './ai/su
 import { createSpeechRecorder } from './audio/speech-recorder.js';
 import { buildBehaviorSummary } from './tracking/behavior.js';
 import { extractDeadlineFromText } from './utils/parse-date-kr.js';
-import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-remove-planner-fix2';
+import { showAddTodoModal } from './ui/todo-modal.js?v=20260715-remove-planner-fix4';
 import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import { initAuthLanding } from './ui/auth-landing.js';
@@ -47,7 +47,7 @@ import {
   renderSchedule,
   initScheduleNav,
   addScheduleTask,
-} from './ui/schedule.js?v=20260715-remove-planner-fix2';
+} from './ui/schedule.js?v=20260715-remove-planner-fix4';
 import { showScheduleModal } from './ui/schedule-modal.js';
 
 function rerender() {
@@ -174,9 +174,9 @@ function setTodoPanelCollapsed(isCollapsed) {
   todoPanelEl?.classList.toggle('collapsed', isCollapsed);
   notesLayoutEl?.classList.toggle('todo-panel-collapsed', isCollapsed);
   if (toggleTodoPanelBtn) {
-    toggleTodoPanelBtn.textContent = isCollapsed ? '?? : '?묎린';
-    toggleTodoPanelBtn.setAttribute('aria-label', isCollapsed ? '?낅Т 紐⑸줉 ?쇱튂湲? : '?낅Т 紐⑸줉 ?묎린');
-    toggleTodoPanelBtn.title = isCollapsed ? '?낅Т 紐⑸줉 ?쇱튂湲? : '?낅Т 紐⑸줉 ?묎린';
+    toggleTodoPanelBtn.textContent = isCollapsed ? '‹' : '›';
+    toggleTodoPanelBtn.setAttribute('aria-label', isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기');
+    toggleTodoPanelBtn.title = isCollapsed ? '업무 목록 펼치기' : '업무 목록 접기';
     toggleTodoPanelBtn.setAttribute('aria-expanded', String(!isCollapsed));
   }
 }
@@ -373,7 +373,7 @@ function addTodoFromNoteText(text, options = {}) {
   const sourceNoteId = options.sourceNoteId || state.selectedNoteId || null;
   const projectName = getNoteProjectName(sourceNoteId);
   setTodoPanelCollapsed(false);
-  const todoId = addTodo(cleanedText, sourceNoteId, '以?, deadline, projectName);
+  const todoId = addTodo(cleanedText, sourceNoteId, '중', deadline, projectName);
   markSelectedTextAsTodoSource(options.markRange, todoId);
   rerender();
 }
@@ -433,7 +433,7 @@ function addExtractedTodos(todoItems, sourceNoteId) {
     addTodo(
       todoText,
       sourceNoteId,
-      todoItem.difficulty || '以?,
+      todoItem.difficulty || '중',
       todoItem.deadline || null,
       getNoteProjectName(sourceNoteId),
     );
@@ -453,7 +453,7 @@ function extractLocalTodosFromNote(noteHtml) {
       const { deadline, cleanedText } = extractDeadlineFromText(line);
       return {
         text: cleanedText,
-        difficulty: '以?,
+        difficulty: '중',
         deadline,
       };
     })
@@ -1233,7 +1233,7 @@ const speechRecorder = createSpeechRecorder({
     noteRecordBtn.disabled = isProcessing;
     if (isProcessing) {
       noteRecordBtn.textContent = '?뺣━ 以?..';
-      recordingPanel.setBusy('?뱀쓬 ?띿뒪??蹂??以?);
+      recordingPanel.setBusy('녹음 텍스트 변환 중...');
     } else if (!speechRecorder.isRecording()) {
       noteRecordBtn.textContent = '?뱀쓬';
     }
@@ -1311,7 +1311,7 @@ noteRecordBtn?.addEventListener('click', () => {
     }
     activeRecordingNoteId = state.selectedNoteId;
     setRecordingDraft(activeRecordingNoteId, '');
-    recordingPanel.setBusy('留덉씠??以鍮?以?);
+    recordingPanel.setBusy('마이크 준비 중...');
     speechRecorder.start();
   }
 });
@@ -1365,10 +1365,10 @@ function closeSettingsDrawer() {
 function updateKeyStatus() {
   const key = getApiKey();
   if (key) {
-    geminiKeyStatus.textContent = '????λ맖';
+    geminiKeyStatus.textContent = '저장됨';
     geminiKeyStatus.dataset.state = 'saved';
   } else {
-    geminiKeyStatus.textContent = '誘몄꽕??;
+    geminiKeyStatus.textContent = '미설정';
     geminiKeyStatus.dataset.state = 'empty';
   }
 }
@@ -1417,7 +1417,7 @@ summaryPromptSave.addEventListener('click', () => {
 
 summaryPromptReset.addEventListener('click', () => {
   summaryPromptInput.value = resetSummaryPrompt();
-  summaryPromptStatus.textContent = '湲곕낯媛??곸슜??;
+  summaryPromptStatus.textContent = '기본값 적용됨';
   summaryPromptStatus.dataset.state = 'saved';
 });
 
