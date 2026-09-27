@@ -41,6 +41,7 @@ import { createRecordingPanel } from './ui/recording-panel.js';
 import { initNotesPanelResize, initSchedulePanelResize } from './ui/panel-resize.js';
 import { initAuthLanding } from './ui/auth-landing.js';
 import { migrateLocalData } from './sync/migration.js';
+import { exportToObsidian } from './export/obsidian.js';
 import {
   renderSchedule,
   initScheduleNav,
@@ -1263,6 +1264,7 @@ const summaryPromptInput = document.getElementById('summary-prompt-input');
 const summaryPromptSave = document.getElementById('summary-prompt-save');
 const summaryPromptReset = document.getElementById('summary-prompt-reset');
 const summaryPromptStatus = document.getElementById('summary-prompt-status');
+const obsidianExportBtn = document.getElementById('obsidian-export-btn');
 
 function openSettingsDrawer() {
   geminiKeyInput.value = getApiKey();
@@ -1326,6 +1328,8 @@ summaryPromptReset.addEventListener('click', () => {
   summaryPromptStatus.textContent = '기본값 적용됨';
   summaryPromptStatus.dataset.state = 'saved';
 });
+
+obsidianExportBtn.addEventListener('click', () => exportToObsidian(state));
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && settingsDrawer.classList.contains('open')) {
