@@ -1,3 +1,4 @@
+import { initializeStorage } from './state/persistence.js';
 import {
   load,
   nowISO,
@@ -48,6 +49,8 @@ import {
   addScheduleTask,
 } from './ui/schedule.js?v=20260715-remove-ai-ref-settings1';
 import { showScheduleModal } from './ui/schedule-modal.js';
+
+await initializeStorage('onenote_mvp_v2');
 
 function rerender() {
   pruneExpiredTrash();
@@ -1583,3 +1586,4 @@ applyAppMode(state.appMode || 'notes');
 window.setInterval(() => {
   if (pruneExpiredTrash()) rerender();
 }, 60 * 60 * 1000);
+

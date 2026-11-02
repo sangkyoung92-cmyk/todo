@@ -1,3 +1,4 @@
+import { readSnapshot, writeSnapshot } from './persistence.js';
 import { todayKey, toDateKey, getSunday } from '../utils/date-utils.js';
 
 export const STORAGE_KEY = 'onenote_mvp_v2';
@@ -153,11 +154,11 @@ export function save() {
     pageSectionCollapsed: state.pageSectionCollapsed,
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  writeSnapshot(STORAGE_KEY, JSON.stringify(payload));
 }
 
 export function load() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = readSnapshot(STORAGE_KEY);
 
   if (!raw) {
     state.tabs = [];
@@ -249,3 +250,4 @@ export function load() {
     state.pageSectionCollapsed = {};
   }
 }
+

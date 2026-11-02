@@ -310,3 +310,8 @@ python3 -m http.server 4173
 6. Google 계정 선택 후 실패하거나 `ApiException: 10`/`DEVELOPER_ERROR`가 뜨는 경우에는 Firebase Console의 Android 앱에 설치 APK 서명 인증서 SHA-1/SHA-256을 추가하고 `google-services.json`을 갱신해야 합니다.
 7. `missing=FirebaseAuthentication`이고 `plugins`/`headers`에 `FirebaseAuthentication`이 없으면 Android `variables.gradle`에 `rgcfaIncludeGoogle = true`가 필요합니다. 이 값이 없으면 Google 로그인 SDK가 런타임 APK에 포함되지 않아 Auth 플러그인이 등록되지 않을 수 있습니다.
 8. `headers=FirebaseAuthentication`인데도 `unable to find plugin`이 계속 뜨면 이전 APK가 남아 있을 가능성이 높으므로 앱을 삭제한 뒤 새 APK를 다시 설치합니다.
+
+## 저장 용량 초과 대응
+- 실행: `python -m http.server 8000` 후 http://localhost:8000 접속.
+- localStorage 한도 초과 시 IndexedDB로 자동 전환하며 기존 데이터는 삭제하지 않습니다. 재접속 시 확장 저장소를 우선 읽습니다.
+- 테스트: localStorage 용량을 채운 뒤 일정과 페이지를 추가하고 새로고침 후 유지되는지 확인합니다. 확장 저장소 실패 시 경고를 표시합니다.
